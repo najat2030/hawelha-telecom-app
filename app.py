@@ -58,14 +58,15 @@ st.markdown("""
         margin-bottom: 1.5rem;
     }
     .logo-img { 
-        max-width: 90%; 
-        max-height: 300px; 
+        max-width: 95%; 
+        max-height: 250px; 
         width: auto; 
         height: auto;
         border-radius: 15px; 
         background: white; 
-        padding: 20px;
+        padding: 25px;
         object-fit: contain;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     .upload-box {
         background: #f0fdf4;
@@ -163,11 +164,10 @@ if logo_data:
         <div class="logo-container">
             <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
-        <h1 style="margin-top: 1rem;">Hawelha Telecom | حوّلها تليكوم</h1>
-        <p style="font-size: 1.3rem; margin: 1rem 0 0.5rem 0; font-weight: 600;">
+        <p style="font-size: 1.5rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600;">
             نظام تحويل فواتير اتصالات من PDF إلى Excel
         </p>
-        <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+        <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
 else:
