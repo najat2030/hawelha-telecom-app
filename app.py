@@ -139,11 +139,11 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_
+if logo_data:
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
-            <img class="logo-img" src="image/png;base64,{logo_data}" alt="Hawelha Logo">
+            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
         <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; white-space: nowrap;">
             نظام تحويل فواتير اتصالات من PDF إلى Excel
