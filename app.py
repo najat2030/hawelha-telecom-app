@@ -15,16 +15,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ========== دالة حفظ الشعار ==========
-def save_logo(uploaded_file):
-    """حفظ الشعار"""
-    if not os.path.exists('static'):
-        os.makedirs('static')
-    logo_path = os.path.join('static', 'logo.png')
-    with open(logo_path, 'wb') as f:
-        f.write(uploaded_file.getbuffer())
-    return logo_path
-
 # ========== تحميل الشعار ==========
 def load_logo():
     """تحميل الشعار إذا كان موجوداً"""
@@ -50,7 +40,14 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(5,150,105,0.3);
     }
     .main-header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
-    .main-header p { font-size: 1.1rem; margin: 0.5rem 0 0 0; opacity: 0.95; }
+    .main-header p { 
+        font-size: 1.3rem; 
+        margin: 1rem 0 0.5rem 0; 
+        opacity: 0.95; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .logo-container { 
         display: flex; 
         justify-content: center; 
@@ -116,22 +113,6 @@ st.markdown("""
 
 # ========== الشريط الجانبي ==========
 with st.sidebar:
-    st.title("⚙️ إعدادات التطبيق")
-    
-    st.markdown("### 🎨 رفع الشعار")
-    uploaded_logo = st.file_uploader(
-        "ارفع شعار التطبيق (PNG)",
-        type=['png', 'jpg', 'jpeg'],
-        help="ارفع شعار ليظهر في الصفحة الرئيسية"
-    )
-    
-    if uploaded_logo is not None:
-        save_logo(uploaded_logo)
-        st.success("✅ تم حفظ الشعار!")
-        st.image(uploaded_logo, width=200, caption="الشعار الحالي")
-        st.info("💡 سَيظهر الشعار عند تحديث الصفحة")
-    
-    st.markdown("---")
     st.title("📋 قائمة التحويل")
     
     st.markdown("""
@@ -158,13 +139,13 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_data:
+if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
-            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+            <img class="logo-img" src="image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
-        <p style="font-size: 1.5rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600;">
+        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; white-space: nowrap;">
             نظام تحويل فواتير اتصالات من PDF إلى Excel
         </p>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
@@ -174,7 +155,7 @@ else:
     st.markdown("""
     <div class="main-header">
         <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-        <p style="font-size: 1.3rem; margin: 1rem 0 0.5rem 0;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
+        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; white-space: nowrap;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
         <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
@@ -246,6 +227,9 @@ def extract_values_from_row(row):
     return values
 
 def create_record(phone, values):
+    """
+    توزيع القيم على الأعمدة بالترتيب الصحيح
+    """
     return {
         'محمول': phone,
         'رسوم شهرية': values[0] if len(values) > 0 else 0,
