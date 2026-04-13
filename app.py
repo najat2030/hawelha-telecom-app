@@ -86,9 +86,6 @@ st.markdown("""
         font-size: 1.3rem; 
         margin: 1rem 0 0.5rem 0; 
         opacity: 0.95; 
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
     .logo-container { 
         display: flex; 
@@ -172,7 +169,7 @@ st.markdown("""
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_data:
+if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
@@ -194,6 +191,7 @@ else:
         <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
+
 # ========== دوال المعالجة ==========
 def detect_language(text):
     """كشف إذا كان النص عربي أو إنجليزي"""
