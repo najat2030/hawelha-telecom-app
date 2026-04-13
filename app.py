@@ -7,12 +7,54 @@ import io
 import base64
 import os
 
+# ========== إخفاء عناصر Streamlit و GitHub ==========
+hide_streamlit_style = """
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+[data-testid="stToolbar"] {visibility: hidden;}
+[data-testid="stSidebar"] {visibility: hidden;}
+.css-1d391kg {visibility: hidden;}
+.css-1y4p8pa {visibility: hidden;}
+.css-1lcbmhc {visibility: hidden;}
+.css-1avcm0n {visibility: hidden;}
+.css-1wrcr25 {visibility: hidden;}
+.css-1cpxqw2 {visibility: hidden;}
+.css-145kmo2 {visibility: hidden;}
+.css-12w0qpk {visibility: hidden;}
+.css-1r6slb0 {visibility: hidden;}
+.css-1jicfp2 {visibility: hidden;}
+.css-1l02zno {visibility: hidden;}
+.css-1e5olcs {visibility: hidden;}
+.css-145kmo2 {display: none;}
+.css-1lcbmhc {display: none;}
+.css-1d391kg {display: none;}
+.css-1y4p8pa {display: none;}
+.css-1wrcr25 {display: none;}
+.css-1cpxqw2 {display: none;}
+.css-1avcm0n {display: none;}
+.css-12w0qpk {display: none;}
+.css-1r6slb0 {display: none;}
+.css-1jicfp2 {display: none;}
+.css-1l02zno {display: none;}
+.css-1e5olcs {display: none;}
+#root > div:nth-child(1) > div > div > div > div > section > div {
+    visibility: hidden;
+}
+.stApp > header {
+    display: none !important;
+}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # ========== إعدادات الصفحة ==========
 st.set_page_config(
     page_title="Hawelha Telecom | حوّلها تليكوم",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ========== تحميل الشعار ==========
@@ -108,33 +150,24 @@ st.markdown("""
         border-radius: 8px;
         width: 100%;
     }
+    section[data-testid="stSidebar"] {
+        display: none !important;
+    }
+    .stApp > div:first-child {
+        display: none !important;
+    }
+    .dataframe {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    .dataframe th {
+        text-align: right !important;
+    }
+    .dataframe td {
+        text-align: right !important;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# ========== الشريط الجانبي ==========
-with st.sidebar:
-    st.title("📋 قائمة التحويل")
-    
-    st.markdown("""
-    ### 📊 الأعمدة المستخرجة (14):
-    1. محمول
-    2. رسوم شهرية
-    3. رسوم الخدمات
-    4. مكالمات محلية
-    5. رسائل محلية
-    6. إنترنت محلية
-    7. مكالمات دولية
-    8. رسائل دولية
-    9. مكالمات تجوال
-    10. رسائل تجوال
-    11. إنترنت تجوال
-    12. رسوم وتسويات أخرى
-    13. قيمة الضرائب
-    14. إجمالي
-    """)
-    
-    st.markdown("---")
-    st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
 
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
@@ -145,8 +178,8 @@ if logo_data:
         <div class="logo-container">
             <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
-        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; white-space: nowrap;">
-            نظام تحويل فواتير اتصالات من PDF إلى Excel
+        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; line-height: 1.8; text-align: center;">
+            نظام تحويل فواتير اتصالات<br>من PDF إلى Excel
         </p>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
@@ -155,60 +188,46 @@ else:
     st.markdown("""
     <div class="main-header">
         <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; white-space: nowrap;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
+        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; line-height: 1.8; text-align: center;">
+            نظام تحويل فواتير اتصالات<br>من PDF إلى Excel
+        </p>
         <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
-
 # ========== دوال المعالجة ==========
 def detect_language(text):
+    """كشف إذا كان النص عربي أو إنجليزي"""
     arabic_pattern = r'[\u0600-\u06FF]'
     arabic_chars = len(re.findall(arabic_pattern, text))
     total_chars = len(text.replace(' ', ''))
     if total_chars == 0:
-        return 'unknown'
+        return 'english'
     arabic_ratio = arabic_chars / total_chars
     return 'arabic' if arabic_ratio > 0.3 else 'english'
 
 def extract_etisalat_data(uploaded_file):
     all_records = []
+    detected_lang = None
+    
     with pdfplumber.open(uploaded_file) as pdf:
+        # كشف اللغة من الصفحة الأولى
+        if len(pdf.pages) > 2:
+            first_page_text = pdf.pages[2].extract_text() or ''
+            detected_lang = detect_language(first_page_text)
+        
+        # معالجة كل الصفحات
         for page_num in range(2, len(pdf.pages)):
             page = pdf.pages[page_num]
-            page_text = page.extract_text() or ''
             tables = page.extract_tables()
             if tables:
                 for table in tables:
-                    page_records = parse_etisalat_table(table)
+                    page_records = parse_etisalat_table(table, detected_lang)
                     all_records.extend(page_records)
-    return all_records
+    
+    return all_records, detected_lang
 
-def parse_etisalat_table(table, language='arabic'):
-    records = []
-    if not table or len(table) < 2:
-        return records
-    i = 0
-    while i < len(table):
-        row = table[i]
-        if not row:
-            i += 1
-            continue
-        row_text = ' '.join([str(cell) if cell else '' for cell in row])
-        phone_match = re.search(r'(01[0125]\d{8})', row_text)
-        if phone_match:
-            phone = phone_match.group(1)
-            values = []
-            if i + 1 < len(table):
-                values_row = table[i + 1]
-                values = extract_values_from_row(values_row)
-            record = create_record(phone, values)
-            records.append(record)
-            i += 2
-        else:
-            i += 1
-    return records
-
-def extract_values_from_row(row):
+def extract_values_from_row(row, is_arabic=True):
+    """استخراج القيم من الصف - بيعكس لو عربي"""
     values = []
     if not row:
         return values
@@ -224,11 +243,45 @@ def extract_values_from_row(row):
                     values.append(val)
             except:
                 pass
+    
+    # عكس القيم فقط لو الفاتورة عربي
+    if is_arabic:
+        values.reverse()
+    
     return values
+
+def parse_etisalat_table(table, language='arabic'):
+    """معالجة الجدول حسب اللغة"""
+    records = []
+    if not table or len(table) < 2:
+        return records
+    
+    is_arabic = (language == 'arabic')
+    
+    i = 0
+    while i < len(table):
+        row = table[i]
+        if not row:
+            i += 1
+            continue
+        row_text = ' '.join([str(cell) if cell else '' for cell in row])
+        phone_match = re.search(r'(01[0125]\d{8})', row_text)
+        if phone_match:
+            phone = phone_match.group(1)
+            values = []
+            if i + 1 < len(table):
+                values_row = table[i + 1]
+                values = extract_values_from_row(values_row, is_arabic)
+            record = create_record(phone, values)
+            records.append(record)
+            i += 2
+        else:
+            i += 1
+    return records
 
 def create_record(phone, values):
     """
-    توزيع القيم على الأعمدة بالترتيب الصحيح
+    توزيع القيم على الأعمدة
     """
     return {
         'محمول': phone,
@@ -274,10 +327,15 @@ if uploaded_file is not None:
             
             try:
                 status_text.text("🔍 جاري استخراج البيانات من PDF...")
-                records = extract_etisalat_data(uploaded_file)
+                records, lang = extract_etisalat_data(uploaded_file)
                 
                 if records:
                     progress_bar.progress(50)
+                    
+                    # عرض نوع الفاتورة
+                    lang_text = "عربي" if lang == "arabic" else "إنجليزي"
+                    st.info(f"📄 نوع الفاتورة: {lang_text}")
+                    
                     df = pd.DataFrame(records)
                     columns_order = [
                         'محمول', 'رسوم شهرية', 'رسوم الخدمات',
