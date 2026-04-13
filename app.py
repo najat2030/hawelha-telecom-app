@@ -4,6 +4,8 @@ import pandas as pd
 import re
 from datetime import datetime
 import io
+import base64
+import os
 
 # ========== إعدادات الصفحة ==========
 st.set_page_config(
@@ -12,6 +14,26 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ========== دالة حفظ الشعار ==========
+def save_logo(uploaded_file):
+    """حفظ الشعار"""
+    if not os.path.exists('static'):
+        os.makedirs('static')
+    logo_path = os.path.join('static', 'logo.png')
+    with open(logo_path, 'wb') as f:
+        f.write(uploaded_file.getbuffer())
+    return logo_path
+
+# ========== تحميل الشعار ==========
+def load_logo():
+    """تحميل الشعار إذا كان موجوداً"""
+    logo_path = 'static/logo.png'
+    if os.path.exists(logo_path):
+        with open(logo_path, 'rb') as f:
+            logo_data = base64.b64encode(f.read()).decode()
+            return logo_data
+    return None
 
 # ========== CSS مخصص ==========
 st.markdown("""
@@ -29,6 +51,7 @@ st.markdown("""
     }
     .main-header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
     .main-header p { font-size: 1.1rem; margin: 0.5rem 0 0 0; opacity: 0.9; }
+    .logo-img { max-height: 100px; width: auto; border-radius: 10px; background: white; padding: 10px; margin-bottom: 10px; }
     .upload-box {
         background: #f0fdf4;
         border: 3px dashed #10b981;
@@ -75,18 +98,26 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ========== الهيدر ==========
-st.markdown("""
-<div class="main-header">
-    <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-    <p>نظام تحويل فواتير الاتصالات من PDF إلى Excel</p>
-    <p style="font-size: 0.9rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
-</div>
-""", unsafe_allow_html=True)
-
 # ========== الشريط الجانبي ==========
 with st.sidebar:
+    st.title("⚙️ إعدادات التطبيق")
+    
+    st.markdown("### 🎨 رفع الشعار")
+    uploaded_logo = st.file_uploader(
+        "ارفع شعار التطبيق (PNG)",
+        type=['png', 'jpg', 'jpeg'],
+        help="ارفع شعار ليظهر في الصفحة الرئيسية"
+    )
+    
+    if uploaded_logo is not None:
+        save_logo(uploaded_logo)
+        st.success("✅ تم حفظ الشعار!")
+        st.image(uploaded_logo, width=200, caption="الشعار الحالي")
+        st.info("💡 سَيظهر الشعار عند تحديث الصفحة")
+    
+    st.markdown("---")
     st.title("📋 قائمة التحويل")
+    
     st.markdown("""
     ### 📊 الأعمدة المستخرجة (14):
     1. محمول
@@ -104,11 +135,34 @@ with st.sidebar:
     13. قيمة الضرائب
     14. إجمالي
     """)
+    
+    st.markdown("---")
     st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
+
+# ========== الهيدر مع الشعار ==========
+logo_data = load_logo()
+
+if logo_data:
+    st.markdown(f"""
+    <div class="main-header">
+        <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+        <h1>Hawelha Telecom | حوّلها تليكوم</h1>
+        <p>نظام تحويل فواتير الاتصالات من PDF إلى Excel</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div class="main-header">
+        <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
+        <p>نظام تحويل فواتير الاتصالات من PDF إلى Excel</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ========== دوال المعالجة ==========
 def detect_language(text):
-    arabic_pattern = r'[\\u0600-\\u06FF]'
+    arabic_pattern = r'[\u0600-\u06FF]'
     arabic_chars = len(re.findall(arabic_pattern, text))
     total_chars = len(text.replace(' ', ''))
     if total_chars == 0:
@@ -140,7 +194,7 @@ def parse_etisalat_table(table, language='arabic'):
             i += 1
             continue
         row_text = ' '.join([str(cell) if cell else '' for cell in row])
-        phone_match = re.search(r'(01[0125]\\d{8})', row_text)
+        phone_match = re.search(r'(01[0125]\d{8})', row_text)
         if phone_match:
             phone = phone_match.group(1)
             values = []
@@ -162,7 +216,7 @@ def extract_values_from_row(row):
         if not cell:
             continue
         cell_text = str(cell).strip()
-        numbers = re.findall(r'-?\\d+\\.?\\d*', cell_text)
+        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
         for num in numbers:
             try:
                 val = float(num)
