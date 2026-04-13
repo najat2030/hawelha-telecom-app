@@ -43,15 +43,30 @@ st.markdown("""
     .main-header {
         background: linear-gradient(135deg, #059669 0%, #10b981 100%);
         color: white;
-        padding: 2rem;
+        padding: 2.5rem 2rem;
         border-radius: 15px;
         text-align: center;
         margin-bottom: 2rem;
         box-shadow: 0 4px 15px rgba(5,150,105,0.3);
     }
     .main-header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
-    .main-header p { font-size: 1.1rem; margin: 0.5rem 0 0 0; opacity: 0.9; }
-    .logo-img { max-height: 100px; width: auto; border-radius: 10px; background: white; padding: 10px; margin-bottom: 10px; }
+    .main-header p { font-size: 1.1rem; margin: 0.5rem 0 0 0; opacity: 0.95; }
+    .logo-container { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        margin-bottom: 1.5rem;
+    }
+    .logo-img { 
+        max-width: 90%; 
+        max-height: 300px; 
+        width: auto; 
+        height: auto;
+        border-radius: 15px; 
+        background: white; 
+        padding: 20px;
+        object-fit: contain;
+    }
     .upload-box {
         background: #f0fdf4;
         border: 3px dashed #10b981;
@@ -145,18 +160,22 @@ logo_data = load_logo()
 if logo_data:
     st.markdown(f"""
     <div class="main-header">
-        <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
-        <h1>Hawelha Telecom | حوّلها تليكوم</h1>
-        <p>نظام تحويل فواتير الاتصالات من PDF إلى Excel</p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+        <div class="logo-container">
+            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+        </div>
+        <h1 style="margin-top: 1rem;">Hawelha Telecom | حوّلها تليكوم</h1>
+        <p style="font-size: 1.3rem; margin: 1rem 0 0.5rem 0; font-weight: 600;">
+            نظام تحويل فواتير اتصالات من PDF إلى Excel
+        </p>
+        <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
     <div class="main-header">
         <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-        <p>نظام تحويل فواتير الاتصالات من PDF إلى Excel</p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+        <p style="font-size: 1.3rem; margin: 1rem 0 0.5rem 0;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
+        <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
 
