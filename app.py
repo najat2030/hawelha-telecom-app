@@ -367,7 +367,7 @@ st.markdown("""
         <span style="color: #10b981; font-weight: 700;">Najat El Bakry</span>
     </p>
     <p style="margin: 0.5rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
-        Hawelha Telecom © 2024 - جميع الحقوق محفوظة
+        Hawelha Telecom © 2026 - جميع الحقوق محفوظة
     </p>
 </div>
 """, unsafe_allow_html=True)
