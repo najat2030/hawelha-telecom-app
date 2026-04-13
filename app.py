@@ -169,7 +169,7 @@ st.markdown("""
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_
+if logo_data:
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
@@ -208,12 +208,10 @@ def extract_etisalat_data(uploaded_file):
     detected_lang = None
     
     with pdfplumber.open(uploaded_file) as pdf:
-        # كشف اللغة من الصفحة الأولى
         if len(pdf.pages) > 2:
             first_page_text = pdf.pages[2].extract_text() or ''
             detected_lang = detect_language(first_page_text)
         
-        # معالجة كل الصفحات
         for page_num in range(2, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
@@ -242,7 +240,6 @@ def extract_values_from_row(row, is_arabic=True):
             except:
                 pass
     
-    # عكس القيم فقط لو الفاتورة عربي
     if is_arabic:
         values.reverse()
     
@@ -278,9 +275,7 @@ def parse_etisalat_table(table, language='arabic'):
     return records
 
 def create_record(phone, values):
-    """
-    توزيع القيم على الأعمدة
-    """
+    """توزيع القيم على الأعمدة"""
     return {
         'محمول': phone,
         'رسوم شهرية': values[0] if len(values) > 0 else 0,
@@ -329,8 +324,6 @@ if uploaded_file is not None:
                 
                 if records:
                     progress_bar.progress(50)
-                    
-                    # عرض نوع الفاتورة
                     lang_text = "عربي" if lang == "arabic" else "إنجليزي"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
