@@ -146,7 +146,7 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_: 
+if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
@@ -211,7 +211,6 @@ def extract_values_from_row(row, is_arabic=True):
         return values
     
     # دايماً بنقرأ من اليمين لليسار (عكس الترتيب)
-    # سواء عربي أو إنجليزي
     for cell in reversed(row):
         if not cell:
             continue
@@ -259,9 +258,6 @@ def parse_etisalat_table(table, language='arabic'):
 def create_record(phone, values):
     """
     توزيع القيم على الأعمدة بالترتيب الصحيح
-    الترتيب: محمول، رسوم شهرية، رسوم خدمات، مكالمات محلية، رسائل محلية، 
-             إنترنت محلي، مكالمات دولية، رسائل دولية، مكالمات تجوال، 
-             رسائل تجوال، إنترنت تجوال، رسوم وتسويات أخرى، قيمة الضرائب، إجمالي
     """
     return {
         'محمول': phone,
@@ -313,7 +309,7 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬"
+                    lang_text = "عربي 🇸" if lang == "arabic" else "إنجليزي 🇬🇧"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
