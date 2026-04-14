@@ -205,11 +205,15 @@ def extract_etisalat_data(uploaded_file):
     return all_records, detected_lang
 
 def extract_values_from_row(row, is_arabic=True):
-    """استخراج القيم من الصف - بيعكس لو عربي"""
+    """استخراج القيم من الصف - بيقرا بالعكس لو عربي"""
     values = []
     if not row:
         return values
-    for cell in row:
+    
+    # لو عربي، بنقرأ الخلايا من الآخر للأول (عكس الترتيب)
+    cells_to_process = reversed(row) if is_arabic else row
+    
+    for cell in cells_to_process:
         if not cell:
             continue
         cell_text = str(cell).strip()
@@ -221,10 +225,6 @@ def extract_values_from_row(row, is_arabic=True):
                     values.append(val)
             except:
                 pass
-    
-    # عكس القيم فقط لو الفاتورة عربي (لأن الأعمدة من اليمين لليسار)
-    if is_arabic:
-        values.reverse()
     
     return values
 
@@ -314,7 +314,7 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸" if lang == "arabic" else "إنجليزي 🇬🇧"
+                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬🇧"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
