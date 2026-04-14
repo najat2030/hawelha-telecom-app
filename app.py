@@ -44,9 +44,6 @@ st.markdown("""
         font-size: 1.3rem; 
         margin: 1rem 0 0.5rem 0; 
         opacity: 0.95; 
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
     .logo-container { 
         display: flex; 
@@ -155,9 +152,6 @@ if logo_data:
         <div class="logo-container">
             <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
-        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; white-space: nowrap;">
-            نظام تحويل فواتير اتصالات من PDF إلى Excel
-        </p>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
@@ -165,7 +159,6 @@ else:
     st.markdown("""
     <div class="main-header">
         <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; white-space: nowrap;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
         <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
@@ -321,7 +314,7 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬🇧"
+                    lang_text = "عربي 🇸" if lang == "arabic" else "إنجليزي 🇬🇧"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
