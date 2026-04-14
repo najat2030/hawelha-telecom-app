@@ -1,5 +1,6 @@
 streamlit
-pdfplumber
 pandas
-openpyxl
-pillow
+pdfplumber
+camelot-py[cv]
+ghostscript
+opencv-python
