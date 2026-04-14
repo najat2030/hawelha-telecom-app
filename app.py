@@ -141,16 +141,16 @@ with st.sidebar:
     """)
     
     st.markdown("---")
-    st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
+    st.info("💡 **ملاحظة:** تم تحسين استخراج السالب للفواتير العربية")
 
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_data:
+if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
-            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+            <img class="logo-img" src="image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
@@ -167,24 +167,30 @@ else:
 
 def extract_values_from_row(row):
     """
-    استخراج القيم من الصف مع الحفاظ على السالب
+    استخراج القيم من الصف مع معالجة خاصة للغة العربية والإشارات السالبة
     """
     values = []
     if not row:
         return values
     
     # دمج محتوى الخلايا في نص واحد
-    row_text = ' '.join([str(cell).strip() for cell in row if cell])
+    raw_text = ' '.join([str(cell).strip() for cell in row if cell])
     
-    # استخراج الأرقام مع الإشارة (سالب أو موجب)
-    # بنستخدم pattern بيحفظ الإشارة
-    numbers = re.findall(r'-?\d+\.?\d*', row_text)
+    # 1. تنظيف النص العربي لمحاكاة دقة الإنجليزي
+    # استبدال كل أشكال الشرطات السالبة بشرطة إنجليزية قياسية
+    clean_text = raw_text.replace('–', '-').replace('−', '-').replace('—', '-')
+    
+    # إزالة المسافات بين الإشارة السالبة والرقم إذا وجدت (مثال: "- 117" تصبح "-117")
+    # هذا مهم جداً في الفواتير العربية حيث يفصل الـ PDF أحياناً بينهما
+    clean_text = re.sub(r'-\s+', '-', clean_text)
+    
+    # 2. استخراج الأرقام باستخدام Regex قوي
+    # يبحث عن: إشارة سالب اختيارية، أرقام، نقطة عشرية اختيارية، أرقام
+    numbers = re.findall(r'-?\d+\.?\d*', clean_text)
     
     for num in numbers:
         try:
             val = float(num)
-            # بنقبل كل القيم من غير فلترة (سالب وموجب)
-            # ده هيحافظ على إشارة السالب (-) زي ما هي
             values.append(val)
         except:
             pass
@@ -193,22 +199,7 @@ def extract_values_from_row(row):
 
 def create_record(phone, values):
     """
-    توزيع القيم على الأعمدة حسب الترتيب في الإكسل
-    
-    الترتيب المطلوب (نفس الإكسل):
-    0: رسوم شهرية
-    1: رسوم الخدمات
-    2: مكالمات محلية
-    3: رسائل محلية
-    4: إنترنت محلية
-    5: مكالمات دولية
-    6: رسائل دولية
-    7: مكالمات تجوال
-    8: رسائل تجوال
-    9: إنترنت تجوال
-    10: رسوم وتسويات أخرى
-    11: قيمة الضرائب
-    12: إجمالي
+    توزيع القيم على الأعمدة حسب الترتيب الثابت والنجاح السابق
     """
     return {
         'محمول': phone,
