@@ -149,7 +149,7 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_: 
+if logo_data:
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
