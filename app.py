@@ -163,195 +163,123 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-# ========== دوال المعالجة المُحسَّنة ==========
-def extract_number(text):
-    """استخراج رقم مع الحفاظ على الإشارة السالبة"""
-    if not text:
-        return 0.0
+# ========== دوال المعالجة ==========
+def extract_etisalat_data(uploaded_file):
+    """استخراج البيانات من ملف PDF"""
+    all_records = []
     
-    text = str(text).strip()
+    with pdfplumber.open(uploaded_file) as pdf:
+        # معالجة كل الصفحات من صفحة 3 فما فوق
+        for page_num in range(2, len(pdf.pages)):
+            page = pdf.pages[page_num]
+            tables = page.extract_tables()
+            if tables:
+                for table in tables:
+                    page_records = parse_etisalat_table(table)
+                    all_records.extend(page_records)
     
-    # البحث عن الأرقام مع الإشارة السالبة أو الموجبة
-    patterns = [
-        r'[-+]?\d{1,3}(?:,\d{3})*(?:\.\d+)?',  # مع الفواصل والنقاط
-        r'[-+]?\d+\.?\d*',                     # الأرقام العادية
-        r'[-+]?\d+',                           # الأرقام الصحيحة
-    ]
-    
-    for pattern in patterns:
-        matches = re.findall(pattern, text)
-        for match in matches:
-            try:
-                # إزالة الفواصل وتحويل إلى float
-                clean_num = match.replace(',', '')
-                num = float(clean_num)
-                return num
-            except ValueError:
-                continue
-    
-    return 0.0
+    return all_records
 
-def extract_phone_number(row_text):
-    """استخراج رقم المحمول بدقة أعلى"""
-    phone_patterns = [
-        r'01[0-2][0-9]{8}',  # أرقام مصرية صحيحة
-        r'01[5][0-9]{8}',
-        r'(01[0-2][0-9]{8})',
-        r'(01[5][0-9]{8})',
-    ]
+def extract_values_from_row(row):
+    """
+    استخراج القيم من الصف
     
-    for pattern in phone_patterns:
-        match = re.search(pattern, row_text)
-        if match:
-            return match.group(1) if match.groups() else match.group(0)
-    return None
+    الـ PDF العربي الأعمدة فيه من اليمين لليسار
+    لكن pdfplumber بيقرا الخلايا من اليسار لليمين
+    فبنعكس الترتيب عشان نطابق الإكسل
+    """
+    values = []
+    if not row:
+        return values
+    
+    # بنقرأ الخلايا بالعكس عشان نطابق الترتيب العربي (من اليمين لليسار)
+    for cell in reversed(row):
+        if not cell:
+            continue
+        cell_text = str(cell).strip()
+        
+        # استخراج الأرقام مع الإشارة (سالب أو موجب)
+        # بنستخدم pattern بيحفظ الإشارة
+        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
+        
+        for num in numbers:
+            try:
+                val = float(num)
+                # بنقبل كل القيم من غير فلترة (سالب وموجب)
+                # ده هيحافظ على إشارة السالب (-) زي ما هي
+                values.append(val)
+            except:
+                pass
+    
+    return values
 
 def parse_etisalat_table(table):
-    """معالجة جدول الفاتورة المُحسَّنة"""
+    """معالجة جدول الفاتورة"""
     records = []
-    
     if not table or len(table) < 2:
         return records
     
-    # تحليل كل الصفوف للبحث عن أرقام الموبايل
-    for i in range(len(table)):
+    i = 0
+    while i < len(table):
         row = table[i]
         if not row:
+            i += 1
             continue
-            
-        row_text = ' '.join(str(cell).strip() if cell else '' for cell in row)
-        
-        # البحث عن رقم المحمول
-        phone = extract_phone_number(row_text)
-        if not phone:
-            continue
-            
-        # البحث عن صف الرسوم (الصف التالي أو صفوف مجاورة)
-        values = []
-        for j in range(max(0, i-2), min(len(table), i+3)):
-            if j == i:
-                continue
-            value_row = table[j]
-            row_values = [extract_number(cell) for cell in value_row if extract_number(cell) != 0]
-            if row_values:
-                values.extend(row_values)
-                break
-        
-        # إذا لم نجد قيم كافية، نبحث في نفس الصف
-        if len(values) < 3:
-            row_values = [extract_number(cell) for cell in row if extract_number(cell) != 0]
-            values.extend(row_values)
-        
-        # تكرار القيم إذا كانت قليلة
-        while len(values) < 14:
-            values.append(0.0)
-        
-        record = create_record(phone, values[:14])
-        records.append(record)
-        
-        # تجنب تكرار نفس السجل
-        i += 1
-    
+        row_text = ' '.join([str(cell) if cell else '' for cell in row])
+        phone_match = re.search(r'(01[0125]\d{8})', row_text)
+        if phone_match:
+            phone = phone_match.group(1)
+            values = []
+            if i + 1 < len(table):
+                values_row = table[i + 1]
+                values = extract_values_from_row(values_row)
+            record = create_record(phone, values)
+            records.append(record)
+            i += 2
+        else:
+            i += 1
     return records
 
 def create_record(phone, values):
-    """إنشاء سجل مع توزيع صحيح للأعمدة"""
-    column_mapping = [
-        'رسوم شهرية',
-        'رسوم الخدمات', 
-        'مكالمات محلية',
-        'رسائل محلية',
-        'إنترنت محلية',
-        'مكالمات دولية',
-        'رسائل دولية',
-        'مكالمات تجوال',
-        'رسائل تجوال',
-        'إنترنت تجوال',
-        'رسوم وتسويات أخرى',
-        'قيمة الضرائب',
-        'إجمالي'
-    ]
+    """
+    توزيع القيم على الأعمدة حسب الترتيب في الإكسل
     
-    record = {'محمول': phone}
-    
-    for i, column in enumerate(column_mapping):
-        if i < len(values):
-            record[column] = values[i]
-        else:
-            record[column] = 0.0
-    
-    return record
-
-def extract_etisalat_data(uploaded_file):
-    """استخراج البيانات من ملف PDF المُحسَّن"""
-    all_records = []
-    
-    try:
-        with pdfplumber.open(uploaded_file) as pdf:
-            st.info(f"📄 تم العثور على {len(pdf.pages)} صفحة")
-            
-            # معالجة كل الصفحات من صفحة 3 فما فوق
-            for page_num in range(2, len(pdf.pages)):
-                page = pdf.pages[page_num]
-                
-                # استخراج النصوص الكاملة للصفحة للتحليل
-                page_text = page.extract_text()
-                if not page_text:
-                    continue
-                
-                # استخراج الجداول
-                tables = page.extract_tables()
-                if tables:
-                    for table_num, table in enumerate(tables):
-                        st.write(f"معالجة الجدول {table_num+1} في الصفحة {page_num+1}")
-                        page_records = parse_etisalat_table(table)
-                        all_records.extend(page_records)
-                        
-                        # عرض عينة من البيانات المستخرجة للتشخيص
-                        if page_records:
-                            st.write("عينة من السجلات المستخرجة:")
-                            for record in page_records[:2]:
-                                st.write(record)
-                
-                # إذا لم نجد جداول، نحاول استخراج النصوص
-                else:
-                    lines = page_text.split('\n')
-                    for line in lines:
-                        phone = extract_phone_number(line)
-                        if phone:
-                            st.write(f"رقم محمول في النص: {phone}")
-    
-    except Exception as e:
-        st.error(f"خطأ في قراءة PDF: {str(e)}")
-    
-    return all_records
+    الترتيب المطلوب (نفس الإكسل):
+    0: رسوم شهرية
+    1: رسوم الخدمات
+    2: مكالمات محلية
+    3: رسائل محلية
+    4: إنترنت محلية
+    5: مكالمات دولية
+    6: رسائل دولية
+    7: مكالمات تجوال
+    8: رسائل تجوال
+    9: إنترنت تجوال
+    10: رسوم وتسويات أخرى
+    11: قيمة الضرائب
+    12: إجمالي
+    """
+    return {
+        'محمول': phone,
+        'رسوم شهرية': values[0] if len(values) > 0 else 0,
+        'رسوم الخدمات': values[1] if len(values) > 1 else 0,
+        'مكالمات محلية': values[2] if len(values) > 2 else 0,
+        'رسائل محلية': values[3] if len(values) > 3 else 0,
+        'إنترنت محلية': values[4] if len(values) > 4 else 0,
+        'مكالمات دولية': values[5] if len(values) > 5 else 0,
+        'رسائل دولية': values[6] if len(values) > 6 else 0,
+        'مكالمات تجوال': values[7] if len(values) > 7 else 0,
+        'رسائل تجوال': values[8] if len(values) > 8 else 0,
+        'إنترنت تجوال': values[9] if len(values) > 9 else 0,
+        'رسوم وتسويات اخري': values[10] if len(values) > 10 else 0,
+        'قيمة الضرائب': values[11] if len(values) > 11 else 0,
+        'إجمالي': values[12] if len(values) > 12 else (values[-1] if values else 0)
+    }
 
 def convert_df_to_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # تنسيق العربية في Excel
         df.to_excel(writer, index=False, sheet_name='البيانات')
-        
-        # تحسين التنسيق
-        worksheet = writer.sheets['البيانات']
-        from openpyxl.styles import Font, Alignment
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = min(max_length + 2, 50)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-        
-        # محاذاة النصوص لليمين
-        for row in worksheet.iter_rows():
-            for cell in row:
-                cell.alignment = Alignment(horizontal='right')
-    
     output.seek(0)
     return output
 
@@ -377,77 +305,51 @@ if uploaded_file is not None:
                 status_text.text("🔍 جاري استخراج البيانات من PDF...")
                 records = extract_etisalat_data(uploaded_file)
                 
-                progress_bar.progress(50)
-                
                 if records:
-                    df = pd.DataFrame(records)
+                    progress_bar.progress(50)
                     
-                    # ترتيب الأعمدة بشكل صحيح
+                    df = pd.DataFrame(records)
                     columns_order = [
                         'محمول', 'رسوم شهرية', 'رسوم الخدمات',
                         'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية',
                         'مكالمات دولية', 'رسائل دولية',
                         'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال',
-                        'رسوم وتسويات أخرى', 'قيمة الضرائب', 'إجمالي'
+                        'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي'
                     ]
-                    
-                    # التأكد من وجود جميع الأعمدة
-                    for col in columns_order:
-                        if col not in df.columns:
-                            df[col] = 0.0
-                    
                     df = df[columns_order]
-                    
                     progress_bar.progress(80)
                     
-                    # إحصائيات محسنة
                     st.markdown("### 📊 إحصائيات التحويل:")
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    total_records = len(df)
-                    total_positive = (df.select_dtypes(include=['number']) > 0).sum().sum()
-                    total_negative = (df.select_dtypes(include=['number']) < 0).sum().sum()
-                    grand_total = df['إجمالي'].sum()
-                    
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         st.markdown(f"""
                         <div class="stats-card">
-                            <h3>{total_records}</h3>
+                            <h3>{len(records)}</h3>
                             <p>عدد السجلات</p>
                         </div>
                         """, unsafe_allow_html=True)
-                    
                     with col2:
+                        positive_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v > 0)
                         st.markdown(f"""
                         <div class="stats-card">
-                            <h3>{total_positive}</h3>
+                            <h3>{positive_count}</h3>
                             <p>قيم موجبة</p>
                         </div>
                         """, unsafe_allow_html=True)
-                    
                     with col3:
+                        negative_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v < 0)
                         st.markdown(f"""
                         <div class="stats-card">
-                            <h3>{total_negative}</h3>
+                            <h3>{negative_count}</h3>
                             <p>تعويضات (سالب)</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    with col4:
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{grand_total:,.2f}</h3>
-                            <p>إجمالي المبالغ</p>
                         </div>
                         """, unsafe_allow_html=True)
                     
                     progress_bar.progress(100)
                     status_text.text("✅ تم التحويل بنجاح!")
+                    st.markdown("### 📋 معاينة البيانات (أول 10 سجلات):")
+                    st.dataframe(df.head(10), use_container_width=True)
                     
-                    st.markdown("### 📋 معاينة البيانات:")
-                    st.dataframe(df, use_container_width=True)
-                    
-                    # تنزيل الملف
                     excel_data = convert_df_to_excel(df)
                     date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
                     file_name = f'Hawelha_Telecom_{date_str}.xlsx'
@@ -455,24 +357,31 @@ if uploaded_file is not None:
                     st.markdown("""
                     <div class="success-box">
                         <h3>🎉 تم التحويل بنجاح!</h3>
-                        <p>اضغط على الزر أدناه لتنزيل ملف Excel</p>
+                        <p>اضغط على الزر أدناه لتنزيل الملف</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
                     st.download_button(
                         label="📥 تنزيل ملف Excel",
-                        data=excel_data.getvalue(),
+                        data=excel_data,
                         file_name=file_name,
-                        mime="application/vnd.openxmlformats-officerspreadsheetml.sheet"
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
                     )
                 else:
-                    st.error("""
-                    ⚠️ **لم يتم العثور على بيانات.** 
-                    تأكد من:
-                    - الملف يحتوي على جداول في صفحة 3 فما فوق
-                    - تنسيق الفاتورة مطابق لفواتير اتصالات
-                    - أرقام الموبايل موجودة بالشكل 01xxxxxxxxx
-                    """)
-                    
+                    st.error("⚠️ لم يتم العثور على أي سجلات. تأكد أن الملف يحتوي على جداول من صفحة 3")
             except Exception as e:
-                st.error(f"❌ خطأ في المعالجة: {
+                st.error(f"❌ حدث خطأ: {str(e)}")
+
+# ========== الفوتر ==========
+st.markdown("""
+<div class="footer">
+    <p style="margin: 0; font-size: 1.1rem;">
+        تم التطوير بواسطة 
+        <span style="color: #10b981; font-weight: 700;">Najat El Bakry</span>
+    </p>
+    <p style="margin: 0.5rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
+        Hawelha Telecom © 2026 - جميع الحقوق محفوظة
+    </p>
+</div>
+""", unsafe_allow_html=True)
