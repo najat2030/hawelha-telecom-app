@@ -4,46 +4,26 @@ import pandas as pd
 import re
 from datetime import datetime
 import io
-
-# ========== إخفاء عناصر Streamlit ==========
-hide_streamlit_style = """
-<style>
-#MainMenu {visibility: hidden !important;}
-footer {visibility: hidden !important;}
-header {visibility: hidden !important;}
-[data-testid="stToolbar"] {visibility: hidden !important;}
-[data-testid="stSidebar"] {display: none !important;}
-section[data-testid="stSidebar"] {display: none !important;}
-
-/* إخفاء العناصر بس مش المحتوى */
-.stApp > div:first-child {
-    visibility: hidden !important;
-    height: 0 !important;
-}
-
-/* إظهار المحتوى الرئيسي */
-.stApp > div:nth-child(2) {
-    visibility: visible !important;
-}
-
-/* إخفاء أي عناصر إضافية */
-.css-1d391kg, .css-1y4p8pa, .css-1lcbmhc, 
-.css-1avcm0n, .css-1wrcr25, .css-1cpxqw2,
-.css-145kmo2, .css-12w0qpk, .css-1r6slb0,
-.css-1jicfp2, .css-1l02zno, .css-1e5olcs {
-    display: none !important;
-}
-</style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+import base64
+import os
 
 # ========== إعدادات الصفحة ==========
 st.set_page_config(
-    page_title="Hawelha Telecom",
+    page_title="Hawelha Telecom | حوّلها تليكوم",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
+
+# ========== تحميل الشعار ==========
+def load_logo():
+    """تحميل الشعار إذا كان موجوداً"""
+    logo_path = 'static/logo.png'
+    if os.path.exists(logo_path):
+        with open(logo_path, 'rb') as f:
+            logo_data = base64.b64encode(f.read()).decode()
+            return logo_data
+    return None
 
 # ========== CSS مخصص ==========
 st.markdown("""
@@ -60,7 +40,31 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(5,150,105,0.3);
     }
     .main-header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
-    .main-header p { font-size: 1.3rem; margin: 1rem 0 0.5rem 0; opacity: 0.95; }
+    .main-header p { 
+        font-size: 1.3rem; 
+        margin: 1rem 0 0.5rem 0; 
+        opacity: 0.95; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .logo-container { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        margin-bottom: 1.5rem;
+    }
+    .logo-img { 
+        max-width: 95%; 
+        max-height: 250px; 
+        width: auto; 
+        height: auto;
+        border-radius: 15px; 
+        background: white; 
+        padding: 25px;
+        object-fit: contain;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
     .upload-box {
         background: #f0fdf4;
         border: 3px dashed #10b981;
@@ -104,22 +108,73 @@ st.markdown("""
         border-radius: 8px;
         width: 100%;
     }
+    .dataframe {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    .dataframe th {
+        text-align: right !important;
+    }
+    .dataframe td {
+        text-align: right !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ========== الهيدر ==========
-st.markdown("""
-<div class="main-header">
-    <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-    <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; line-height: 1.8;">
-        نظام تحويل فواتير اتصالات<br>من PDF إلى Excel
-    </p>
-    <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
-</div>
-""", unsafe_allow_html=True)
+# ========== الشريط الجانبي ==========
+with st.sidebar:
+    st.title("📋 قائمة التحويل")
+    
+    st.markdown("""
+    ### 📊 الأعمدة المستخرجة (14):
+    1. محمول
+    2. رسوم شهرية
+    3. رسوم الخدمات
+    4. مكالمات محلية
+    5. رسائل محلية
+    6. إنترنت محلية
+    7. مكالمات دولية
+    8. رسائل دولية
+    9. مكالمات تجوال
+    10. رسائل تجوال
+    11. إنترنت تجوال
+    12. رسوم وتسويات أخرى
+    13. قيمة الضرائب
+    14. إجمالي
+    """)
+    
+    st.markdown("---")
+    st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
+
+# ========== الهيدر مع الشعار ==========
+logo_data = load_logo()
+
+if logo_
+    st.markdown(f"""
+    <div class="main-header">
+        <div class="logo-container">
+            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+        </div>
+        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; white-space: nowrap;">
+            نظام تحويل فواتير اتصالات من PDF إلى Excel
+        </p>
+        <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div class="main-header">
+        <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
+        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; white-space: nowrap;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
+        <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ========== دوال المعالجة ==========
 def detect_language(text):
+    """كشف إذا كان النص عربي أو إنجليزي"""
+    if not text:
+        return 'english'
     arabic_pattern = r'[\u0600-\u06FF]'
     arabic_chars = len(re.findall(arabic_pattern, text))
     total_chars = len(text.replace(' ', ''))
@@ -129,14 +184,23 @@ def detect_language(text):
     return 'arabic' if arabic_ratio > 0.3 else 'english'
 
 def extract_etisalat_data(uploaded_file):
+    """استخراج البيانات من ملف PDF مع كشف اللغة"""
     all_records = []
     detected_lang = None
     
     with pdfplumber.open(uploaded_file) as pdf:
-        if len(pdf.pages) > 2:
-            first_page_text = pdf.pages[2].extract_text() or ''
-            detected_lang = detect_language(first_page_text)
+        # كشف اللغة من الصفحة الأولى التي تحتوي على جداول
+        for page_num in range(2, min(5, len(pdf.pages))):
+            page_text = pdf.pages[page_num].extract_text() or ''
+            if page_text.strip():
+                detected_lang = detect_language(page_text)
+                break
         
+        # إذا لم نكتشف اللغة، نفترض أنها إنجليزي
+        if detected_lang is None:
+            detected_lang = 'english'
+        
+        # معالجة كل الصفحات
         for page_num in range(2, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
@@ -148,6 +212,7 @@ def extract_etisalat_data(uploaded_file):
     return all_records, detected_lang
 
 def extract_values_from_row(row, is_arabic=True):
+    """استخراج القيم من الصف - بيعكس لو عربي"""
     values = []
     if not row:
         return values
@@ -164,12 +229,14 @@ def extract_values_from_row(row, is_arabic=True):
             except:
                 pass
     
+    # عكس القيم فقط لو الفاتورة عربي (لأن الأعمدة من اليمين لليسار)
     if is_arabic:
         values.reverse()
     
     return values
 
 def parse_etisalat_table(table, language='arabic'):
+    """معالجة الجدول حسب اللغة"""
     records = []
     if not table or len(table) < 2:
         return records
@@ -198,6 +265,12 @@ def parse_etisalat_table(table, language='arabic'):
     return records
 
 def create_record(phone, values):
+    """
+    توزيع القيم على الأعمدة بالترتيب الصحيح
+    الترتيب: محمول، رسوم شهرية، رسوم خدمات، مكالمات محلية، رسائل محلية، 
+             إنترنت محلي، مكالمات دولية، رسائل دولية، مكالمات تجوال، 
+             رسائل تجوال، إنترنت تجوال، رسوم وتسويات أخرى، قيمة الضرائب، إجمالي
+    """
     return {
         'محمول': phone,
         'رسوم شهرية': values[0] if len(values) > 0 else 0,
@@ -246,7 +319,9 @@ if uploaded_file is not None:
                 
                 if records:
                     progress_bar.progress(50)
-                    lang_text = "عربي" if lang == "arabic" else "إنجليزي"
+                    
+                    # عرض نوع الفاتورة المكتشف
+                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬🇧"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
