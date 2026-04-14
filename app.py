@@ -123,7 +123,7 @@ with st.sidebar:
     st.title("📋 قائمة التحويل")
     
     st.markdown("""
-    ### 📊 الأعمدة المستخرجة (14):
+    ### 📊 الأعمدة المستخرجة (13):
     1. رسوم شهرية
     2. رسوم الخدمات
     3. مكالمات محلية
@@ -145,7 +145,7 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_data:
+if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
@@ -163,87 +163,62 @@ else:
     """, unsafe_allow_html=True)
 
 # ========== دوال المعالجة ==========
-def detect_language(text):
-    """كشف إذا كان النص عربي أو إنجليزي"""
-    if not text:
-        return 'english'
-    arabic_pattern = r'[\u0600-\u06FF]'
-    arabic_chars = len(re.findall(arabic_pattern, text))
-    total_chars = len(text.replace(' ', ''))
-    if total_chars == 0:
-        return 'english'
-    arabic_ratio = arabic_chars / total_chars
-    return 'arabic' if arabic_ratio > 0.3 else 'english'
-
 def extract_etisalat_data(uploaded_file):
-    """استخراج البيانات من ملف PDF مع كشف اللغة"""
+    """استخراج البيانات من ملف PDF - فاتورة اتصالات مصر دائماً عربي"""
     all_records = []
-    detected_lang = None
     
     with pdfplumber.open(uploaded_file) as pdf:
-        # كشف اللغة من الصفحة الأولى التي تحتوي على جداول
-        for page_num in range(2, min(5, len(pdf.pages))):
-            page_text = pdf.pages[page_num].extract_text() or ''
-            if page_text.strip():
-                detected_lang = detect_language(page_text)
-                break
-        
-        # إذا لم نكتشف اللغة، نفترض أنها إنجليزي
-        if detected_lang is None:
-            detected_lang = 'english'
-        
-        # معالجة كل الصفحات
+        # معالجة كل الصفحات من صفحة 3 فما فوق
         for page_num in range(2, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
             if tables:
                 for table in tables:
-                    page_records = parse_etisalat_table(table, detected_lang)
+                    page_records = parse_etisalat_table(table)
                     all_records.extend(page_records)
     
-    return all_records, detected_lang
+    return all_records
 
-def extract_values_from_row(row, is_arabic=True):
+def extract_values_from_row(row):
     """
-    استخراج القيم من الصف حسب الترتيب الفعلي في الـ PDF
+    استخراج القيم من الصف - الأعمدة دائماً من اليمين لليسار
     
-    الـ PDF بيعرض الأعمدة من اليمين لليسار، لكن pdfplumber بيقراهم من اليسار لليمين
-    فبنقلبهم عشان نطابق الترتيب الصح
+    الترتيب في الـ PDF (من اليسار لليمين في pdfplumber):
+    إجمالي | قيمة الضرائب | رسوم وتسويات أخرى | إنترنت تجوال | رسائل تجوال | 
+    مكالمات تجوال | رسائل دولية | مكالمات دولية | إنترنت محلية | رسائل محلية | 
+    مكالمات محلية | رسوم الخدمات | رسوم شهرية
+    
+    فبنعكسهم عشان يبقوا من اليمين لليسار زي الـ PDF
     """
     values = []
     if not row:
         return values
     
-    # بنقرأ الخلايا من اليمين لليسار (عكس الترتيب اللي pdfplumber بيقراه)
+    # بنقرأ الخلايا بالعكس عشان نطابق الترتيب العربي
     for cell in reversed(row):
         if not cell:
             continue
         cell_text = str(cell).strip()
         
-        # استخراج الأرقام مع الإشارة (موجب أو سالب)
-        # بنستخدم pattern بيستخرج الأرقام مع الإشارة والفاصلة العشرية
-        numbers = re.findall(r'[-+]?\d*\.?\d+', cell_text)
+        # استخراج الأرقام مع الإشارة (سالب أو موجب)
+        # بنستخدم pattern بسيط يستخرج أي رقم مع الإشارة
+        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
         
         for num in numbers:
             try:
-                # تنظيف الرقم من أي أحرف زائدة
-                num_clean = num.strip()
-                val = float(num_clean)
-                # بنقبل كل القيم من غير فلترة (موجبة وسالبة)
-                if abs(val) <= 1000000:
-                    values.append(val)
+                val = float(num)
+                # بنقبل كل القيم من غير فلترة (سالب وموجب)
+                values.append(val)
             except:
                 pass
     
     return values
 
-def parse_etisalat_table(table, language='arabic'):
-    """معالجة الجدول حسب اللغة"""
+def parse_etisalat_table(table):
+    """معالجة جدول الفاتورة"""
     records = []
     if not table or len(table) < 2:
         return records
-    
-    is_arabic = (language == 'arabic')
     
     i = 0
     while i < len(table):
@@ -258,7 +233,7 @@ def parse_etisalat_table(table, language='arabic'):
             values = []
             if i + 1 < len(table):
                 values_row = table[i + 1]
-                values = extract_values_from_row(values_row, is_arabic)
+                values = extract_values_from_row(values_row)
             record = create_record(phone, values)
             records.append(record)
             i += 2
@@ -268,9 +243,9 @@ def parse_etisalat_table(table, language='arabic'):
 
 def create_record(phone, values):
     """
-    توزيع القيم على الأعمدة حسب الترتيب في الـ PDF (من اليمين لليسار):
+    توزيع القيم على الأعمدة حسب الترتيب في الـ PDF
     
-    الترتيب في الـ PDF:
+    بعد الـ reversed، القيم جاية بالترتيب ده (من اليمين لليسار):
     0: رسوم شهرية
     1: رسوم الخدمات
     2: مكالمات محلية
@@ -329,14 +304,10 @@ if uploaded_file is not None:
             
             try:
                 status_text.text("🔍 جاري استخراج البيانات من PDF...")
-                records, lang = extract_etisalat_data(uploaded_file)
+                records = extract_etisalat_data(uploaded_file)
                 
                 if records:
                     progress_bar.progress(50)
-                    
-                    # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬"
-                    st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
                     columns_order = [
