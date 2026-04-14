@@ -11,7 +11,8 @@ import os
 st.set_page_config(
     page_title="Hawelha Telecom | حوّلها تليكوم",
     page_icon="📊",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # ========== تحميل الشعار ==========
@@ -25,17 +26,20 @@ def load_logo():
 # ========== CSS ==========
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+* { font-family: 'Cairo', sans-serif; }
 .main-header {
-    background: linear-gradient(135deg, #059669, #10b981);
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: white;
-    padding: 2rem;
+    padding: 2.5rem;
     border-radius: 15px;
     text-align: center;
 }
 .upload-box {
-    border: 2px dashed #10b981;
-    padding: 2rem;
-    border-radius: 10px;
+    background: #f0fdf4;
+    border: 3px dashed #10b981;
+    border-radius: 15px;
+    padding: 3rem;
     text-align: center;
 }
 </style>
@@ -47,8 +51,8 @@ logo = load_logo()
 if logo:
     st.markdown(f"""
     <div class="main-header">
-        <img src="data:image/png;base64,{logo}" style="max-height:180px;">
-        <p>تحويل فواتير الاتصالات من PDF إلى Excel</p>
+        <img src="data:image/png;base64,{logo}" style="max-height:200px;">
+        <p>تحويل فواتير اتصالات من PDF إلى Excel</p>
     </div>
     """, unsafe_allow_html=True)
 else:
@@ -66,73 +70,87 @@ st.markdown("""
 
 uploaded_file = st.file_uploader("", type=["pdf"])
 
-# ================== ENGINE ==================
+# ================== SMART ENGINE ==================
 
 def extract_etisalat_data(file):
-    records = []
+    all_records = []
 
     with pdfplumber.open(file) as pdf:
-        for page_num in range(2, len(pdf.pages)):
-            page = pdf.pages[page_num]
+        for i in range(2, len(pdf.pages)):
+            text = pdf.pages[i].extract_text()
+            if text:
+                all_records.extend(parse_text_page(text))
 
-            words = page.extract_words(use_text_flow=True)
+    return all_records
 
-            # استخراج الأرقام
-            numbers = [
-                w for w in words
-                if re.match(r'-?\d+\.\d+', w['text'])
-            ]
 
-            # استخراج أرقام الموبايل
-            phones = [
-                w for w in words
-                if re.match(r'01[0125]\d{8}', w['text'])
-            ]
+def parse_text_page(text):
+    records = []
+    lines = text.split('\n')
+    current_phone = None
 
-            for phone in phones:
-                phone_y = phone['top']
+    for line in lines:
 
-                # الأرقام في نفس السطر
-                row_numbers = [
-                    n for n in numbers
-                    if abs(n['top'] - phone_y) < 5
-                ]
+        phone = re.search(r'(01[0125]\d{8})', line)
+        if phone:
+            current_phone = phone.group(1)
+            continue
 
-                # ترتيب عربي (يمين → شمال)
-                row_numbers = sorted(row_numbers, key=lambda x: -x['x0'])
+        numbers = extract_numbers(line)
 
-                values = []
-                for n in row_numbers:
-                    try:
-                        values.append(float(n['text']))
-                    except:
-                        pass
+        if current_phone and len(numbers) >= 5:
+            values = normalize(numbers)
+            record = create_record(current_phone, values)
+            record = validate(record)
 
-                record = create_record(phone['text'], values)
-                record = validate(record)
-
-                records.append(record)
+            records.append(record)
+            current_phone = None
 
     return records
 
-# ================== RECORD ==================
+
+def extract_numbers(text):
+    nums = re.findall(r'-?\d+\.\d+', text)
+
+    if not nums:
+        chunks = re.findall(r'[-\d\.]{8,}', text)
+        for c in chunks:
+            nums.extend(re.findall(r'-?\d+\.\d{2}', c))
+
+    return nums
+
+
+def normalize(nums):
+    clean = []
+    for n in nums:
+        try:
+            clean.append(float(n))
+        except:
+            pass
+    return clean
+
 
 def create_record(phone, values):
-    keys = [
-        'رسوم شهرية','رسوم الخدمات','مكالمات محلية','رسائل محلية',
-        'إنترنت محلية','مكالمات دولية','رسائل دولية',
-        'مكالمات تجوال','رسائل تجوال','إنترنت تجوال',
-        'رسوم وتسويات اخري','قيمة الضرائب','إجمالي'
-    ]
+    def g(i):
+        return values[i] if i < len(values) else 0
 
-    record = {'محمول': phone}
+    return {
+        'محمول': phone,
+        'رسوم شهرية': g(0),
+        'رسوم الخدمات': g(1),
+        'مكالمات محلية': g(2),
+        'رسائل محلية': g(3),
+        'إنترنت محلية': g(4),
+        'مكالمات دولية': g(5),
+        'رسائل دولية': g(6),
+        'مكالمات تجوال': g(7),
+        'رسائل تجوال': g(8),
+        'إنترنت تجوال': g(9),
+        'رسوم وتسويات اخري': g(10),
+        'قيمة الضرائب': g(11),
+        'إجمالي': g(12) if len(values) > 12 else (values[-1] if values else 0)
+    }
 
-    for i, key in enumerate(keys):
-        record[key] = values[i] if i < len(values) else 0
-
-    return record
-
-# ================== VALIDATION ==================
 
 def validate(record):
     total_calc = sum([
@@ -149,7 +167,6 @@ def validate(record):
 
     return record
 
-# ================== EXCEL ==================
 
 def to_excel(df):
     buffer = io.BytesIO()
@@ -192,4 +209,4 @@ if uploaded_file:
                 )
 
             else:
-                st.error("❌ لم يتم استخراج بيانات")
+                st.error("لم يتم استخراج بيانات")
