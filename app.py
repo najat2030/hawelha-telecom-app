@@ -11,377 +11,149 @@ import os
 st.set_page_config(
     page_title="Hawelha Telecom | حوّلها تليكوم",
     page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# ========== تحميل الشعار ==========
-def load_logo():
-    """تحميل الشعار إذا كان موجوداً"""
-    logo_path = 'static/logo.png'
-    if os.path.exists(logo_path):
-        with open(logo_path, 'rb') as f:
-            logo_data = base64.b64encode(f.read()).decode()
-            return logo_data
-    return None
-
-# ========== CSS مخصص ==========
+# ========== CSS مخصص للتنسيق ==========
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
     * { font-family: 'Cairo', sans-serif; }
     .main-header {
         background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        color: white;
-        padding: 2.5rem 2rem;
-        border-radius: 15px;
-        text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 15px rgba(5,150,105,0.3);
+        color: white; padding: 2rem; border-radius: 15px;
+        text-align: center; margin-bottom: 2rem;
     }
-    .main-header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
-    .main-header p { 
-        font-size: 1.3rem; 
-        margin: 1rem 0 0.5rem 0; 
-        opacity: 0.95; 
-    }
-    .logo-container { 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        margin-bottom: 1.5rem;
-    }
-    .logo-img { 
-        max-width: 95%; 
-        max-height: 250px; 
-        width: auto; 
-        height: auto;
-        border-radius: 15px; 
-        background: white; 
-        padding: 25px;
-        object-fit: contain;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    .upload-box {
-        background: #f0fdf4;
-        border: 3px dashed #10b981;
-        border-radius: 15px;
-        padding: 3rem 2rem;
-        text-align: center;
-    }
-    .stats-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-right: 4px solid #059669;
-    }
-    .stats-card h3 { color: #059669; margin: 0 0 0.5rem 0; font-size: 2rem; }
-    .stats-card p { color: #6b7280; margin: 0; font-size: 0.9rem; }
     .footer {
-        background: #1e293b;
-        color: white;
-        text-align: center;
-        padding: 2rem;
-        margin-top: 3rem;
-        border-radius: 10px;
-    }
-    .success-box {
-        background: #dcfce7;
-        border: 2px solid #16a34a;
-        border-radius: 10px;
-        padding: 1.5rem;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    .stButton>button {
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1.1rem;
-        font-weight: 600;
-        border-radius: 8px;
-        width: 100%;
-    }
-    .dataframe {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-    .dataframe th {
-        text-align: right !important;
-    }
-    .dataframe td {
-        text-align: right !important;
+        background: #1e293b; color: white; text-align: center;
+        padding: 1rem; margin-top: 3rem; border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ========== الشريط الجانبي ==========
-with st.sidebar:
-    st.title("📋 قائمة التحويل")
-    
-    st.markdown("""
-    ### 📊 الأعمدة المستخرجة (14):
-    1. محمول
-    2. رسوم شهرية
-    3. رسوم الخدمات
-    4. مكالمات محلية
-    5. رسائل محلية
-    6. إنترنت محلية
-    7. مكالمات دولية
-    8. رسائل دولية
-    9. مكالمات تجوال
-    10. رسائل تجوال
-    11. إنترنت تجوال
-    12. رسوم وتسويات أخرى
-    13. قيمة الضرائب
-    14. إجمالي
-    """)
-    
-    st.markdown("---")
-    st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
+# ========== دوال المعالجة المنطقية ==========
 
-# ========== الهيدر مع الشعار ==========
-logo_data = load_logo()
+def extract_numbers_from_row(row):
+    """استخراج الأرقام من الصف مع معالجة الإشارة السالبة والترتيب العربي"""
+    found_values = []
+    if not row: return found_values
 
-if logo_data:
-    st.markdown(f"""
-    <div class="main-header">
-        <div class="logo-container">
-            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
-        </div>
-        <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-    <div class="main-header">
-        <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-        <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ========== دوال المعالجة ==========
-def extract_etisalat_data(uploaded_file):
-    """استخراج البيانات من ملف PDF"""
-    all_records = []
-    
-    with pdfplumber.open(uploaded_file) as pdf:
-        # معالجة كل الصفحات من صفحة 3 فما فوق
-        for page_num in range(2, len(pdf.pages)):
-            page = pdf.pages[page_num]
-            tables = page.extract_tables()
-            if tables:
-                for table in tables:
-                    page_records = parse_etisalat_table(table)
-                    all_records.extend(page_records)
-    
-    return all_records
-
-def extract_values_from_row(row):
-    """
-    استخراج القيم من الصف
-    
-    الـ PDF العربي الأعمدة فيه من اليمين لليسار
-    لكن pdfplumber بيقرا الخلايا من اليسار لليمين
-    فبنعكس الترتيب عشان نطابق الإكسل
-    """
-    values = []
-    if not row:
-        return values
-    
-    # بنقرأ الخلايا بالعكس عشان نطابق الترتيب العربي (من اليمين لليسار)
-    for cell in reversed(row):
-        if not cell:
-            continue
-        cell_text = str(cell).strip()
+    for cell in row:
+        if cell is None: continue
+        # تنظيف النص ومعالجة السالب في نهاية الرقم (مثل 10.5-)
+        val_str = str(cell).strip().replace(',', '')
+        if val_str.endswith('-'):
+            val_str = '-' + val_str[:-1]
         
-        # استخراج الأرقام مع الإشارة (سالب أو موجب)
-        # بنستخدم pattern بيحفظ الإشارة
-        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
-        
-        for num in numbers:
+        # البحث عن الأرقام
+        nums = re.findall(r'(-?\d+\.?\d*)', val_str)
+        for n in nums:
             try:
-                val = float(num)
-                # بنقبل كل القيم من غير فلترة (سالب وموجب)
-                # ده هيحافظ على إشارة السالب (-) زي ما هي
-                values.append(val)
-            except:
-                pass
-    
-    return values
+                found_values.append(float(n))
+            except: pass
+    return found_values
 
 def parse_etisalat_table(table):
-    """معالجة جدول الفاتورة"""
+    """معالجة الجدول: الهاتف في صف والمبالغ في الصف التالي"""
     records = []
-    if not table or len(table) < 2:
-        return records
+    if not table: return records
     
     i = 0
     while i < len(table):
-        row = table[i]
-        if not row:
-            i += 1
-            continue
-        row_text = ' '.join([str(cell) if cell else '' for cell in row])
-        phone_match = re.search(r'(01[0125]\d{8})', row_text)
+        # تحويل الصف لنص للبحث عن رقم الموبايل
+        current_row_text = " ".join([str(c) for c in table[i] if c])
+        phone_match = re.search(r'(01[0125]\d{8})', current_row_text)
+        
         if phone_match:
             phone = phone_match.group(1)
-            values = []
+            # المبالغ في الصف التالي (i + 1)
             if i + 1 < len(table):
-                values_row = table[i + 1]
-                values = extract_values_from_row(values_row)
-            record = create_record(phone, values)
-            records.append(record)
-            i += 2
+                next_row = table[i + 1]
+                # استخراج الأرقام (تظهر من اليسار لليمين في PDF)
+                raw_values = extract_numbers_from_row(next_row)
+                
+                # عكس الترتيب لأن الجدول RTL (من اليمين لليسار)
+                # لكي تصبح "الرسوم الشهرية" هي أول عنصر و"الإجمالي" هو آخر عنصر
+                v = raw_values[::-1]
+                
+                # ملء القيم الناقصة بأصفار لضمان عدم حدوث خطأ
+                v = v + [0.0] * (14 - len(v))
+                
+                record = {
+                    'محمول': phone,
+                    'رسوم شهرية': v[0],
+                    'رسوم الخدمات': v[1],
+                    'مكالمات محلية': v[2],
+                    'رسائل محلية': v[3],
+                    'إنترنت محلية': v[4],
+                    'مكالمات دولية': v[5],
+                    'رسائل دولية': v[6],
+                    'مكالمات تجوال': v[7],
+                    'رسائل تجوال': v[8],
+                    'إنترنت تجوال': v[9],
+                    'رسوم وتسويات اخري': v[10],
+                    'قيمة الضرائب': v[11],
+                    'إجمالي': v[12] if len(raw_values) > 1 else 0.0
+                }
+                # تصحيح الإجمالي: غالباً ما يكون هو أول قيمة قرأها الكود (أقصى اليسار)
+                if len(raw_values) > 0:
+                    record['إجمالي'] = raw_values[0]
+
+                records.append(record)
+                i += 2 # تخطي صف المبالغ
+            else:
+                i += 1
         else:
             i += 1
     return records
 
-def create_record(phone, values):
-    """
-    توزيع القيم على الأعمدة حسب الترتيب في الإكسل
-    
-    الترتيب المطلوب (نفس الإكسل):
-    0: رسوم شهرية
-    1: رسوم الخدمات
-    2: مكالمات محلية
-    3: رسائل محلية
-    4: إنترنت محلية
-    5: مكالمات دولية
-    6: رسائل دولية
-    7: مكالمات تجوال
-    8: رسائل تجوال
-    9: إنترنت تجوال
-    10: رسوم وتسويات أخرى
-    11: قيمة الضرائب
-    12: إجمالي
-    """
-    return {
-        'محمول': phone,
-        'رسوم شهرية': values[0] if len(values) > 0 else 0,
-        'رسوم الخدمات': values[1] if len(values) > 1 else 0,
-        'مكالمات محلية': values[2] if len(values) > 2 else 0,
-        'رسائل محلية': values[3] if len(values) > 3 else 0,
-        'إنترنت محلية': values[4] if len(values) > 4 else 0,
-        'مكالمات دولية': values[5] if len(values) > 5 else 0,
-        'رسائل دولية': values[6] if len(values) > 6 else 0,
-        'مكالمات تجوال': values[7] if len(values) > 7 else 0,
-        'رسائل تجوال': values[8] if len(values) > 8 else 0,
-        'إنترنت تجوال': values[9] if len(values) > 9 else 0,
-        'رسوم وتسويات اخري': values[10] if len(values) > 10 else 0,
-        'قيمة الضرائب': values[11] if len(values) > 11 else 0,
-        'إجمالي': values[12] if len(values) > 12 else (values[-1] if values else 0)
-    }
+# ========== واجهة المستخدم Streamlit ==========
 
-def convert_df_to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='البيانات')
-    output.seek(0)
-    return output
+st.markdown('<div class="main-header"><h1>📊 Hawelha Telecom | حوّلها تليكوم</h1><p>استخراج ذكي لفواتير اتصالات المزدوجة</p></div>', unsafe_allow_html=True)
 
-# ========== المنطقة الرئيسية ==========
-st.markdown("""
-<div class="upload-box">
-    <h2>📁 ارفع ملف الفاتورة (PDF)</h2>
-    <p>يدعم الملفات الكبيرة - يبدأ الاستخراج من صفحة 3</p>
-</div>
-""", unsafe_allow_html=True)
+uploaded_file = st.file_uploader("ارفع ملف الفاتورة PDF (يبدأ الاستخراج من صفحة 3)", type=['pdf'])
 
-uploaded_file = st.file_uploader(" ", type=['pdf'], label_visibility="collapsed")
-
-if uploaded_file is not None:
-    st.success(f"✅ تم رفع الملف: **{uploaded_file.name}**")
-    
-    if st.button("🚀 بدء التحويل الآن"):
-        with st.spinner('⏳ جاري معالجة الملف...'):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+if uploaded_file:
+    if st.button("🚀 بدء المعالجة الآن"):
+        all_records = []
+        try:
+            with pdfplumber.open(uploaded_file) as pdf:
+                # البدء من صفحة 3 (Index 2)
+                for page in pdf.pages[2:]:
+                    # استخراج الجداول (استخدام استراتيجية النصوص لتحسين الدقة)
+                    table = page.extract_table({
+                        "vertical_strategy": "text",
+                        "horizontal_strategy": "text"
+                    })
+                    if table:
+                        all_records.extend(parse_etisalat_table(table))
             
-            try:
-                status_text.text("🔍 جاري استخراج البيانات من PDF...")
-                records = extract_etisalat_data(uploaded_file)
+            if all_records:
+                df = pd.DataFrame(all_records)
+                # ترتيب الأعمدة
+                cols = ['محمول', 'رسوم شهرية', 'رسوم الخدمات', 'مكالمات محلية', 'رسائل محلية', 
+                        'إنترنت محلية', 'مكالمات دولية', 'رسائل دولية', 'مكالمات تجوال', 
+                        'رسائل تجوال', 'إنترنت تجوال', 'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي']
+                df = df[cols]
                 
-                if records:
-                    progress_bar.progress(50)
-                    
-                    df = pd.DataFrame(records)
-                    columns_order = [
-                        'محمول', 'رسوم شهرية', 'رسوم الخدمات',
-                        'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية',
-                        'مكالمات دولية', 'رسائل دولية',
-                        'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال',
-                        'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي'
-                    ]
-                    df = df[columns_order]
-                    progress_bar.progress(80)
-                    
-                    st.markdown("### 📊 إحصائيات التحويل:")
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{len(records)}</h3>
-                            <p>عدد السجلات</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with col2:
-                        positive_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v > 0)
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{positive_count}</h3>
-                            <p>قيم موجبة</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with col3:
-                        negative_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v < 0)
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{negative_count}</h3>
-                            <p>تعويضات (سالب)</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    progress_bar.progress(100)
-                    status_text.text("✅ تم التحويل بنجاح!")
-                    st.markdown("### 📋 معاينة البيانات (أول 10 سجلات):")
-                    st.dataframe(df.head(10), use_container_width=True)
-                    
-                    excel_data = convert_df_to_excel(df)
-                    date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    file_name = f'Hawelha_Telecom_{date_str}.xlsx'
-                    
-                    st.markdown("""
-                    <div class="success-box">
-                        <h3>🎉 تم التحويل بنجاح!</h3>
-                        <p>اضغط على الزر أدناه لتنزيل الملف</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.download_button(
-                        label="📥 تنزيل ملف Excel",
-                        data=excel_data,
-                        file_name=file_name,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
-                else:
-                    st.error("⚠️ لم يتم العثور على أي سجلات. تأكد أن الملف يحتوي على جداول من صفحة 3")
-            except Exception as e:
-                st.error(f"❌ حدث خطأ: {str(e)}")
+                st.success(f"✅ تم استخراج {len(df)} سجل بنجاح!")
+                st.dataframe(df, use_container_width=True)
+                
+                # تحويل إلى Excel
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Data')
+                
+                st.download_button(
+                    label="📥 تحميل ملف Excel",
+                    data=output.getvalue(),
+                    file_name=f"Telecom_Extract_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.warning("⚠️ لم يتم العثور على بيانات في الصفحات المحددة.")
+        except Exception as e:
+            st.error(f"❌ حدث خطأ: {e}")
 
-# ========== الفوتر ==========
-st.markdown("""
-<div class="footer">
-    <p style="margin: 0; font-size: 1.1rem;">
-        تم التطوير بواسطة 
-        <span style="color: #10b981; font-weight: 700;">Najat El Bakry</span>
-    </p>
-    <p style="margin: 0.5rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
-        Hawelha Telecom © 2026 - جميع الحقوق محفوظة
-    </p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="footer"><p>Hawelha Telecom © 2026 - نظام استخراج البيانات المتقدم</p></div>', unsafe_allow_html=True)
