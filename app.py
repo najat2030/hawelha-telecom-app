@@ -86,6 +86,9 @@ st.markdown("""
         font-size: 1.3rem; 
         margin: 1rem 0 0.5rem 0; 
         opacity: 0.95; 
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .logo-container { 
         display: flex; 
@@ -175,8 +178,8 @@ if logo_data:
         <div class="logo-container">
             <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
-        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; line-height: 1.8; text-align: center;">
-            نظام تحويل فواتير اتصالات<br>من PDF إلى Excel
+        <p style="font-size: 1.4rem; margin: 1.5rem 0 0.5rem 0; font-weight: 600; white-space: nowrap;">
+            نظام تحويل فواتير اتصالات من PDF إلى Excel
         </p>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
@@ -185,9 +188,7 @@ else:
     st.markdown("""
     <div class="main-header">
         <h1>🏢 Hawelha Telecom | حوّلها تليكوم</h1>
-        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; line-height: 1.8; text-align: center;">
-            نظام تحويل فواتير اتصالات<br>من PDF إلى Excel
-        </p>
+        <p style="font-size: 1.4rem; margin: 1rem 0 0.5rem 0; white-space: nowrap;">نظام تحويل فواتير اتصالات من PDF إلى Excel</p>
         <p style="font-size: 1.1rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
     """, unsafe_allow_html=True)
@@ -208,10 +209,12 @@ def extract_etisalat_data(uploaded_file):
     detected_lang = None
     
     with pdfplumber.open(uploaded_file) as pdf:
+        # كشف اللغة من الصفحة الأولى
         if len(pdf.pages) > 2:
             first_page_text = pdf.pages[2].extract_text() or ''
             detected_lang = detect_language(first_page_text)
         
+        # معالجة كل الصفحات
         for page_num in range(2, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
@@ -240,6 +243,7 @@ def extract_values_from_row(row, is_arabic=True):
             except:
                 pass
     
+    # عكس القيم فقط لو الفاتورة عربي
     if is_arabic:
         values.reverse()
     
@@ -275,7 +279,9 @@ def parse_etisalat_table(table, language='arabic'):
     return records
 
 def create_record(phone, values):
-    """توزيع القيم على الأعمدة"""
+    """
+    توزيع القيم على الأعمدة
+    """
     return {
         'محمول': phone,
         'رسوم شهرية': values[0] if len(values) > 0 else 0,
@@ -324,6 +330,8 @@ if uploaded_file is not None:
                 
                 if records:
                     progress_bar.progress(50)
+                    
+                    # عرض نوع الفاتورة
                     lang_text = "عربي" if lang == "arabic" else "إنجليزي"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
