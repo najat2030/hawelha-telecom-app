@@ -109,19 +109,12 @@ st.markdown("""
         direction: rtl !important;
         text-align: right !important;
     }
-    .dataframe th {
-        text-align: right !important;
-    }
-    .dataframe td {
-        text-align: right !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ========== الشريط الجانبي ==========
 with st.sidebar:
     st.title("📋 قائمة التحويل")
-    
     st.markdown("""
     ### 📊 الأعمدة المستخرجة (14):
     1. محمول
@@ -139,18 +132,18 @@ with st.sidebar:
     13. قيمة الضرائب
     14. إجمالي
     """)
-    
     st.markdown("---")
     st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
 
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_
+# تصحيح الخطأ: تم إضافة : وتعديل اسم المتغير
+if logo_data:
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
-            <img class="logo-img" src="image/png;base64,{logo_data}" alt="Hawelha Logo">
+            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
@@ -165,35 +158,23 @@ else:
 
 # ========== دوال المعالجة ==========
 def detect_language(text):
-    """كشف إذا كان النص عربي أو إنجليزي"""
-    if not text:
-        return 'english'
+    if not text: return 'english'
     arabic_pattern = r'[\u0600-\u06FF]'
     arabic_chars = len(re.findall(arabic_pattern, text))
     total_chars = len(text.replace(' ', ''))
-    if total_chars == 0:
-        return 'english'
-    arabic_ratio = arabic_chars / total_chars
-    return 'arabic' if arabic_ratio > 0.3 else 'english'
+    if total_chars == 0: return 'english'
+    return 'arabic' if (arabic_chars / total_chars) > 0.3 else 'english'
 
 def extract_etisalat_data(uploaded_file):
-    """استخراج البيانات من ملف PDF مع كشف اللغة"""
     all_records = []
     detected_lang = None
-    
     with pdfplumber.open(uploaded_file) as pdf:
-        # كشف اللغة من الصفحة الأولى التي تحتوي على جداول
         for page_num in range(2, min(5, len(pdf.pages))):
             page_text = pdf.pages[page_num].extract_text() or ''
             if page_text.strip():
                 detected_lang = detect_language(page_text)
                 break
-        
-        # إذا لم نكتشف اللغة، نفترض أنها إنجليزي
-        if detected_lang is None:
-            detected_lang = 'english'
-        
-        # معالجة كل الصفحات
+        if detected_lang is None: detected_lang = 'english'
         for page_num in range(2, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
@@ -201,21 +182,14 @@ def extract_etisalat_data(uploaded_file):
                 for table in tables:
                     page_records = parse_etisalat_table(table, detected_lang)
                     all_records.extend(page_records)
-    
     return all_records, detected_lang
 
 def extract_values_from_row(row, is_arabic=True):
-    """استخراج القيم من الصف - بيقرا بالعكس لو عربي"""
     values = []
-    if not row:
-        return values
-    
-    # لو عربي، بنقرأ الخلايا من الآخر للأول (عكس الترتيب)
+    if not row: return values
     cells_to_process = reversed(row) if is_arabic else row
-    
     for cell in cells_to_process:
-        if not cell:
-            continue
+        if not cell: continue
         cell_text = str(cell).strip()
         numbers = re.findall(r'-?\d+\.?\d*', cell_text)
         for num in numbers:
@@ -223,19 +197,13 @@ def extract_values_from_row(row, is_arabic=True):
                 val = float(num)
                 if val != 0 and abs(val) <= 1000000:
                     values.append(val)
-            except:
-                pass
-    
+            except: pass
     return values
 
 def parse_etisalat_table(table, language='arabic'):
-    """معالجة الجدول حسب اللغة"""
     records = []
-    if not table or len(table) < 2:
-        return records
-    
+    if not table or len(table) < 2: return records
     is_arabic = (language == 'arabic')
-    
     i = 0
     while i < len(table):
         row = table[i]
@@ -250,20 +218,12 @@ def parse_etisalat_table(table, language='arabic'):
             if i + 1 < len(table):
                 values_row = table[i + 1]
                 values = extract_values_from_row(values_row, is_arabic)
-            record = create_record(phone, values)
-            records.append(record)
+            records.append(create_record(phone, values))
             i += 2
-        else:
-            i += 1
+        else: i += 1
     return records
 
 def create_record(phone, values):
-    """
-    توزيع القيم على الأعمدة بالترتيب الصحيح
-    الترتيب: محمول، رسوم شهرية، رسوم خدمات، مكالمات محلية، رسائل محلية، 
-             إنترنت محلي، مكالمات دولية، رسائل دولية، مكالمات تجوال، 
-             رسائل تجوال، إنترنت تجوال، رسوم وتسويات أخرى، قيمة الضرائب، إجمالي
-    """
     return {
         'محمول': phone,
         'رسوم شهرية': values[0] if len(values) > 0 else 0,
@@ -300,97 +260,27 @@ uploaded_file = st.file_uploader(" ", type=['pdf'], label_visibility="collapsed"
 
 if uploaded_file is not None:
     st.success(f"✅ تم رفع الملف: **{uploaded_file.name}**")
-    
     if st.button("🚀 بدء التحويل الآن"):
         with st.spinner('⏳ جاري معالجة الملف...'):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
             try:
-                status_text.text("🔍 جاري استخراج البيانات من PDF...")
                 records, lang = extract_etisalat_data(uploaded_file)
-                
                 if records:
-                    progress_bar.progress(50)
-                    
-                    # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬🇧"
-                    st.info(f"📄 نوع الفاتورة: {lang_text}")
-                    
                     df = pd.DataFrame(records)
-                    columns_order = [
-                        'محمول', 'رسوم شهرية', 'رسوم الخدمات',
-                        'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية',
-                        'مكالمات دولية', 'رسائل دولية',
-                        'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال',
-                        'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي'
-                    ]
-                    df = df[columns_order]
-                    progress_bar.progress(80)
+                    cols = ['محمول', 'رسوم شهرية', 'رسوم الخدمات', 'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية', 'مكالمات دولية', 'رسائل دولية', 'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال', 'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي']
+                    df = df[cols]
                     
-                    st.markdown("### 📊 إحصائيات التحويل:")
+                    st.info(f"📄 نوع الفاتورة: {'عربي 🇸🇦' if lang == 'arabic' else 'إنجليزي 🇬🇧'}")
+                    
                     col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{len(records)}</h3>
-                            <p>عدد السجلات</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with col2:
-                        positive_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v > 0)
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{positive_count}</h3>
-                            <p>قيم موجبة</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    with col3:
-                        negative_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v < 0)
-                        st.markdown(f"""
-                        <div class="stats-card">
-                            <h3>{negative_count}</h3>
-                            <p>تعويضات (سالب)</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+                    col1.markdown(f'<div class="stats-card"><h3>{len(records)}</h3><p>عدد السجلات</p></div>', unsafe_allow_html=True)
                     
-                    progress_bar.progress(100)
-                    status_text.text("✅ تم التحويل بنجاح!")
-                    st.markdown("### 📋 معاينة البيانات (أول 10 سجلات):")
                     st.dataframe(df.head(10), use_container_width=True)
                     
                     excel_data = convert_df_to_excel(df)
-                    date_str = datetime.now().strftime('%Y%m%d_%H%M%S')
-                    file_name = f'Hawelha_Telecom_{date_str}.xlsx'
-                    
-                    st.markdown("""
-                    <div class="success-box">
-                        <h3>🎉 تم التحويل بنجاح!</h3>
-                        <p>اضغط على الزر أدناه لتنزيل الملف</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    st.download_button(
-                        label="📥 تنزيل ملف Excel",
-                        data=excel_data,
-                        file_name=file_name,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
+                    st.download_button("📥 تنزيل ملف Excel", data=excel_data, file_name=f"Hawelha_{datetime.now().strftime('%Y%m%d')}.xlsx", use_container_width=True)
                 else:
-                    st.error("⚠️ لم يتم العثور على أي سجلات. تأكد أن الملف يحتوي على جداول من صفحة 3")
+                    st.error("⚠️ لم يتم العثور على سجلات.")
             except Exception as e:
                 st.error(f"❌ حدث خطأ: {str(e)}")
 
-# ========== الفوتر ==========
-st.markdown("""
-<div class="footer">
-    <p style="margin: 0; font-size: 1.1rem;">
-        تم التطوير بواسطة 
-        <span style="color: #10b981; font-weight: 700;">Najat El Bakry</span>
-    </p>
-    <p style="margin: 0.5rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
-        Hawelha Telecom © 2026 - جميع الحقوق محفوظة
-    </p>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("""<div class="footer"><p>تم التطوير بواسطة <span style="color: #10b981; font-weight: 700;">Najat El Bakry</span></p></div>""", unsafe_allow_html=True)
