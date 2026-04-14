@@ -123,25 +123,24 @@ with st.sidebar:
     st.title("📋 قائمة التحويل")
     
     st.markdown("""
-    ### 📊 الأعمدة المستخرجة (14):
-    1. محمول
-    2. رسوم شهرية
-    3. رسوم الخدمات
-    4. مكالمات محلية
-    5. رسائل محلية
-    6. إنترنت محلية
-    7. مكالمات دولية
-    8. رسائل دولية
-    9. مكالمات تجوال
-    10. رسائل تجوال
-    11. إنترنت تجوال
-    12. رسوم وتسويات أخرى
-    13. قيمة الضرائب
-    14. إجمالي
+    ### 📊 ترتيب القيم (Index):
+    1. رسوم شهرية (45.5)
+    2. رسوم الخدمات
+    3. مكالمات محلية
+    4. رسائل محلية
+    5. إنترنت محلية
+    6. مكالمات دولية
+    7. رسائل دولية
+    8. مكالمات تجوال
+    9. رسائل تجوال
+    10. إنترنت تجوال
+    11. رسوم وتسويات أخرى
+    12. قيمة الضرائب
+    13. إجمالي
     """)
     
     st.markdown("---")
-    st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
+    st.info("💡 **ملاحظة:** يبدأ التوزيع من القيمة الثانية (index 1)")
 
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
@@ -165,54 +164,63 @@ else:
 
 # ========== دوال المعالجة ==========
 
-# ترتيب الأعمدة النهائي المطلوب في الإكسل (نفس ترتيب الملف المرفق من اليمين لليسار بصرياً)
-# في الباندا نرتبها من اليسار لليمين
-FINAL_COLUMNS_ORDER = [
-    'محمول', 
-    'إجمالي', 
-    'قيمة الضرائب', 
-    'رسوم وتسويات اخري', 
-    'إنترنت تجوال', 
-    'رسائل تجوال', 
-    'مكالمات تجوال', 
-    'رسائل دولية', 
-    'مكالمات دولية', 
-    'إنترنت محلية', 
-    'رسائل محلية', 
-    'مكالمات محلية', 
-    'رسوم الخدمات', 
-    'رسوم شهرية'
-]
-
-def extract_numbers_from_text(text):
+def extract_values_from_row(row):
     """
-    استخراج جميع الأرقام (الموجبة والسالبة والعشرية) من نص معين
-    يحافظ على ترتيب الأرقام كما تظهر في النص (من اليسار لليمين)
+    استخراج جميع الأرقام من الصف
     """
-    if not text:
-        return []
+    values = []
+    if not row:
+        return values
     
-    # Pattern لاستخراج الأرقام مع الإشارة السالبة والكسور العشرية
-    # يدعم: 45.5, -99.58, 780, 0, -49, إلخ
-    pattern = r'-?\d+\.?\d*'
-    matches = re.findall(pattern, str(text))
+    # دمج محتوى الخلايا في نص واحد
+    row_text = ' '.join([str(cell).strip() for cell in row if cell])
     
-    numbers = []
-    for match in matches:
+    # استخراج الأرقام
+    numbers = re.findall(r'-?\d+\.?\d*', row_text)
+    
+    for num in numbers:
         try:
-            num = float(match)
-            numbers.append(num)
-        except (ValueError, TypeError):
-            continue
+            val = float(num)
+            values.append(val)
+        except:
+            pass
     
-    return numbers
+    return values
+
+def create_record(phone, values):
+    """
+    توزيع القيم على الأعمدة حسب الترتيب المطلوب (يبدأ من index 1)
+    """
+    
+    # دالة مساعدة لجلب القيمة بأمان لمنع الأخطاء
+    def get_val(index):
+        if len(values) > index:
+            return values[index]
+        return 0.0
+
+    return {
+        'محمول': phone,
+        'رسوم شهرية': get_val(1),          # القيم [1]
+        'رسوم الخدمات': get_val(2),        # القيم [2]
+        'مكالمات محلية': get_val(3),       # القيم [3]
+        'رسائل محلية': get_val(4),         # القيم [4]
+        'إنترنت محلية': get_val(5),        # القيم [5]
+        'مكالمات دولية': get_val(6),       # القيم [6]
+        'رسائل دولية': get_val(7),         # القيم [7]
+        'مكالمات تجوال': get_val(8),       # القيم [8]
+        'رسائل تجوال': get_val(9),         # القيم [9]
+        'إنترنت تجوال': get_val(10),       # القيم [10]
+        'رسوم وتسويات اخري': get_val(11),  # القيم [11]
+        'قيمة الضرائب': get_val(12),       # القيم [12]
+        'إجمالي': get_val(13)              # القيم [13]
+    }
 
 def extract_etisalat_data(uploaded_file):
     """استخراج البيانات من ملف PDF"""
     all_records = []
     
     with pdfplumber.open(uploaded_file) as pdf:
-        # البدء من صفحة 3 (الفهارس تبدأ من 0)
+        # البدء من صفحة 3
         start_page = 2
         if len(pdf.pages) <= start_page:
             start_page = 0
@@ -238,36 +246,26 @@ def extract_etisalat_data(uploaded_file):
                     # دمج محتويات الصف للبحث عن رقم الهاتف
                     row_text = ' '.join([str(cell).strip() for cell in row if cell])
                     
-                    # البحث عن رقم محمول مصري (010, 011, 012, 015)
+                    # البحث عن رقم محمول مصري
                     phone_match = re.search(r'(01[0125]\d{8})', row_text)
                     
                     if phone_match:
                         phone_number = phone_match.group(1)
                         
-                        # البحث عن صف القيم (عادة يكون الصف التالي)
-                        values = []
+                        # استخراج القيم من الصف
+                        # نفترض أن القيم في نفس الصف أو الصف التالي
+                        values = extract_values_from_row(row)
                         
-                        # محاولة استخراج القيم من الصف الحالي أولاً
-                        current_values = extract_numbers_from_text(row_text)
-                        
-                        # ثم من الصف التالي إذا وجد
-                        if i + 1 < len(table):
+                        # إذا لم نجد قيم كافية في نفس الصف، نحاول في الصف التالي
+                        if len(values) < 13 and i + 1 < len(table):
                             next_row = table[i + 1]
-                            next_row_text = ' '.join([str(c).strip() for c in next_row if c])
-                            next_values = extract_numbers_from_text(next_row_text)
-                            
-                            # نختار الصف الذي يحتوي على عدد أكبر من القيم (عادة 13 قيمة)
-                            if len(next_values) >= 10:
+                            next_values = extract_values_from_row(next_row)
+                            if len(next_values) >= len(values):
                                 values = next_values
-                                i += 1  # تخطي الصف التالي لأنه تم استخدامه
-                            elif len(current_values) >= 10:
-                                values = current_values
-                        else:
-                            if len(current_values) >= 10:
-                                values = current_values
+                                i += 1
                         
-                        # إنشاء سجل إذا وجدنا قيم
-                        if values:
+                        # إنشاء سجل إذا وجدنا قيم كافية (على الأقل حتى الإجمالي)
+                        if len(values) > 1:
                             record = create_record(phone_number, values)
                             all_records.append(record)
                     
@@ -275,68 +273,34 @@ def extract_etisalat_data(uploaded_file):
     
     return all_records
 
-def create_record(phone, values):
-    """
-    توزيع القيم المستخرجة على الأعمدة المطلوبة
-    
-    ملاحظة هامة:
-    - القيم في الـ PDF تأتي مرتبة بصرياً من اليمين لليسار (عربي)
-    - لكن عند استخراجها بـ pdfplumber تكون من اليسار لليمين
-    - لذلك نقوم بعكس القائمة لمطابقة ترتيب أعمدة الإكسل
-    
-    ترتيب القيم في الـ PDF (بعد الاستخراج وعكسها):
-    0: إجمالي
-    1: قيمة الضرائب
-    2: رسوم وتسويات اخري
-    3: إنترنت تجوال
-    4: رسائل تجوال
-    5: مكالمات تجوال
-    6: رسائل دولية
-    7: مكالمات دولية
-    8: إنترنت محلية
-    9: رسائل محلية
-    10: مكالمات محلية
-    11: رسوم الخدمات
-    12: رسوم شهرية
-    """
-    
-    # عكس القيم لمطابقة الترتيب العربي (من اليمين لليسار)
-    reversed_values = values[::-1] if values else []
-    
-    # دالة مساعدة لجلب القيمة بأمان مع التعامل مع القيم الفارغة
-    def get_value(index, default=0.0):
-        if index < len(reversed_values):
-            val = reversed_values[index]
-            return val if val is not None else default
-        return default
-    
-    record = {
-        'محمول': phone,
-        'إجمالي': get_value(0),
-        'قيمة الضرائب': get_value(1),
-        'رسوم وتسويات اخري': get_value(2),
-        'إنترنت تجوال': get_value(3),
-        'رسائل تجوال': get_value(4),
-        'مكالمات تجوال': get_value(5),
-        'رسائل دولية': get_value(6),
-        'مكالمات دولية': get_value(7),
-        'إنترنت محلية': get_value(8),
-        'رسائل محلية': get_value(9),
-        'مكالمات محلية': get_value(10),
-        'رسوم الخدمات': get_value(11),
-        'رسوم شهرية': get_value(12),
-    }
-    
-    return record
-
 def convert_df_to_excel(df):
     """تحويل البيانات إلى ملف Excel قابل للتنزيل"""
     output = io.BytesIO()
     
+    # ترتيب الأعمدة النهائي المطلوب
+    columns_order = [
+        'محمول',
+        'إجمالي',
+        'قيمة الضرائب',
+        'رسوم وتسويات اخري',
+        'إنترنت تجوال',
+        'رسائل تجوال',
+        'مكالمات تجوال',
+        'رسائل دولية',
+        'مكالمات دولية',
+        'إنترنت محلية',
+        'رسائل محلية',
+        'مكالمات محلية',
+        'رسوم الخدمات',
+        'رسوم شهرية'
+    ]
+    
+    # التأكد من ترتيب الأعمدة
+    existing_cols = [col for col in columns_order if col in df.columns]
+    df = df[existing_cols]
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # التأكد من ترتيب الأعمدة كما في النموذج المطلوب
-        existing_cols = [col for col in FINAL_COLUMNS_ORDER if col in df.columns]
-        df.to_excel(writer, index=False, sheet_name='البيانات', columns=existing_cols)
+        df.to_excel(writer, index=False, sheet_name='البيانات')
     
     output.seek(0)
     return output
@@ -345,7 +309,7 @@ def convert_df_to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 ارفع ملف الفاتورة (PDF)</h2>
-    <p>يدعم الملفات الكبيرة - يبدأ الاستخراج من صفحة 3</p>
+    <p>سيقوم النظام بتوزيع القيم حسب الترتيب: رسوم شهرية (index 1) -> إجمالي (index 13)</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -355,12 +319,12 @@ if uploaded_file is not None:
     st.success(f"✅ تم رفع الملف: **{uploaded_file.name}**")
     
     if st.button("🚀 بدء التحويل الآن"):
-        with st.spinner('⏳ جاري معالجة الملف...'):
+        with st.spinner('⏳ جاري معالجة الملف وتوزيع القيم...'):
             progress_bar = st.progress(0)
             status_text = st.empty()
             
             try:
-                status_text.text("🔍 جاري استخراج البيانات من PDF...")
+                status_text.text("🔍 جاري استخراج البيانات...")
                 records = extract_etisalat_data(uploaded_file)
                 
                 if records:
@@ -368,8 +332,28 @@ if uploaded_file is not None:
                     
                     df = pd.DataFrame(records)
                     
-                    # ترتيب الأعمدة حسب النموذج المطلوب
-                    df = df.reindex(columns=FINAL_COLUMNS_ORDER)
+                    # ترتيب الأعمدة في الجدول
+                    columns_order_display = [
+                        'محمول',
+                        'إجمالي',
+                        'قيمة الضرائب',
+                        'رسوم وتسويات اخري',
+                        'إنترنت تجوال',
+                        'رسائل تجوال',
+                        'مكالمات تجوال',
+                        'رسائل دولية',
+                        'مكالمات دولية',
+                        'إنترنت محلية',
+                        'رسائل محلية',
+                        'مكالمات محلية',
+                        'رسوم الخدمات',
+                        'رسوم شهرية'
+                    ]
+                    
+                    # إعادة ترتيب الأعمدة
+                    existing_cols = [col for col in columns_order_display if col in df.columns]
+                    df = df[existing_cols]
+                    
                     progress_bar.progress(80)
                     
                     st.markdown("### 📊 إحصائيات التحويل:")
@@ -382,19 +366,19 @@ if uploaded_file is not None:
                         </div>
                         """, unsafe_allow_html=True)
                     with col2:
-                        positive_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v > 0)
+                        total_sum = df['إجمالي'].sum() if 'إجمالي' in df.columns else 0
                         st.markdown(f"""
                         <div class="stats-card">
-                            <h3>{positive_count}</h3>
-                            <p>قيم موجبة</p>
+                            <h3>{total_sum:,.2f}</h3>
+                            <p>إجمالي الفواتير</p>
                         </div>
                         """, unsafe_allow_html=True)
                     with col3:
-                        negative_count = sum(1 for r in records for v in r.values() if isinstance(v, (int, float)) and v < 0)
+                        monthly_sum = df['رسوم شهرية'].sum() if 'رسوم شهرية' in df.columns else 0
                         st.markdown(f"""
                         <div class="stats-card">
-                            <h3>{negative_count}</h3>
-                            <p>تعويضات (سالب)</p>
+                            <h3>{monthly_sum:,.2f}</h3>
+                            <p>إجمالي الشهرية</p>
                         </div>
                         """, unsafe_allow_html=True)
                     
