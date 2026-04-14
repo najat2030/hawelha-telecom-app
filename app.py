@@ -131,13 +131,12 @@ with st.sidebar:
     5. إنترنت محلية
     6. مكالمات دولية
     7. رسائل دولية
-    8. إنترنت دولية
-    9. مكالمات تجوال
-    10. رسائل تجوال
-    11. إنترنت تجوال
-    12. رسوم وتسويات أخرى
-    13. قيمة الضرائب
-    14. إجمالي
+    8. مكالمات تجوال
+    9. رسائل تجوال
+    10. إنترنت تجوال
+    11. رسوم وتسويات أخرى
+    12. قيمة الضرائب
+    13. إجمالي
     """)
     
     st.markdown("---")
@@ -206,31 +205,31 @@ def extract_etisalat_data(uploaded_file):
 
 def extract_values_from_row(row, is_arabic=True):
     """
-    استخراج القيم من الصف - حسب ترتيب الأعمدة في الـ PDF
+    استخراج القيم من الصف حسب الترتيب الفعلي في الـ PDF
     
-    الترتيب في الـ PDF (من اليمين لليسار):
-    رسوم شهرية | رسوم الخدمات | مكالمات محلية | رسائل محلية | إنترنت محلية |
-    مكالمات دولية | رسائل دولية | إنترنت دولية | مكالمات تجوال | رسائل تجوال |
-    إنترنت تجوال | رسوم وتسويات أخرى | قيمة الضرائب | إجمالي
+    الـ PDF بيعرض الأعمدة من اليمين لليسار، لكن pdfplumber بيقراهم من اليسار لليمين
+    فبنقلبهم عشان نطابق الترتيب الصح
     """
     values = []
     if not row:
         return values
     
-    # بنقرأ الخلايا من اليمين لليسار (عكس الترتيب) عشان نطابق الـ PDF العربي
-    # وبنحافظ على إشارة السالب (-) زي ما هي
+    # بنقرأ الخلايا من اليمين لليسار (عكس الترتيب اللي pdfplumber بيقراه)
     for cell in reversed(row):
         if not cell:
             continue
         cell_text = str(cell).strip()
         
         # استخراج الأرقام مع الإشارة (موجب أو سالب)
-        # بنستخدم regex اللي بيحفظ الإشارة
-        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
+        # بنستخدم pattern بيستخرج الأرقام مع الإشارة والفاصلة العشرية
+        numbers = re.findall(r'[-+]?\d*\.?\d+', cell_text)
+        
         for num in numbers:
             try:
-                val = float(num)
-                # بنقبل كل القيم (موجبة وسالبة) من غير فلترة
+                # تنظيف الرقم من أي أحرف زائدة
+                num_clean = num.strip()
+                val = float(num_clean)
+                # بنقبل كل القيم من غير فلترة (موجبة وسالبة)
                 if abs(val) <= 1000000:
                     values.append(val)
             except:
@@ -269,9 +268,9 @@ def parse_etisalat_table(table, language='arabic'):
 
 def create_record(phone, values):
     """
-    توزيع القيم على الأعمدة بالترتيب الصحيح حسب الـ PDF
+    توزيع القيم على الأعمدة حسب الترتيب في الـ PDF (من اليمين لليسار):
     
-    الترتيب (من اليمين لليسار في الـ PDF):
+    الترتيب في الـ PDF:
     0: رسوم شهرية
     1: رسوم الخدمات
     2: مكالمات محلية
@@ -279,13 +278,12 @@ def create_record(phone, values):
     4: إنترنت محلية
     5: مكالمات دولية
     6: رسائل دولية
-    7: إنترنت دولية (إنترنت تجوال في بعض الفواتير)
-    8: مكالمات تجوال
-    9: رسائل تجوال
-    10: إنترنت تجوال
-    11: رسوم وتسويات أخرى
-    12: قيمة الضرائب
-    13: إجمالي
+    7: مكالمات تجوال
+    8: رسائل تجوال
+    9: إنترنت تجوال
+    10: رسوم وتسويات أخرى
+    11: قيمة الضرائب
+    12: إجمالي
     """
     return {
         'محمول': phone,
@@ -296,13 +294,12 @@ def create_record(phone, values):
         'إنترنت محلية': values[4] if len(values) > 4 else 0,
         'مكالمات دولية': values[5] if len(values) > 5 else 0,
         'رسائل دولية': values[6] if len(values) > 6 else 0,
-        'إنترنت دولية': values[7] if len(values) > 7 else 0,
-        'مكالمات تجوال': values[8] if len(values) > 8 else 0,
-        'رسائل تجوال': values[9] if len(values) > 9 else 0,
-        'إنترنت تجوال': values[10] if len(values) > 10 else 0,
-        'رسوم وتسويات اخري': values[11] if len(values) > 11 else 0,
-        'قيمة الضرائب': values[12] if len(values) > 12 else 0,
-        'إجمالي': values[13] if len(values) > 13 else (values[-1] if values else 0)
+        'مكالمات تجوال': values[7] if len(values) > 7 else 0,
+        'رسائل تجوال': values[8] if len(values) > 8 else 0,
+        'إنترنت تجوال': values[9] if len(values) > 9 else 0,
+        'رسوم وتسويات اخري': values[10] if len(values) > 10 else 0,
+        'قيمة الضرائب': values[11] if len(values) > 11 else 0,
+        'إجمالي': values[12] if len(values) > 12 else (values[-1] if values else 0)
     }
 
 def convert_df_to_excel(df):
@@ -338,14 +335,14 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬🇧"
+                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
                     columns_order = [
                         'محمول', 'رسوم شهرية', 'رسوم الخدمات',
                         'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية',
-                        'مكالمات دولية', 'رسائل دولية', 'إنترنت دولية',
+                        'مكالمات دولية', 'رسائل دولية',
                         'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال',
                         'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي'
                     ]
