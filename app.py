@@ -203,51 +203,39 @@ def extract_values_from_row(row):
     return values
     
 def parse_etisalat_table(table):
-    """معالجة جدول الفاتورة"""
+    """قراءة كل صف كنص كامل واستخراج البيانات منه"""
     records = []
-    if not table or len(table) < 2:
-        return records
-    
-    i = 0
-    while i < len(table):
-        row = table[i]
+
+    for row in table:
         if not row:
-            i += 1
             continue
+
+        # نحول الصف لنص واحد
         row_text = ' '.join([str(cell) if cell else '' for cell in row])
+
+        # نبحث عن رقم الموبايل
         phone_match = re.search(r'(01[0125]\d{8})', row_text)
+
         if phone_match:
             phone = phone_match.group(1)
-            values = []
-            if i + 1 < len(table):
-                values_row = table[i + 1]
-                values = extract_values_from_row(values_row)
-            record = create_record(phone, values)
-            records.append(record)
-            i += 2
-        else:
-            i += 1
-    return records
 
+            # استخراج كل الأرقام من نفس الصف
+            numbers = re.findall(r'-?\d+\.?\d*', row_text)
+
+            values = []
+            for num in numbers:
+                try:
+                    values.append(float(num))
+                except:
+                    pass
+
+            # نحذف رقم الموبايل لو ظهر ضمن الأرقام
+            values = [v for v in values if str(int(v)) != phone]
+
+            records.append(create_record(phone, values))
+
+    return records
 def create_record(phone, values):
-    """
-    توزيع القيم على الأعمدة حسب الترتيب في الإكسل
-    
-    الترتيب المطلوب (نفس الإكسل):
-    0: رسوم شهرية
-    1: رسوم الخدمات
-    2: مكالمات محلية
-    3: رسائل محلية
-    4: إنترنت محلية
-    5: مكالمات دولية
-    6: رسائل دولية
-    7: مكالمات تجوال
-    8: رسائل تجوال
-    9: إنترنت تجوال
-    10: رسوم وتسويات أخرى
-    11: قيمة الضرائب
-    12: إجمالي
-    """
     return {
         'محمول': phone,
         'رسوم شهرية': values[0] if len(values) > 0 else 0,
@@ -264,13 +252,6 @@ def create_record(phone, values):
         'قيمة الضرائب': values[11] if len(values) > 11 else 0,
         'إجمالي': values[12] if len(values) > 12 else (values[-1] if values else 0)
     }
-
-def convert_df_to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='البيانات')
-    output.seek(0)
-    return output
 
 # ========== المنطقة الرئيسية ==========
 st.markdown("""
