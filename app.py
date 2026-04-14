@@ -182,37 +182,26 @@ def extract_etisalat_data(uploaded_file):
 
 def extract_values_from_row(row):
     """
-    استخراج القيم من الصف
-    
-    الـ PDF العربي الأعمدة فيه من اليمين لليسار
-    لكن pdfplumber بيقرا الخلايا من اليسار لليمين
-    فبنعكس الترتيب عشان نطابق الإكسل
+    استخراج القيم بنفس ترتيب الفاتورة (زي Excel Text to Columns)
     """
-    values = []
     if not row:
-        return values
-    
-    # بنقرأ الخلايا بالعكس عشان نطابق الترتيب العربي (من اليمين لليسار)
-    for cell in reversed(row):
-        if not cell:
-            continue
-        cell_text = str(cell).strip()
-        
-        # استخراج الأرقام مع الإشارة (سالب أو موجب)
-        # بنستخدم pattern بيحفظ الإشارة
-        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
-        
-        for num in numbers:
-            try:
-                val = float(num)
-                # بنقبل كل القيم من غير فلترة (سالب وموجب)
-                # ده هيحافظ على إشارة السالب (-) زي ما هي
-                values.append(val)
-            except:
-                pass
-    
-    return values
+        return []
 
+    # نجمع الصف كله في نص واحد
+    row_text = ' '.join([str(cell) if cell else '' for cell in row])
+
+    # نطلع كل الأرقام بالترتيب
+    numbers = re.findall(r'-?\d+\.?\d*', row_text)
+
+    values = []
+    for num in numbers:
+        try:
+            values.append(float(num))
+        except:
+            pass
+
+    return values
+    
 def parse_etisalat_table(table):
     """معالجة جدول الفاتورة"""
     records = []
