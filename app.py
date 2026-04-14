@@ -164,122 +164,180 @@ else:
     """, unsafe_allow_html=True)
 
 # ========== دوال المعالجة ==========
+
+# ترتيب الأعمدة النهائي المطلوب في الإكسل (نفس ترتيب الملف المرفق من اليمين لليسار بصرياً)
+# في الباندا نرتبها من اليسار لليمين
+FINAL_COLUMNS_ORDER = [
+    'محمول', 
+    'إجمالي', 
+    'قيمة الضرائب', 
+    'رسوم وتسويات اخري', 
+    'إنترنت تجوال', 
+    'رسائل تجوال', 
+    'مكالمات تجوال', 
+    'رسائل دولية', 
+    'مكالمات دولية', 
+    'إنترنت محلية', 
+    'رسائل محلية', 
+    'مكالمات محلية', 
+    'رسوم الخدمات', 
+    'رسوم شهرية'
+]
+
+def extract_numbers_from_text(text):
+    """
+    استخراج جميع الأرقام (الموجبة والسالبة والعشرية) من نص معين
+    يحافظ على ترتيب الأرقام كما تظهر في النص (من اليسار لليمين)
+    """
+    if not text:
+        return []
+    
+    # Pattern لاستخراج الأرقام مع الإشارة السالبة والكسور العشرية
+    # يدعم: 45.5, -99.58, 780, 0, -49, إلخ
+    pattern = r'-?\d+\.?\d*'
+    matches = re.findall(pattern, str(text))
+    
+    numbers = []
+    for match in matches:
+        try:
+            num = float(match)
+            numbers.append(num)
+        except (ValueError, TypeError):
+            continue
+    
+    return numbers
+
 def extract_etisalat_data(uploaded_file):
     """استخراج البيانات من ملف PDF"""
     all_records = []
     
     with pdfplumber.open(uploaded_file) as pdf:
-        # معالجة كل الصفحات من صفحة 3 فما فوق
-        for page_num in range(2, len(pdf.pages)):
+        # البدء من صفحة 3 (الفهارس تبدأ من 0)
+        start_page = 2
+        if len(pdf.pages) <= start_page:
+            start_page = 0
+            
+        for page_num in range(start_page, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
-            if tables:
-                for table in tables:
-                    page_records = parse_etisalat_table(table)
-                    all_records.extend(page_records)
+            
+            if not tables:
+                continue
+                
+            for table in tables:
+                if not table or len(table) < 2:
+                    continue
+                    
+                i = 0
+                while i < len(table):
+                    row = table[i]
+                    if not row:
+                        i += 1
+                        continue
+                    
+                    # دمج محتويات الصف للبحث عن رقم الهاتف
+                    row_text = ' '.join([str(cell).strip() for cell in row if cell])
+                    
+                    # البحث عن رقم محمول مصري (010, 011, 012, 015)
+                    phone_match = re.search(r'(01[0125]\d{8})', row_text)
+                    
+                    if phone_match:
+                        phone_number = phone_match.group(1)
+                        
+                        # البحث عن صف القيم (عادة يكون الصف التالي)
+                        values = []
+                        
+                        # محاولة استخراج القيم من الصف الحالي أولاً
+                        current_values = extract_numbers_from_text(row_text)
+                        
+                        # ثم من الصف التالي إذا وجد
+                        if i + 1 < len(table):
+                            next_row = table[i + 1]
+                            next_row_text = ' '.join([str(c).strip() for c in next_row if c])
+                            next_values = extract_numbers_from_text(next_row_text)
+                            
+                            # نختار الصف الذي يحتوي على عدد أكبر من القيم (عادة 13 قيمة)
+                            if len(next_values) >= 10:
+                                values = next_values
+                                i += 1  # تخطي الصف التالي لأنه تم استخدامه
+                            elif len(current_values) >= 10:
+                                values = current_values
+                        else:
+                            if len(current_values) >= 10:
+                                values = current_values
+                        
+                        # إنشاء سجل إذا وجدنا قيم
+                        if values:
+                            record = create_record(phone_number, values)
+                            all_records.append(record)
+                    
+                    i += 1
     
     return all_records
 
-def extract_values_from_row(row):
-    """
-    استخراج القيم من الصف
-    
-    الـ PDF العربي الأعمدة فيه من اليمين لليسار
-    لكن pdfplumber بيقرا الخلايا من اليسار لليمين
-    فبنعكس الترتيب عشان نطابق الإكسل
-    """
-    values = []
-    if not row:
-        return values
-    
-    # بنقرأ الخلايا بالعكس عشان نطابق الترتيب العربي (من اليمين لليسار)
-    for cell in reversed(row):
-        if not cell:
-            continue
-        cell_text = str(cell).strip()
-        
-        # استخراج الأرقام مع الإشارة (سالب أو موجب)
-        # بنستخدم pattern بيحفظ الإشارة
-        numbers = re.findall(r'-?\d+\.?\d*', cell_text)
-        
-        for num in numbers:
-            try:
-                val = float(num)
-                # بنقبل كل القيم من غير فلترة (سالب وموجب)
-                # ده هيحافظ على إشارة السالب (-) زي ما هي
-                values.append(val)
-            except:
-                pass
-    
-    return values
-
-def parse_etisalat_table(table):
-    """معالجة جدول الفاتورة"""
-    records = []
-    if not table or len(table) < 2:
-        return records
-    
-    i = 0
-    while i < len(table):
-        row = table[i]
-        if not row:
-            i += 1
-            continue
-        row_text = ' '.join([str(cell) if cell else '' for cell in row])
-        phone_match = re.search(r'(01[0125]\d{8})', row_text)
-        if phone_match:
-            phone = phone_match.group(1)
-            values = []
-            if i + 1 < len(table):
-                values_row = table[i + 1]
-                values = extract_values_from_row(values_row)
-            record = create_record(phone, values)
-            records.append(record)
-            i += 2
-        else:
-            i += 1
-    return records
-
 def create_record(phone, values):
     """
-    توزيع القيم على الأعمدة حسب الترتيب في الإكسل
+    توزيع القيم المستخرجة على الأعمدة المطلوبة
     
-    الترتيب المطلوب (نفس الإكسل):
-    0: رسوم شهرية
-    1: رسوم الخدمات
-    2: مكالمات محلية
-    3: رسائل محلية
-    4: إنترنت محلية
-    5: مكالمات دولية
+    ملاحظة هامة:
+    - القيم في الـ PDF تأتي مرتبة بصرياً من اليمين لليسار (عربي)
+    - لكن عند استخراجها بـ pdfplumber تكون من اليسار لليمين
+    - لذلك نقوم بعكس القائمة لمطابقة ترتيب أعمدة الإكسل
+    
+    ترتيب القيم في الـ PDF (بعد الاستخراج وعكسها):
+    0: إجمالي
+    1: قيمة الضرائب
+    2: رسوم وتسويات اخري
+    3: إنترنت تجوال
+    4: رسائل تجوال
+    5: مكالمات تجوال
     6: رسائل دولية
-    7: مكالمات تجوال
-    8: رسائل تجوال
-    9: إنترنت تجوال
-    10: رسوم وتسويات أخرى
-    11: قيمة الضرائب
-    12: إجمالي
+    7: مكالمات دولية
+    8: إنترنت محلية
+    9: رسائل محلية
+    10: مكالمات محلية
+    11: رسوم الخدمات
+    12: رسوم شهرية
     """
-    return {
+    
+    # عكس القيم لمطابقة الترتيب العربي (من اليمين لليسار)
+    reversed_values = values[::-1] if values else []
+    
+    # دالة مساعدة لجلب القيمة بأمان مع التعامل مع القيم الفارغة
+    def get_value(index, default=0.0):
+        if index < len(reversed_values):
+            val = reversed_values[index]
+            return val if val is not None else default
+        return default
+    
+    record = {
         'محمول': phone,
-        'رسوم شهرية': values[0] if len(values) > 0 else 0,
-        'رسوم الخدمات': values[1] if len(values) > 1 else 0,
-        'مكالمات محلية': values[2] if len(values) > 2 else 0,
-        'رسائل محلية': values[3] if len(values) > 3 else 0,
-        'إنترنت محلية': values[4] if len(values) > 4 else 0,
-        'مكالمات دولية': values[5] if len(values) > 5 else 0,
-        'رسائل دولية': values[6] if len(values) > 6 else 0,
-        'مكالمات تجوال': values[7] if len(values) > 7 else 0,
-        'رسائل تجوال': values[8] if len(values) > 8 else 0,
-        'إنترنت تجوال': values[9] if len(values) > 9 else 0,
-        'رسوم وتسويات اخري': values[10] if len(values) > 10 else 0,
-        'قيمة الضرائب': values[11] if len(values) > 11 else 0,
-        'إجمالي': values[12] if len(values) > 12 else (values[-1] if values else 0)
+        'إجمالي': get_value(0),
+        'قيمة الضرائب': get_value(1),
+        'رسوم وتسويات اخري': get_value(2),
+        'إنترنت تجوال': get_value(3),
+        'رسائل تجوال': get_value(4),
+        'مكالمات تجوال': get_value(5),
+        'رسائل دولية': get_value(6),
+        'مكالمات دولية': get_value(7),
+        'إنترنت محلية': get_value(8),
+        'رسائل محلية': get_value(9),
+        'مكالمات محلية': get_value(10),
+        'رسوم الخدمات': get_value(11),
+        'رسوم شهرية': get_value(12),
     }
+    
+    return record
 
 def convert_df_to_excel(df):
+    """تحويل البيانات إلى ملف Excel قابل للتنزيل"""
     output = io.BytesIO()
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='البيانات')
+        # التأكد من ترتيب الأعمدة كما في النموذج المطلوب
+        existing_cols = [col for col in FINAL_COLUMNS_ORDER if col in df.columns]
+        df.to_excel(writer, index=False, sheet_name='البيانات', columns=existing_cols)
+    
     output.seek(0)
     return output
 
@@ -309,14 +367,9 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     df = pd.DataFrame(records)
-                    columns_order = [
-                        'محمول', 'رسوم شهرية', 'رسوم الخدمات',
-                        'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية',
-                        'مكالمات دولية', 'رسائل دولية',
-                        'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال',
-                        'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي'
-                    ]
-                    df = df[columns_order]
+                    
+                    # ترتيب الأعمدة حسب النموذج المطلوب
+                    df = df.reindex(columns=FINAL_COLUMNS_ORDER)
                     progress_bar.progress(80)
                     
                     st.markdown("### 📊 إحصائيات التحويل:")
