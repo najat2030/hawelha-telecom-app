@@ -146,11 +146,11 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-if logo_data:
+if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
-            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+            <img class="logo-img" src="image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
@@ -205,15 +205,14 @@ def extract_etisalat_data(uploaded_file):
     return all_records, detected_lang
 
 def extract_values_from_row(row, is_arabic=True):
-    """استخراج القيم من الصف - بيقرا بالعكس لو عربي"""
+    """استخراج القيم من الصف - دايماً من اليمين لليسار"""
     values = []
     if not row:
         return values
     
-    # لو عربي، بنقرأ الخلايا من الآخر للأول (عكس الترتيب)
-    cells_to_process = reversed(row) if is_arabic else row
-    
-    for cell in cells_to_process:
+    # دايماً بنقرأ من اليمين لليسار (عكس الترتيب)
+    # سواء عربي أو إنجليزي
+    for cell in reversed(row):
         if not cell:
             continue
         cell_text = str(cell).strip()
@@ -314,7 +313,7 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     # عرض نوع الفاتورة المكتشف
-                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬🇧"
+                    lang_text = "عربي 🇸🇦" if lang == "arabic" else "إنجليزي 🇬"
                     st.info(f"📄 نوع الفاتورة: {lang_text}")
                     
                     df = pd.DataFrame(records)
