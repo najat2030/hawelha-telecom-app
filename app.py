@@ -40,16 +40,11 @@ html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
 
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
-    padding: 40px 20px;
+    padding: 40px;
     border-radius: 18px;
     text-align: center;
     color: white;
     margin-bottom: 25px;
-}
-
-.header img {
-    width: 420px;
-    max-width: 95%;
 }
 
 .upload-box {
@@ -63,7 +58,8 @@ html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
-    font-weight: 700;
+    padding: 12px;
+    border-radius: 10px;
     width: 100%;
 }
 
@@ -81,79 +77,70 @@ html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
 if logo:
     st.markdown(f"""
     <div class="header">
-        <img src="data:image/png;base64,{logo}">
+        <img src="data:image/png;base64,{logo}" width="300">
         <h1>Hawelha Telecom</h1>
-        <p>PDF → Excel Automation System</p>
     </div>
     """, unsafe_allow_html=True)
 
 # ================= HELPERS =================
-def normalize(t):
-    return (t or "").replace("−","-").replace("–","-")
+def normalize(text):
+    return (text or "").replace("−","-").replace("–","-")
 
-PHONE_PATTERN = re.compile(r'(01[0125]\d{8})')
-
-# 🔥 FIX نهائي للسالب
+# 🔥 الحل النهائي للسالب
 def extract_numbers(text):
     text = normalize(text)
 
-    # توحيد كل أشكال السالب
-    text = re.sub(r'(\d+)\s*-\b', r'-\1', text)
-    text = re.sub(r'(\d+)\s*-\s', r'-\1', text)
-    text = re.sub(r'-\s*(\d+)', r'-\1', text)
+    matches = re.findall(r'(-?\s*\d+(?:\.\d+)?\s*-?)', text)
 
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+    numbers = []
+    for m in matches:
+        m = m.replace(" ", "")
+        if m.endswith("-"):
+            val = -float(m[:-1])
+        else:
+            val = float(m)
+        numbers.append(val)
 
-    return [float(x) for x in numbers]
+    return numbers
 
 # ================= PARSER =================
-def parse_file(file):
+def parse_ar(file):
     records = []
 
     with pdfplumber.open(file) as pdf:
         total_pages = len(pdf.pages)
 
         progress = st.progress(0)
-        status = st.empty()
 
-        for idx, page in enumerate(pdf.pages[2:]):
+        for p, page in enumerate(pdf.pages[2:], start=2):
 
-            text_page = page.extract_text()
-            if not text_page or "01" not in text_page:
-                continue
+            progress.progress(int((p / total_pages) * 100))
 
-            percent = int((idx / max(total_pages-2, 1)) * 100)
-            progress.progress(percent)
-            status.text(f"📄 صفحة {idx+3} من {total_pages}")
-
-            tables = page.extract_tables()
-            if not tables:
-                continue
-
-            for table in tables:
+            for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
+
                     row = table[i]
                     if not row:
                         i += 1
                         continue
 
                     text = normalize(" ".join([str(c) for c in row if c]))
-                    phone_match = PHONE_PATTERN.search(text)
 
-                    if phone_match:
-                        phone = phone_match.group(1)
+                    phone = re.search(r'(01[0125]\d{8})', text)
+
+                    if phone:
+                        phone = phone.group(1)
 
                         vals = extract_numbers(text)
 
                         if i+1 < len(table):
-                            next_text = " ".join([str(c) for c in table[i+1] if c])
-                            nxt = extract_numbers(next_text)
+                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
 
-                        vals.reverse()
+                        vals = vals[::-1]
 
                         def g(i): return vals[i] if i < len(vals) else 0
 
@@ -176,9 +163,6 @@ def parse_file(file):
 
                     i += 1
 
-        progress.progress(100)
-        status.text("✅ تم الانتهاء")
-
     return records
 
 # ================= EXCEL =================
@@ -193,7 +177,6 @@ def to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
-    <p>Drag & Drop your file</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -206,7 +189,7 @@ if file:
 
         with st.spinner("Processing..."):
 
-            data = parse_file(file)
+            data = parse_ar(file)
 
             if data:
 
@@ -215,7 +198,7 @@ if file:
                 # ================= KPIS =================
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
-                total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
+                total_settlement = df["رسوم تسويات"].sum()
                 total_total = df["إجمالي"].sum()
 
                 st.markdown("## 📊 Dashboard")
@@ -231,13 +214,12 @@ if file:
 
                 excel = to_excel(df)
 
-                st.success("🎉 تم التحويل بنجاح")
+                st.success("✅ تم التحويل بنجاح")
 
                 st.download_button(
                     "📥 تحميل Excel",
                     excel,
-                    file_name="hawelha_telecom.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    file_name="hawelha.xlsx"
                 )
 
             else:
