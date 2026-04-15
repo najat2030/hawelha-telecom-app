@@ -2,7 +2,6 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
-from datetime import datetime
 import io
 import base64
 import os
@@ -12,13 +11,6 @@ st.set_page_config(
     page_title="Hawelha Telecom | حوّلها تليكوم",
     page_icon="📊",
     layout="wide"
-)
-
-# ================= MODE =================
-mode = st.radio(
-    "🌐 اختر وضع التحليل",
-    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
-    horizontal=True
 )
 
 # ================= LOGO =================
@@ -31,65 +23,15 @@ def load_logo():
 
 logo = load_logo()
 
-# ================= UI =================
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+# =========================================================
+# ❌❌ DO NOT MODIFY BELOW THIS LINE (CORE LOGIC) ❌❌❌
+# =========================================================
 
-html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
-
-.header {
-    background: linear-gradient(135deg, #059669, #10b981);
-    padding: 40px;
-    border-radius: 18px;
-    text-align: center;
-    color: white;
-    margin-bottom: 25px;
-}
-
-.upload-box {
-    background: white;
-    border: 2px dashed #10b981;
-    border-radius: 16px;
-    padding: 45px;
-    text-align: center;
-}
-
-.stButton>button {
-    background: linear-gradient(135deg, #059669, #10b981);
-    color: white;
-    padding: 12px;
-    border-radius: 10px;
-    width: 100%;
-}
-
-.kpi {
-    background: white;
-    border-radius: 14px;
-    padding: 18px;
-    text-align: center;
-    border-top: 4px solid #10b981;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ================= HEADER =================
-if logo:
-    st.markdown(f"""
-    <div class="header">
-        <img src="data:image/png;base64,{logo}" width="300">
-        <h1>Hawelha Telecom</h1>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ================= HELPERS =================
 def normalize(text):
     return (text or "").replace("−","-").replace("–","-")
 
-# 🔥 الحل النهائي للسالب
 def extract_numbers(text):
     text = normalize(text)
-
     matches = re.findall(r'(-?\s*\d+(?:\.\d+)?\s*-?)', text)
 
     numbers = []
@@ -103,19 +45,11 @@ def extract_numbers(text):
 
     return numbers
 
-# ================= PARSER =================
 def parse_ar(file):
     records = []
 
     with pdfplumber.open(file) as pdf:
-        total_pages = len(pdf.pages)
-
-        progress = st.progress(0)
-
-        for p, page in enumerate(pdf.pages[2:], start=2):
-
-            progress.progress(int((p / total_pages) * 100))
-
+        for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -126,7 +60,6 @@ def parse_ar(file):
                         continue
 
                     text = normalize(" ".join([str(c) for c in row if c]))
-
                     phone = re.search(r'(01[0125]\d{8})', text)
 
                     if phone:
@@ -165,7 +98,6 @@ def parse_ar(file):
 
     return records
 
-# ================= EXCEL =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -173,54 +105,206 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# ================= INPUT =================
-st.markdown("""
-<div class="upload-box">
-    <h2>📁 Upload PDF Invoice</h2>
-</div>
-""", unsafe_allow_html=True)
+# =========================================================
+# ✅✅✅ UI SECTION ONLY (SAFE TO MODIFY) ✅✅✅
+# =========================================================
 
-file = st.file_uploader("", type=["pdf"])
+def build_ui():
+    # Import Google Font Cairo for better Arabic typography
+    st.markdown("""
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Cairo', sans-serif !important;
+            background-color: #f0fdf4; /* Light green tint */
+        }
+        
+        /* Header Styling */
+        .main-header {
+            background: linear-gradient(135deg, #047857 0%, #10b981 100%);
+            padding: 3rem 2rem;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo-img {
+            max-width: 350px; /* Larger Logo */
+            height: auto;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .app-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+
+        .app-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+
+        /* Upload Box Styling */
+        .upload-container {
+            background: white;
+            border: 2px dashed #10b981;
+            border-radius: 16px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+        .upload-container:hover {
+            border-color: #047857;
+            background: #ecfdf5;
+        }
+
+        /* KPI Cards Styling */
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-top: 5px solid #10b981;
+            height: 100%;
+        }
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #047857;
+            margin: 0.5rem 0;
+        }
+        .kpi-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Footer Styling */
+        .footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: #047857;
+            border-top: 1px solid #d1fae5;
+        }
+        .developer-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #047857;
+        }
+        .copyright {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+        }
+        
+        /* Button Styling */
+        .stButton>button {
+            background: linear-gradient(90deg, #047857 0%, #10b981 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        .stButton>button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Header Section with Large Logo
+    if logo:
+        st.markdown(f"""
+        <div class="main-header">
+            <img class="logo-img" src="data:image/png;base64,{logo}" alt="Hawelha Logo">
+            <h1 class="app-title">Hawelha Telecom</h1>
+            <p class="app-subtitle">نظام تحويل فواتير الاتصالات الذكي من PDF إلى Excel</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="main-header">
+            <h1 class="app-title">Hawelha Telecom</h1>
+            <p class="app-subtitle">نظام تحويل فواتير الاتصالات الذكي</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Upload Section
+    st.markdown('<div class="upload-container"><h2>📁 رفع ملف الفاتورة (PDF)</h2><p style="color:#6b7280">اسحب الملف هنا أو اضغط للاختيار</p></div>', unsafe_allow_html=True)
+    file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
+
+    return file
+
+def show_dashboard(df):
+    total_lines = len(df)
+    total_monthly = df["رسوم شهرية"].sum()
+    total_settlement = df["رسوم تسويات"].sum()
+    total_total = df["إجمالي"].sum()
+
+    st.markdown("## 📊 لوحة المعلومات")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">عدد الخطوط</div><div class="kpi-value">{total_lines}</div></div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">الرسوم الشهرية</div><div class="kpi-value">{total_monthly:,.2f} ج.م</div></div>', unsafe_allow_html=True)
+    with c3:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">التسويات</div><div class="kpi-value">{total_settlement:,.2f} ج.م</div></div>', unsafe_allow_html=True)
+    with c4:
+        st.markdown(f'<div class="kpi-card"><div class="kpi-label">الإجمالي النهائي</div><div class="kpi-value">{total_total:,.2f} ج.م</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
 
 # ================= MAIN =================
+file = build_ui()
+
 if file:
-
-    if st.button("🚀 Start Processing"):
-
-        with st.spinner("Processing..."):
+    if st.button("🚀 بدء المعالجة"):
+        with st.spinner("جاري معالجة البيانات... يرجى الانتظار"):
 
             data = parse_ar(file)
 
             if data:
-
                 df = pd.DataFrame(data)
 
-                # ================= KPIS =================
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlement = df["رسوم تسويات"].sum()
-                total_total = df["إجمالي"].sum()
+                show_dashboard(df)
 
-                st.markdown("## 📊 Dashboard")
-
-                c1, c2, c3, c4 = st.columns(4)
-
-                c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
-                c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
-
+                st.markdown("### 📋 معاينة البيانات (أول 10 سجلات)")
                 st.dataframe(df.head(10), use_container_width=True)
 
                 excel = to_excel(df)
 
-                st.success("✅ تم التحويل بنجاح")
-
                 st.download_button(
-                    "📥 تحميل Excel",
+                    "📥 تحميل ملف Excel",
                     excel,
-                    file_name="hawelha.xlsx"
+                    file_name="Hawelha_Invoice_Data.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+                
+                # Footer with Name and Copyright
+                st.markdown("""
+                <div class="footer">
+                    <p class="developer-name">Developed by Najat El Bakry</p>
+                    <p class="copyright">© 2026 Hawelha Telecom. All Rights Reserved.</p>
+                </div>
+                """, unsafe_allow_html=True)
 
             else:
-                st.error("No data found")
+                st.error("⚠️ لم يتم العثور على بيانات في الملف. تأكد من صحة ملف PDF.")
