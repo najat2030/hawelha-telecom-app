@@ -32,15 +32,26 @@ def load_logo():
 logo = load_logo()
 
 # ================= UI =================
-st.markdown("""<style>
-body { font-family: 'Cairo', sans-serif; }
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
+html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
+
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
-    padding: 40px;
+    padding: 40px 20px;
     border-radius: 18px;
     text-align: center;
     color: white;
+    margin-bottom: 25px;
 }
+
+.header img {
+    width: 420px;
+    max-width: 95%;
+}
+
 .upload-box {
     background: white;
     border: 2px dashed #10b981;
@@ -48,11 +59,14 @@ body { font-family: 'Cairo', sans-serif; }
     padding: 45px;
     text-align: center;
 }
+
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
+    font-weight: 700;
     width: 100%;
 }
+
 .kpi {
     background: white;
     border-radius: 14px;
@@ -60,14 +74,16 @@ body { font-family: 'Cairo', sans-serif; }
     text-align: center;
     border-top: 4px solid #10b981;
 }
-</style>""", unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
 
 # ================= HEADER =================
 if logo:
     st.markdown(f"""
     <div class="header">
-        <img src="data:image/png;base64,{logo}" width="300">
+        <img src="data:image/png;base64,{logo}">
         <h1>Hawelha Telecom</h1>
+        <p>PDF → Excel Automation System</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -75,15 +91,18 @@ if logo:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
+# 🔥 Regex pre-compiled (سرعة)
+PHONE_PATTERN = re.compile(r'(01[0125]\d{8})')
+NUMBER_PATTERN = re.compile(r'-?\d+(?:\.\d+)?|\d+-')
+
 # 🔥 FIX السالب يمين/شمال
 def extract_numbers(text):
     text = normalize(text)
-
-    numbers = re.findall(r'-?\d+(?:\.\d+)?|\d+-', text)
+    numbers = NUMBER_PATTERN.findall(text)
 
     clean = []
     for n in numbers:
-        if n.endswith('-'):  # 15-
+        if n.endswith('-'):
             clean.append(-float(n[:-1]))
         else:
             clean.append(float(n))
@@ -102,11 +121,20 @@ def parse_file(file):
 
         for idx, page in enumerate(pdf.pages[2:]):
 
-            percent = int((idx / max(total_pages-2,1)) * 100)
-            progress.progress(percent)
-            status.text(f"📄 جاري معالجة الصفحة {idx+3} من {total_pages}")
+            # 🔥 Skip الصفحات الفاضية (تسريع)
+            text_page = page.extract_text()
+            if not text_page or "01" not in text_page:
+                continue
 
-            for table in page.extract_tables() or []:
+            percent = int((idx / max(total_pages-2, 1)) * 100)
+            progress.progress(percent)
+            status.text(f"📄 صفحة {idx+3} من {total_pages}")
+
+            tables = page.extract_tables()
+            if not tables:
+                continue
+
+            for table in tables:
                 i = 0
                 while i < len(table):
                     row = table[i]
@@ -115,20 +143,21 @@ def parse_file(file):
                         continue
 
                     text = normalize(" ".join([str(c) for c in row if c]))
-                    phone = re.search(r'(01[0125]\d{8})', text)
+                    phone_match = PHONE_PATTERN.search(text)
 
-                    if phone:
-                        phone = phone.group(1)
+                    if phone_match:
+                        phone = phone_match.group(1)
 
                         vals = extract_numbers(text)
 
                         if i+1 < len(table):
-                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                            next_text = " ".join([str(c) for c in table[i+1] if c])
+                            nxt = extract_numbers(next_text)
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
 
-                        vals = vals[::-1]
+                        vals.reverse()
 
                         def g(i): return vals[i] if i < len(vals) else 0
 
@@ -168,6 +197,7 @@ def to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
+    <p>Drag & Drop your file</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -192,6 +222,8 @@ if file:
                 total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
                 total_total = df["إجمالي"].sum()
 
+                st.markdown("## 📊 Dashboard")
+
                 c1, c2, c3, c4 = st.columns(4)
 
                 c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
@@ -208,7 +240,8 @@ if file:
                 st.download_button(
                     "📥 تحميل Excel",
                     excel,
-                    file_name="hawelha.xlsx"
+                    file_name="hawelha_telecom.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
             else:
