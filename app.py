@@ -146,6 +146,7 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
+# ✅ التصحيح النهائي هنا: استخدام الاسم الكامل + النقطتين
 if logo_
     st.markdown(f"""
     <div class="main-header">
@@ -170,53 +171,33 @@ def detect_language(pdf):
     محاولة اكتشاف لغة الفاتورة من الصفحة الأولى أو الثانية
     """
     try:
-        # نفحص أول صفحتين للبحث عن كلمات مفتاحية عربية
         for i in range(min(2, len(pdf.pages))):
             page = pdf.pages[i]
             text = page.extract_text()
             if text:
-                # البحث عن كلمات عربية شائعة في فواتير اتصالات
+                # البحث عن أحرف عربية
                 if any(char.isalpha() and '\u0600' <= char <= '\u06FF' for char in text):
                     return 'arabic'
-        return 'english' # افتراضي إذا لم نجد عربي
+        return 'english'
     except:
         return 'english'
 
-def extract_values_arabic(row):
+def extract_values_from_row(row):
     """
-    استخراج القيم للفواتير العربية (كما في الكود الأول)
-    يحافظ على الترتيب كما يستخرجه pdfplumber للعربي
+    استخراج القيم من الصف مع الحفاظ على السالب
     """
     values = []
     if not row:
         return values
     
+    # دمج محتوى الخلايا في نص واحد
     row_text = ' '.join([str(cell).strip() for cell in row if cell])
     
-    # تنظيف النص لدعم السالب بشكل أفضل
-    clean_text = row_text.replace('–', '-').replace('−', '-')
+    # تنظيف النص: توحيد أشكال الشرطات السالبة المختلفة إلى شرطة إنجليزية قياسية
+    clean_text = row_text.replace('–', '-').replace('−', '-').replace('—', '-')
     
+    # استخراج الأرقام مع الإشارة (سالب أو موجب)
     numbers = re.findall(r'-?\d+\.?\d*', clean_text)
-    
-    for num in numbers:
-        try:
-            val = float(num)
-            values.append(val)
-        except:
-            pass
-    
-    return values
-
-def extract_values_english(row):
-    """
-    استخراج القيم للفواتير الإنجليزية (كما في الكود الثاني)
-    """
-    values = []
-    if not row:
-        return values
-    
-    row_text = ' '.join([str(cell).strip() for cell in row if cell])
-    numbers = re.findall(r'-?\d+\.?\d*', row_text)
     
     for num in numbers:
         try:
@@ -229,12 +210,11 @@ def extract_values_english(row):
 
 def create_record(phone, values, is_arabic=True):
     """
-    توزيع القيم على الأعمدة
+    توزيع القيم على الأعمدة حسب اللغة المكتشفة
     """
     
     # إذا كانت الفاتورة إنجليزية، نعكس القيم لأن pdfplumber يقرأ LTR
     # بينما الترتيب المطلوب في الدالة يفترض أن index 0 هو الشهرية (التي تكون على اليمين بصرياً في الهيدر المختلط)
-    # ملاحظة: في الكود الإنجليزي الذي أرسلتيه، كنتِ تعكسين القيم.
     if not is_arabic:
         values = values[::-1]
 
@@ -283,10 +263,7 @@ def parse_etisalat_table(table, is_arabic):
             # استخراج القيم من الصف التالي
             if i + 1 < len(table):
                 values_row = table[i + 1]
-                if is_arabic:
-                    values = extract_values_arabic(values_row)
-                else:
-                    values = extract_values_english(values_row)
+                values = extract_values_from_row(values_row)
             
             record = create_record(phone, values, is_arabic)
             records.append(record)
