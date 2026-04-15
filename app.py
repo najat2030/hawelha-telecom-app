@@ -6,6 +6,7 @@ import io
 import base64
 import os
 import zipfile
+from datetime import datetime
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -35,11 +36,7 @@ logo = load_logo()
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-
-html, body {
-    font-family: 'Cairo', sans-serif;
-    background: #f8fafc;
-}
+html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
 
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
@@ -48,18 +45,22 @@ html, body {
     text-align: center;
     color: white;
 }
+.header img { width: 420px; }
 
 .upload-box {
     background: white;
     border: 2px dashed #10b981;
     border-radius: 16px;
-    padding: 45px;
+    padding: 40px;
     text-align: center;
 }
 
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
+    padding: 12px;
+    border-radius: 10px;
+    width: 100%;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -68,7 +69,7 @@ html, body {
 if logo:
     st.markdown(f"""
     <div class="header">
-        <img src="data:image/png;base64,{logo}" width="400">
+        <img src="data:image/png;base64,{logo}">
         <h1>Hawelha Telecom</h1>
     </div>
     """, unsafe_allow_html=True)
@@ -79,51 +80,26 @@ def normalize(t):
 
 def extract_numbers(text):
     text = normalize(text)
-    text = re.sub(r'01[0125]\d{8}', '', text)
     return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
 
-# ================= ENGINE =================
-@st.cache_data(show_spinner=False)
-def process_file(file_bytes, mode):
-
+# ================= PARSER =================
+def parse_ar(file):
     records = []
-
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-
-        if mode == "Auto 🤖":
-            text = pdf.pages[0].extract_text() or ""
-            lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-        else:
-            lang = "ar" if mode == "عربي 🇪🇬" else "en"
-
+    with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
-
-                i = 0
-                while i < len(table):
-                    row = table[i]
+                for row in table:
                     if not row:
-                        i += 1
                         continue
 
                     text = normalize(" ".join([str(c) for c in row if c]))
-                    phone_match = re.search(r'(01[0125]\d{8})', text)
+                    phone = re.search(r'(01[0125]\d{8})', text)
 
-                    if phone_match:
-                        phone = phone_match.group(1)
+                    if phone:
+                        phone = phone.group(1)
+                        vals = extract_numbers(text)[::-1]
 
-                        values = extract_numbers(text)
-
-                        if i+1 < len(table):
-                            next_row = " ".join([str(c) for c in table[i+1] if c])
-                            next_vals = extract_numbers(next_row)
-                            if len(next_vals) > len(values):
-                                values = next_vals
-                                i += 1
-
-                        values = values[::-1]
-
-                        def g(i): return values[i] if i < len(values) else 0
+                        def g(i): return vals[i] if i < len(vals) else 0
 
                         records.append({
                             "محمول": phone,
@@ -141,9 +117,6 @@ def process_file(file_bytes, mode):
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
-
-                    i += 1
-
     return records
 
 # ================= EXCEL =================
@@ -157,7 +130,7 @@ def to_excel(df):
 # ================= INPUT =================
 st.markdown("""
 <div class="upload-box">
-    <h2>📁 Upload PDF Invoices</h2>
+    <h2>📁 ارفع ملفات PDF</h2>
 </div>
 """, unsafe_allow_html=True)
 
@@ -166,61 +139,37 @@ files = st.file_uploader("", type=["pdf"], accept_multiple_files=True)
 # ================= MAIN =================
 if files:
 
-    st.success(f"✅ تم رفع {len(files)} ملف")
-
     if st.button("🚀 Start Processing"):
 
-        progress_bar = st.progress(0)
+        progress = st.progress(0)
         status = st.empty()
-        details = st.empty()
 
-        total = len(files)
-        all_excels = []
+        zip_buffer = io.BytesIO()
 
-        for i, f in enumerate(files):
+        with zipfile.ZipFile(zip_buffer, "w") as zipf:
 
-            current = i + 1
-            percent = int((current / total) * 100)
+            for i, file in enumerate(files):
 
-            status.text(f"📄 جاري معالجة: {f.name}")
-            details.text(f"📁 {current} من {total} ملفات | {percent}%")
+                status.text(f"Processing {file.name}...")
 
-            data = process_file(f.read(), mode)
+                data = parse_ar(file)
 
-            progress_bar.progress(percent)
+                if data:
+                    df = pd.DataFrame(data)
+                    excel = to_excel(df)
 
-            if data:
-                df = pd.DataFrame(data)
-                excel = to_excel(df)
+                    filename = file.name.replace(".pdf", ".xlsx")
+                    zipf.writestr(filename, excel.getvalue())
 
-                file_name = f.name.replace(".pdf", ".xlsx")
-                all_excels.append((file_name, excel))
+                progress.progress((i + 1) / len(files))
 
-                st.markdown(f"### 📄 {f.name}")
-                st.download_button(
-                    f"📥 تحميل {file_name}",
-                    excel,
-                    file_name=file_name,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-            else:
-                st.warning(f"⚠️ لم يتم استخراج بيانات من {f.name}")
+        zip_buffer.seek(0)
 
-        status.text("✅ تم الانتهاء من كل الملفات")
+        st.success("🎉 تم تحويل كل الملفات")
 
-        # ================= ZIP =================
-        if all_excels:
-            zip_buffer = io.BytesIO()
-
-            with zipfile.ZipFile(zip_buffer, "w") as z:
-                for name, file_data in all_excels:
-                    z.writestr(name, file_data.getvalue())
-
-            zip_buffer.seek(0)
-
-            st.download_button(
-                "📦 تحميل كل الملفات مرة واحدة (ZIP)",
-                zip_buffer,
-                file_name="hawelha_all_files.zip",
-                mime="application/zip"
-            )
+        st.download_button(
+            "📦 تحميل كل الملفات ZIP",
+            zip_buffer,
+            file_name=f"hawelha_all_{datetime.now().strftime('%Y%m%d')}.zip",
+            mime="application/zip"
+        )
