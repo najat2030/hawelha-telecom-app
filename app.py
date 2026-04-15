@@ -31,16 +31,8 @@ def load_logo():
 
 logo = load_logo()
 
-# عرض الشعار في أعلى الصفحة إذا كان موجوداً
-if logo:
-    st.markdown(f"""
-    <div style="text-align: center; margin-bottom: 20px;">
-        <img src="data:image/png;base64,{logo}" width="250">
-    </div>
-    """, unsafe_allow_html=True)
-
 # =========================================================
-# 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫🚫
+# 🚫🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫🚫🚫
 # ⚠️ هذا الجزء مسؤول عن استخراج البيانات من PDF
 # ⚠️ أي تعديل هنا ممكن يكسر:
 # - اتجاه البيانات (يمين/شمال)
@@ -180,56 +172,10 @@ def to_excel(df):
 # ✅ UI ONLY BELOW — SAFE TO MODIFY
 # =========================================================
 
-# ================= CSS STYLES =================
-st.markdown("""
-<style>
-    .upload-box {
-        background: #f0fdf4;
-        border: 2px dashed #10b981;
-        border-radius: 15px;
-        padding: 2rem;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .kpi {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-top: 4px solid #10b981;
-        height: 100%;
-    }
-    .kpi h2 {
-        color: #059669;
-        font-size: 1.8rem;
-        margin: 0.5rem 0;
-        font-weight: bold;
-    }
-    .kpi p {
-        color: #6b7280;
-        margin: 0;
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-    .success-box {
-        background: #dcfce7;
-        border: 1px solid #16a34a;
-        color: #166534;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        margin: 1rem 0;
-        font-weight: bold;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # ================= INPUT =================
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
-    <p style="color: #666;">Select mode above and upload your file</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -254,40 +200,19 @@ if file:
             if data:
                 df = pd.DataFrame(data)
 
-                # حساب الإجماليات للداشبورد
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlements = df["رسوم تسويات"].sum()
-                total_grand = df["إجمالي"].sum()
-
                 st.markdown("## 📊 Dashboard")
 
-                # عرض 4 مؤشرات أداء رئيسية (KPIs)
-                k1, k2, k3, k4 = st.columns(4)
+                c1, c2 = st.columns(2)
+                c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
-                with k1:
-                    st.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                
-                with k2:
-                    st.markdown(f'<div class="kpi"><h2>{total_monthly:,.2f}</h2><p>إجمالي الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                
-                with k3:
-                    # تلوين التسويات حسب القيمة (سالب/موجب)
-                    color = "#ef4444" if total_settlements < 0 else "#059669"
-                    st.markdown(f'<div class="kpi" style="border-top-color: {color};"><h2 style="color: {color};">{total_settlements:,.2f}</h2><p>إجمالي التسويات</p></div>', unsafe_allow_html=True)
-
-                with k4:
-                    st.markdown(f'<div class="kpi"><h2>{total_grand:,.2f}</h2><p>الإجمالي النهائي</p></div>', unsafe_allow_html=True)
-
-                st.divider()
-
-                st.dataframe(df.head(20), use_container_width=True)
+                st.dataframe(df.head(10), use_container_width=True)
 
                 excel = to_excel(df)
 
                 st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
 
-                st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
+                st.download_button("📥 تحميل Excel", excel, "hawelha.xlsx")
 
             else:
                 st.error("No data found")
