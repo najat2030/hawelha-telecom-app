@@ -21,7 +21,7 @@ mode = st.radio(
     horizontal=True
 )
 
-# ================= LOGO =================
+# ================= LOGO (UNCHANGED) =================
 def load_logo():
     logo_path = 'static/logo.png'
     if os.path.exists(logo_path):
@@ -29,11 +29,76 @@ def load_logo():
             return base64.b64encode(f.read()).decode()
     return None
 
-# ================= TEXT NORMALIZATION (FIX NEGATIVE ISSUE) =================
+# ================= CORPORATE UI =================
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+* {
+    font-family: 'Inter', sans-serif;
+}
+
+/* HEADER */
+.main-header {
+    background: #0f172a;
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 2rem;
+    border: 1px solid #1f2937;
+}
+
+/* UPLOAD */
+.upload-box {
+    background: #f8fafc;
+    border: 2px dashed #94a3b8;
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+}
+
+/* STATS */
+.stats-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+/* BUTTON */
+.stButton>button {
+    background: #1d4ed8;
+    color: white;
+    border-radius: 8px;
+    width: 100%;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ================= LOGO DISPLAY =================
+logo_data = load_logo()
+
+if logo_data:
+    st.markdown(f"""
+    <div class="main-header">
+        <img src="data:image/png;base64,{logo_data}" width="250">
+        <p style="color:#94a3b8;">احترافي • سريع • دقيق</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div class="main-header">
+        <h1>Hawelwa Telecom</h1>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ================= NORMALIZATION (FIX NEGATIVE ISSUE) =================
 def normalize_text(text):
     if not text:
         return ""
-    text = text.replace("−", "-")  # Unicode minus
+    text = text.replace("−", "-")
     text = text.replace("–", "-")
     return text
 
@@ -46,10 +111,10 @@ def detect_language(uploaded_file):
                 return "ar"
     return "en"
 
-# ================= COMMON NUMBER EXTRACTION =================
-def extract_numbers(row_text):
-    row_text = normalize_text(row_text)
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', row_text)
+# ================= NUMBER EXTRACTION =================
+def extract_numbers(text):
+    text = normalize_text(text)
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
 
     values = []
     for n in numbers:
