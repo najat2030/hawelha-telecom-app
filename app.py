@@ -33,11 +33,17 @@ logo = load_logo()
 # ================= UI =================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap');
 
 html, body {
-    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    font-family: 'Tajawal', sans-serif;
     background: #f6f8f7;
+}
+
+/* HEADINGS */
+h1, h2, h3 {
+    font-family: 'Cairo', sans-serif;
+    font-weight: 800;
 }
 
 /* HEADER */
@@ -48,18 +54,19 @@ html, body {
     text-align: center;
     color: white;
     margin-bottom: 40px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
 }
 .header img {
     width: 520px;
     max-width: 95%;
     margin-bottom: 25px;
 }
+.header h1 {
+    font-size: 42px;
+}
 
 /* UPLOAD */
 .upload-box {
     background: white;
-    border: 1px solid #e5e7eb;
     border-radius: 18px;
     padding: 50px;
     text-align: center;
@@ -73,7 +80,6 @@ html, body {
     font-weight: 600;
     padding: 14px;
     border-radius: 12px;
-    border: none;
 }
 
 /* KPI */
@@ -85,13 +91,13 @@ html, body {
     box-shadow: 0 6px 25px rgba(0,0,0,0.05);
 }
 .kpi h2 {
-    color: #047857;
-    font-size: 26px;
-    font-weight: 700;
+    font-family: 'Cairo', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #065f46;
 }
 .kpi p {
     color: #6b7280;
-    font-size: 14px;
 }
 
 /* SUCCESS */
@@ -107,8 +113,9 @@ html, body {
     font-size: 80px;
 }
 .success-box h1 {
-    font-size: 40px;
-    font-weight: 700;
+    font-family: 'Cairo', sans-serif;
+    font-size: 46px;
+    font-weight: 800;
     color: #064e3b;
 }
 .success-box h2 {
@@ -120,19 +127,34 @@ html, body {
     color: #6b7280;
 }
 
-/* FOOTER */
+/* FOOTER PREMIUM SIGNATURE 🔥 */
 .footer {
-    margin-top: 70px;
-    padding: 25px;
+    margin-top: 80px;
+    padding: 35px;
     text-align: center;
     border-top: 1px solid #e5e7eb;
 }
-.footer h3 {
-    font-weight: 600;
-    font-size: 16px;
-    color: #047857;
+
+.brand-line {
+    font-family: 'Cairo', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #065f46;
 }
-.footer p {
+
+.signature {
+    font-family: 'Cairo', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #047857, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+    margin-top: 6px;
+}
+
+.copy {
+    margin-top: 6px;
     font-size: 13px;
     color: #9ca3af;
 }
@@ -274,7 +296,6 @@ if file:
             if data:
                 df = pd.DataFrame(data)
 
-                # KPIs
                 c1, c2, c3, c4 = st.columns(4)
                 c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
                 c2.markdown(f'<div class="kpi"><h2>{df["رسوم شهرية"].sum():.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
@@ -307,7 +328,8 @@ if file:
 # ================= FOOTER =================
 st.markdown("""
 <div class="footer">
-    <h3>Hawelha Telecom — Built by Najat El Bakry</h3>
-    <p>© 2026 All Rights Reserved</p>
+    <div class="brand-line">Hawelha Telecom</div>
+    <div class="signature">Built by Najat El Bakry</div>
+    <div class="copy">© 2026 All Rights Reserved</div>
 </div>
 """, unsafe_allow_html=True)
