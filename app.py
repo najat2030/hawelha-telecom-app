@@ -2,6 +2,7 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
+from datetime import datetime
 import io
 import base64
 import os
@@ -30,69 +31,89 @@ def load_logo():
 
 logo = load_logo()
 
-# ================= UI =================
+# ================= GREEN CORPORATE UI =================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 
-html, body { font-family: 'Tajawal', sans-serif; background: #f6f8f7; }
-h1, h2, h3 { font-family: 'Cairo', sans-serif; font-weight: 800; }
+html, body {
+    font-family: 'Cairo', sans-serif;
+    background: #f8fafc;
+}
 
+/* HEADER */
 .header {
-    background: linear-gradient(135deg, #047857, #10b981);
-    padding: 60px 20px;
-    border-radius: 20px;
+    background: linear-gradient(135deg, #059669, #10b981);
+    padding: 40px 20px;
+    border-radius: 18px;
     text-align: center;
     color: white;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 30px rgba(16,185,129,0.25);
 }
-.header img { width: 520px; }
 
+/* BIG LOGO */
+.header img {
+    width: 420px;
+    max-width: 95%;
+    margin-bottom: 15px;
+    filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.2));
+}
+
+/* UPLOAD BOX */
 .upload-box {
     background: white;
-    border-radius: 18px;
-    padding: 50px;
+    border: 2px dashed #10b981;
+    border-radius: 16px;
+    padding: 45px;
     text-align: center;
-    margin-top: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 
+/* BUTTON */
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
-    padding: 14px;
-    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px;
+    border-radius: 10px;
+    width: 100%;
 }
 
+/* KPIs */
 .kpi {
     background: white;
-    border-radius: 16px;
-    padding: 22px;
+    border-radius: 14px;
+    padding: 18px;
     text-align: center;
-    margin-top: 20px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    border-top: 4px solid #10b981;
 }
-.kpi h2 { font-size: 28px; color: #065f46; }
 
+.kpi h2 {
+    color: #059669;
+    margin: 0;
+}
+
+.kpi p {
+    color: #64748b;
+    margin: 5px 0 0;
+}
+
+/* SUCCESS ANIMATION */
 .success-box {
-    background: white;
-    border-radius: 22px;
-    padding: 60px;
+    background: #ecfdf5;
+    border: 2px solid #10b981;
+    border-radius: 16px;
+    padding: 25px;
     text-align: center;
-    margin-top: 40px;
-}
-.success-box h1 {
-    font-size: 46px;
-    color: #064e3b;
+    animation: pop 0.6s ease;
 }
 
-.footer {
-    margin-top: 80px;
-    text-align: center;
-}
-.signature {
-    font-size: 22px;
-    font-weight: 800;
-    background: linear-gradient(90deg, #047857, #10b981);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+@keyframes pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -103,6 +124,13 @@ if logo:
     <div class="header">
         <img src="data:image/png;base64,{logo}">
         <h1>Hawelha Telecom</h1>
+        <p>PDF → Excel Automation System</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <div class="header">
+        <h1>Hawelha Telecom</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -110,20 +138,14 @@ if logo:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
-# 🔥 FIX هنا: نشيل رقم الموبايل قبل استخراج الأرقام
 def extract_numbers(text):
     text = normalize(text)
+    return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
 
-    # حذف رقم الموبايل
-    text = re.sub(r'01[0125]\d{8}', '', text)
-
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-
-    return [float(x) for x in numbers]
-
-# ================= AR =================
+# ================= AR ENGINE =================
 def parse_ar(file):
     records = []
+
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
@@ -135,26 +157,25 @@ def parse_ar(file):
                         continue
 
                     text = normalize(" ".join([str(c) for c in row if c]))
-                    phone_match = re.search(r'(01[0125]\d{8})', text)
+                    phone = re.search(r'(01[0125]\d{8})', text)
 
-                    if phone_match:
-                        phone = phone_match.group(1)
+                    if phone:
+                        phone = phone.group(1)
 
-                        values = extract_numbers(text)
+                        vals = extract_numbers(text)
 
                         if i+1 < len(table):
-                            next_row = " ".join([str(c) for c in table[i+1] if c])
-                            next_vals = extract_numbers(next_row)
-                            if len(next_vals) > len(values):
-                                values = next_vals
+                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                            if len(nxt) > len(vals):
+                                vals = nxt
                                 i += 1
 
-                        values = values[::-1]
+                        vals = vals[::-1]
 
-                        def g(i): return values[i] if i < len(values) else 0
+                        def g(i): return vals[i] if i < len(vals) else 0
 
                         records.append({
-                            "محمول": str(phone),  # 🔥 FIX
+                            "محمول": phone,
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
                             "مكالمات محلية": g(2),
@@ -173,9 +194,10 @@ def parse_ar(file):
                     i += 1
     return records
 
-# ================= EN =================
+# ================= EN ENGINE =================
 def parse_en(file):
     records = []
+
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
@@ -187,72 +209,107 @@ def parse_en(file):
                         continue
 
                     text = " ".join([str(c) for c in row])
-                    phone_match = re.search(r'(01[0125]\d{8})', text)
+                    phone = re.search(r'(01[0125]\d{8})', text)
 
-                    if phone_match:
-                        phone = phone_match.group(1)
-
-                        values = []
-                        if i+1 < len(table):
-                            next_row = " ".join([str(c) for c in table[i+1] if c])
-                            values = extract_numbers(next_row)
+                    if phone:
+                        phone = phone.group(1)
+                        vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
 
                         records.append({
-                            "محمول": str(phone),  # 🔥 FIX
-                            "رسوم شهرية": values[0] if len(values)>0 else 0,
-                            "رسوم الخدمات": values[1] if len(values)>1 else 0,
-                            "إجمالي": values[-1] if values else 0
+                            "محمول": phone,
+                            "رسوم شهرية": vals[0] if len(vals)>0 else 0,
+                            "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
+                            "مكالمات محلية": vals[2] if len(vals)>2 else 0,
+                            "رسائل محلية": vals[3] if len(vals)>3 else 0,
+                            "إنترنت محلية": vals[4] if len(vals)>4 else 0,
+                            "مكالمات دولية": vals[5] if len(vals)>5 else 0,
+                            "رسائل دولية": vals[6] if len(vals)>6 else 0,
+                            "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
+                            "رسائل تجوال": vals[8] if len(vals)>8 else 0,
+                            "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
+                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
+                            "ضرائب": vals[11] if len(vals)>11 else 0,
+                            "إجمالي": vals[-1] if vals else 0
                         })
 
                         i += 2
                         continue
 
                     i += 1
+
     return records
 
-# ================= MAIN =================
-st.markdown('<div class="upload-box"><h2>📁 Upload PDF</h2></div>', unsafe_allow_html=True)
-file = st.file_uploader("", type=["pdf"])
+# ================= EXCEL =================
+def to_excel(df):
+    out = io.BytesIO()
+    with pd.ExcelWriter(out, engine="openpyxl") as w:
+        df.to_excel(w, index=False)
+    out.seek(0)
+    return out
 
-if file:
-    if st.button("🚀 Start Processing"):
-
-        if mode == "Auto 🤖":
-            with pdfplumber.open(file) as pdf:
-                text = pdf.pages[0].extract_text() or ""
-            lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-        else:
-            lang = "ar" if mode == "عربي 🇪🇬" else "en"
-
-        data = parse_ar(file) if lang == "ar" else parse_en(file)
-
-        if data:
-            df = pd.DataFrame(data)
-
-            c1, c2 = st.columns(2)
-            c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-            c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
-
-            st.dataframe(df.head(10), use_container_width=True)
-
-            output = io.BytesIO()
-            df.to_excel(output, index=False)
-            output.seek(0)
-
-            st.markdown("""
-            <div class="success-box">
-                <h1>🎉 تم تحويل الملف بنجاح</h1>
-                <p>File ready for download</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.download_button("📥 تحميل Excel", output, "hawelha.xlsx")
-
-# ================= FOOTER =================
+# ================= INPUT =================
 st.markdown("""
-<div class="footer">
-    <div>Hawelha Telecom</div>
-    <div class="signature">Built by Najat El Bakry</div>
-    <div>© 2026 All Rights Reserved</div>
+<div class="upload-box">
+    <h2>📁 Upload PDF Invoice</h2>
+    <p>Drag & Drop your file</p>
 </div>
 """, unsafe_allow_html=True)
+
+file = st.file_uploader("", type=["pdf"])
+
+# ================= MAIN =================
+if file:
+
+    if st.button("🚀 Start Processing"):
+
+        with st.spinner("Processing..."):
+
+            if mode == "Auto 🤖":
+                with pdfplumber.open(file) as pdf:
+                    text = pdf.pages[0].extract_text() or ""
+                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+            else:
+                lang = "ar" if mode == "عربي 🇪🇬" else "en"
+
+            data = parse_ar(file) if lang == "ar" else parse_en(file)
+
+            if data:
+
+                df = pd.DataFrame(data)
+
+                # ================= KPIS =================
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
+                total_total = df["إجمالي"].sum()
+
+                # ================= DASHBOARD =================
+                st.markdown("## 📊 Dashboard")
+
+                c1, c2, c3, c4 = st.columns(4)
+
+                c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+                c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
+                c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+
+                st.dataframe(df.head(10), use_container_width=True)
+
+                excel = to_excel(df)
+
+                # ================= SUCCESS ANIMATION =================
+                st.markdown("""
+                <div class="success-box">
+                    🎉 تم التحويل بنجاح! الملف جاهز للتحميل
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.download_button(
+                    "📥 تحميل Excel",
+                    excel,
+                    file_name="hawelha_telecom.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+            else:
+                st.error("No data found")
