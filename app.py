@@ -136,11 +136,28 @@ else:
 
 # ================= HELPERS =================
 def normalize(t):
-    return (t or "").replace("−","-").replace("–","-")
+    return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
+# 🔥 FIX النهائي للسالب
 def extract_numbers(text):
-    text = normalize(text)
-    return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
+    if not text:
+        return []
+
+    text = normalize(str(text))
+
+    # إصلاح - 123 → -123
+    text = re.sub(r'-\s+(\d)', r'-\1', text)
+
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+
+    result = []
+    for n in numbers:
+        try:
+            result.append(float(n))
+        except:
+            pass
+
+    return result
 
 # ================= AR ENGINE =================
 def parse_ar(file):
@@ -170,6 +187,7 @@ def parse_ar(file):
                                 vals = nxt
                                 i += 1
 
+                        # 🔥 مهم جدًا للاتجاه
                         vals = vals[::-1]
 
                         def g(i): return vals[i] if i < len(vals) else 0
@@ -297,7 +315,6 @@ if file:
 
                 excel = to_excel(df)
 
-                # ================= SUCCESS ANIMATION =================
                 st.markdown("""
                 <div class="success-box">
                     🎉 تم التحويل بنجاح! الملف جاهز للتحميل
