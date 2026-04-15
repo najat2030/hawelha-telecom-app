@@ -3,7 +3,6 @@ import pdfplumber
 import pandas as pd
 import re
 import io
-from concurrent.futures import ThreadPoolExecutor
 
 # ================= CONFIG =================
 st.set_page_config(page_title="Hawelha Telecom", layout="wide")
@@ -22,50 +21,52 @@ def extract_numbers(text):
     text = phone_pattern.sub('', text)
     return [float(x) for x in number_pattern.findall(text)]
 
-# ================= SMART PARSER =================
-def process_file(file):
+# ================= CORE ENGINE =================
+def process_files(files):
 
-    records = []
+    all_records = []
 
-    with pdfplumber.open(file) as pdf:
+    for file in files:
 
-        # 🔥 Detect language مرة واحدة
-        first_page_text = pdf.pages[0].extract_text() or ""
-        lang = "ar" if arabic_pattern.search(first_page_text) else "en"
+        with pdfplumber.open(file) as pdf:
 
-        for page in pdf.pages[2:]:
+            # Detect language مرة واحدة بس
+            first_text = pdf.pages[0].extract_text() or ""
+            lang = "ar" if arabic_pattern.search(first_text) else "en"
 
-            # 🔥 Skip الصفحات الفاضية
-            if not page.extract_text():
-                continue
+            for page in pdf.pages[2:]:
 
-            tables = page.extract_tables()
-            if not tables:
-                continue
+                # Skip الصفحات الفاضية بسرعة
+                if not page.extract_text():
+                    continue
 
-            for table in tables:
-                for row in table:
-                    if not row:
-                        continue
+                tables = page.extract_tables()
+                if not tables:
+                    continue
 
-                    text = " ".join([str(c) for c in row if c])
-                    match = phone_pattern.search(text)
+                for table in tables:
+                    for row in table:
+                        if not row:
+                            continue
 
-                    if match:
-                        phone = match.group(1)
-                        values = extract_numbers(text)
+                        text = " ".join([str(c) for c in row if c])
+                        match = phone_pattern.search(text)
 
-                        records.append({
-                            "المصدر": file.name,
-                            "محمول": str(phone),
-                            "رسوم شهرية": values[0] if len(values)>0 else 0,
-                            "إجمالي": values[-1] if values else 0
-                        })
+                        if match:
+                            phone = match.group(1)
+                            values = extract_numbers(text)
 
-    return records
+                            all_records.append({
+                                "المصدر": file.name,
+                                "محمول": phone,
+                                "رسوم شهرية": values[0] if len(values)>0 else 0,
+                                "إجمالي": values[-1] if values else 0
+                            })
+
+    return all_records
 
 # ================= UI =================
-st.title("🚀 Hawelha Telecom — Ultra Fast Engine")
+st.title("⚡ Hawelha Telecom — Fast Stable Version")
 
 files = st.file_uploader(
     "📂 ارفع ملفات PDF",
@@ -73,40 +74,17 @@ files = st.file_uploader(
     accept_multiple_files=True
 )
 
-# ================= PROCESS =================
 if files:
-    if st.button("🔥 بدء المعالجة السريعة"):
+    if st.button("🚀 Start Processing"):
 
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        with st.spinner("⚡ جاري التحويل بسرعة..."):
 
-        total_files = len(files)
-        all_data = []
+            data = process_files(files)
 
-        # 🔥 Queue processing + Threads
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        if data:
+            df = pd.DataFrame(data)
 
-            futures = []
-            for f in files:
-                futures.append(executor.submit(process_file, f))
-
-            for i, future in enumerate(futures):
-
-                result = future.result()
-                all_data.extend(result)
-
-                progress = int(((i+1) / total_files) * 100)
-
-                progress_bar.progress(progress)
-                status_text.text(f"⚡ تم معالجة {i+1} من {total_files} ملف")
-
-        # ================= OUTPUT =================
-        if all_data:
-            df = pd.DataFrame(all_data)
-
-            st.success("🎉 تم تحويل كل الملفات بسرعة خارقة")
-
-            # KPI
+            # KPIs
             c1, c2, c3 = st.columns(3)
             c1.metric("عدد السجلات", len(df))
             c2.metric("إجمالي الرسوم", int(df["رسوم شهرية"].sum()))
@@ -114,13 +92,14 @@ if files:
 
             st.dataframe(df.head(20), use_container_width=True)
 
-            # Excel
             output = io.BytesIO()
             df.to_excel(output, index=False)
             output.seek(0)
 
+            st.success("🎉 تم التحويل بنجاح")
+
             st.download_button(
-                "📥 تحميل الملف النهائي",
+                "📥 تحميل Excel",
                 output,
-                "hawelha_fast.xlsx"
+                "hawelha.xlsx"
             )
