@@ -184,7 +184,7 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Cairo:wght@400;700&display=swap');
     
     .upload-box {
         background: #f0fdf4;
@@ -226,30 +226,41 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Footer Styles */
-    .footer-container {
-        margin-top: 4rem;
+    /* Footer Styles inside the Dashed Box */
+    .footer-dashed-box {
+        margin-top: 3rem;
         padding: 2rem;
         text-align: center;
-        border-top: 1px solid #e5e7eb;
-        background: linear-gradient(to right, #f8fafc, #ffffff);
-        border-radius: 12px 12px 0 0;
+        border: 3px dashed #10b981; /* Green dashed border matching the theme */
+        border-radius: 20px;
+        background-color: #f0fdf4; /* Light green background */
+        box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.1);
     }
-    .developer-name {
+    
+    .developer-name-3d {
         font-family: 'Poppins', sans-serif;
-        font-size: 1.5rem;
+        font-size: 2.5rem; /* Larger size */
         font-weight: 700;
-        color: #059669;
+        color: #ffffff; /* White text for contrast */
         margin: 0;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
+        letter-spacing: 1px;
+        /* 3D Effect using text-shadow */
+        text-shadow: 
+            1px 1px 0 #047857,
+            2px 2px 0 #047857,
+            3px 3px 0 #047857,
+            4px 4px 0 #047857,
+            5px 5px 10px rgba(0,0,0,0.3);
+        display: inline-block;
+        transform: perspective(500px) rotateX(10deg); /* Slight 3D tilt */
     }
+    
     .copyright-text {
-        font-family: 'Poppins', sans-serif;
-        font-size: 0.9rem;
-        color: #9ca3af;
-        margin-top: 0.5rem;
-        font-weight: 500;
+        font-family: 'Cairo', sans-serif;
+        font-size: 1.1rem;
+        color: #047857;
+        margin-top: 1rem;
+        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -330,10 +341,10 @@ if file:
 
                 st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
 
-                # Footer Section
+                # Footer Section inside Dashed Box with 3D Name
                 st.markdown("""
-                <div class="footer-container">
-                    <p class="developer-name">Developed by Najat El Bakry</p>
+                <div class="footer-dashed-box">
+                    <p class="developer-name-3d">Developed by Najat El Bakry</p>
                     <p class="copyright-text">© 2026 All Rights Reserved</p>
                 </div>
                 """, unsafe_allow_html=True)
