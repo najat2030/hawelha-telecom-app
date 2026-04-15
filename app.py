@@ -31,105 +31,22 @@ def load_logo():
 
 logo = load_logo()
 
-# ================= GREEN CORPORATE UI =================
-st.markdown("""
-<style>
+# ================= UI =================
+st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-
-html, body {
-    font-family: 'Cairo', sans-serif;
-    background: #f8fafc;
-}
-
-/* HEADER */
-.header {
-    background: linear-gradient(135deg, #059669, #10b981);
-    padding: 40px 20px;
-    border-radius: 18px;
-    text-align: center;
-    color: white;
-    margin-bottom: 25px;
-    box-shadow: 0 10px 30px rgba(16,185,129,0.25);
-}
-
-/* BIG LOGO */
-.header img {
-    width: 420px;
-    max-width: 95%;
-    margin-bottom: 15px;
-    filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.2));
-}
-
-/* UPLOAD BOX */
-.upload-box {
-    background: white;
-    border: 2px dashed #10b981;
-    border-radius: 16px;
-    padding: 45px;
-    text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-}
-
-/* BUTTON */
-.stButton>button {
-    background: linear-gradient(135deg, #059669, #10b981);
-    color: white;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 12px;
-    border-radius: 10px;
-    width: 100%;
-}
-
-/* KPIs */
-.kpi {
-    background: white;
-    border-radius: 14px;
-    padding: 18px;
-    text-align: center;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
-    border-top: 4px solid #10b981;
-}
-
-.kpi h2 {
-    color: #059669;
-    margin: 0;
-}
-
-.kpi p {
-    color: #64748b;
-    margin: 5px 0 0;
-}
-
-/* SUCCESS ANIMATION */
-.success-box {
-    background: #ecfdf5;
-    border: 2px solid #10b981;
-    border-radius: 16px;
-    padding: 25px;
-    text-align: center;
-    animation: pop 0.6s ease;
-}
-
-@keyframes pop {
-    0% { transform: scale(0.8); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-</style>
-""", unsafe_allow_html=True)
+html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
+.header { background: linear-gradient(135deg, #059669, #10b981); padding: 40px; border-radius: 18px; text-align:center; color:white; }
+.upload-box { background:white; border:2px dashed #10b981; border-radius:16px; padding:45px; text-align:center; margin-top:20px; }
+.stButton>button { background: linear-gradient(135deg, #059669, #10b981); color:white; border-radius:10px; width:100%; }
+.kpi { background:white; border-radius:14px; padding:18px; text-align:center; border-top:4px solid #10b981; }
+.success-box { background:#ecfdf5; border:2px solid #10b981; border-radius:16px; padding:25px; text-align:center; }
+</style>""", unsafe_allow_html=True)
 
 # ================= HEADER =================
 if logo:
     st.markdown(f"""
     <div class="header">
-        <img src="data:image/png;base64,{logo}">
-        <h1>Hawelha Telecom</h1>
-        <p>PDF → Excel Automation System</p>
-    </div>
-    """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-    <div class="header">
+        <img src="data:image/png;base64,{logo}" style="width:420px;">
         <h1>Hawelha Telecom</h1>
     </div>
     """, unsafe_allow_html=True)
@@ -138,31 +55,29 @@ else:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
-# 🔥 FIX النهائي للسالب
+# 🔥 FIX النهائي للسالب (يدعم عربي + إنجليزي)
 def extract_numbers(text):
     if not text:
         return []
 
     text = normalize(str(text))
 
-    # إصلاح - 123 → -123
+    # (123) → -123
+    text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
+
+    # 15- → -15 (العربي)
+    text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
+
+    # - 15 → -15
     text = re.sub(r'-\s+(\d)', r'-\1', text)
 
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
 
-    result = []
-    for n in numbers:
-        try:
-            result.append(float(n))
-        except:
-            pass
+    return [float(n) for n in numbers]
 
-    return result
-
-# ================= AR ENGINE =================
+# ================= AR =================
 def parse_ar(file):
     records = []
-
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
@@ -187,8 +102,7 @@ def parse_ar(file):
                                 vals = nxt
                                 i += 1
 
-                        # 🔥 مهم جدًا للاتجاه
-                        vals = vals[::-1]
+                        vals = vals[::-1]  # مهم للاتجاه العربي
 
                         def g(i): return vals[i] if i < len(vals) else 0
 
@@ -212,10 +126,9 @@ def parse_ar(file):
                     i += 1
     return records
 
-# ================= EN ENGINE =================
+# ================= EN =================
 def parse_en(file):
     records = []
-
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
@@ -269,7 +182,6 @@ def to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
-    <p>Drag & Drop your file</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -292,41 +204,21 @@ if file:
             data = parse_ar(file) if lang == "ar" else parse_en(file)
 
             if data:
-
                 df = pd.DataFrame(data)
 
-                # ================= KPIS =================
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
-                total_total = df["إجمالي"].sum()
-
-                # ================= DASHBOARD =================
                 st.markdown("## 📊 Dashboard")
 
-                c1, c2, c3, c4 = st.columns(4)
-
-                c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
-                c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+                c1, c2 = st.columns(2)
+                c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
                 st.dataframe(df.head(10), use_container_width=True)
 
                 excel = to_excel(df)
 
-                st.markdown("""
-                <div class="success-box">
-                    🎉 تم التحويل بنجاح! الملف جاهز للتحميل
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
 
-                st.download_button(
-                    "📥 تحميل Excel",
-                    excel,
-                    file_name="hawelha_telecom.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+                st.download_button("📥 تحميل Excel", excel, "hawelha.xlsx")
 
             else:
                 st.error("No data found")
