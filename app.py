@@ -146,12 +146,12 @@ with st.sidebar:
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-# التصحيح هنا: إضافة النقطتين واستخدام اسم المتغير الصحيح
+# ✅ التصحيح هنا: استخدام الاسم الكامل + النقطتين
 if logo_
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
-            <img class="logo-img" src="data:image/png;base64,{logo_data}" alt="Hawelha Logo">
+            <img class="logo-img" src="image/png;base64,{logo_data}" alt="Hawelha Logo">
         </div>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">احترافي • سريع • دقيق</p>
     </div>
