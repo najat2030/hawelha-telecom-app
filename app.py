@@ -110,7 +110,6 @@ else:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
-# 🔥 النسخة المعدلة (حل مشكلة السالب + منع خلط الموبايل)
 def extract_numbers(text):
     text = normalize(text)
 
@@ -259,6 +258,21 @@ if file:
 
             if data:
                 df = pd.DataFrame(data)
+
+                # ===== Dashboard =====
+                st.markdown("## 📊 Dashboard")
+
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
+                total_total = df["إجمالي"].sum()
+
+                c1, c2, c3, c4 = st.columns(4)
+
+                c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+                c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
+                c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
                 st.dataframe(df.head(10), use_container_width=True)
 
