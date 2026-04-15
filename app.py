@@ -5,7 +5,7 @@ import re
 import io
 import base64
 import os
-import time
+import zipfile
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -32,9 +32,15 @@ def load_logo():
 logo = load_logo()
 
 # ================= UI =================
-st.markdown("""<style>
+st.markdown("""
+<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
+
+html, body {
+    font-family: 'Cairo', sans-serif;
+    background: #f8fafc;
+}
+
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
     padding: 40px;
@@ -42,6 +48,7 @@ html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
     text-align: center;
     color: white;
 }
+
 .upload-box {
     background: white;
     border: 2px dashed #10b981;
@@ -49,12 +56,15 @@ html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
     padding: 45px;
     text-align: center;
 }
+
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
 }
-</style>""", unsafe_allow_html=True)
+</style>
+""", unsafe_allow_html=True)
 
+# ================= HEADER =================
 if logo:
     st.markdown(f"""
     <div class="header">
@@ -69,10 +79,10 @@ def normalize(t):
 
 def extract_numbers(text):
     text = normalize(text)
-    text = re.sub(r'01[0125]\d{8}', '', text)  # حذف رقم الموبايل
+    text = re.sub(r'01[0125]\d{8}', '', text)
     return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
 
-# ================= FAST ENGINE =================
+# ================= ENGINE =================
 @st.cache_data(show_spinner=False)
 def process_file(file_bytes, mode):
 
@@ -80,17 +90,13 @@ def process_file(file_bytes, mode):
 
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
 
-        # 🔥 تحديد اللغة بدون فتح الملف مرتين
         if mode == "Auto 🤖":
             text = pdf.pages[0].extract_text() or ""
             lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
         else:
             lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-        # 🔥 معالجة من صفحة 3 فقط
-        pages = pdf.pages[2:]
-
-        for page in pages:
+        for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
 
                 i = 0
@@ -166,40 +172,55 @@ if files:
 
         progress_bar = st.progress(0)
         status = st.empty()
-        stats = st.empty()
+        details = st.empty()
 
-        all_data = []
-        start = time.time()
+        total = len(files)
+        all_excels = []
 
         for i, f in enumerate(files):
 
-            percent = int(((i+1)/len(files))*100)
+            current = i + 1
+            percent = int((current / total) * 100)
 
-            status.text(f"📄 {f.name}")
-
-            # 🔥 السرعة
-            elapsed = time.time() - start
-            speed = (i+1)/elapsed if elapsed>0 else 0
-            eta = (len(files)-(i+1))/speed if speed>0 else 0
-
-            stats.text(f"⚡ {speed:.2f} ملف/ث | ⏱ {int(eta)} ثانية")
+            status.text(f"📄 جاري معالجة: {f.name}")
+            details.text(f"📁 {current} من {total} ملفات | {percent}%")
 
             data = process_file(f.read(), mode)
 
-            if data:
-                all_data.extend(data)
-
             progress_bar.progress(percent)
 
-        if all_data:
+            if data:
+                df = pd.DataFrame(data)
+                excel = to_excel(df)
 
-            df = pd.DataFrame(all_data)
-            excel = to_excel(df)
+                file_name = f.name.replace(".pdf", ".xlsx")
+                all_excels.append((file_name, excel))
 
-            st.success("🎉 تم التحويل بنجاح")
+                st.markdown(f"### 📄 {f.name}")
+                st.download_button(
+                    f"📥 تحميل {file_name}",
+                    excel,
+                    file_name=file_name,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.warning(f"⚠️ لم يتم استخراج بيانات من {f.name}")
+
+        status.text("✅ تم الانتهاء من كل الملفات")
+
+        # ================= ZIP =================
+        if all_excels:
+            zip_buffer = io.BytesIO()
+
+            with zipfile.ZipFile(zip_buffer, "w") as z:
+                for name, file_data in all_excels:
+                    z.writestr(name, file_data.getvalue())
+
+            zip_buffer.seek(0)
 
             st.download_button(
-                "📥 تحميل Excel",
-                excel,
-                "hawelha.xlsx"
+                "📦 تحميل كل الملفات مرة واحدة (ZIP)",
+                zip_buffer,
+                file_name="hawelha_all_files.zip",
+                mime="application/zip"
             )
