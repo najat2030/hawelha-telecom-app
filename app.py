@@ -3,19 +3,15 @@ import pdfplumber
 import pandas as pd
 import re
 import io
-import base64
-import os
 from concurrent.futures import ThreadPoolExecutor
 
 # ================= CONFIG =================
-st.set_page_config(
-    page_title="Hawelha Telecom",
-    layout="wide"
-)
+st.set_page_config(page_title="Hawelha Telecom", layout="wide")
 
-# ================= REGEX OPTIMIZED =================
+# ================= REGEX =================
 phone_pattern = re.compile(r'(01[0125]\d{8})')
 number_pattern = re.compile(r'-?\d+(?:\.\d+)?')
+arabic_pattern = re.compile(r'[\u0600-\u06FF]')
 
 # ================= HELPERS =================
 def normalize(t):
@@ -26,20 +22,23 @@ def extract_numbers(text):
     text = phone_pattern.sub('', text)
     return [float(x) for x in number_pattern.findall(text)]
 
-# ================= PARSE FILE =================
-def process_file(file, mode):
+# ================= SMART PARSER =================
+def process_file(file):
 
     records = []
 
     with pdfplumber.open(file) as pdf:
 
-        if mode == "Auto":
-            text = pdf.pages[0].extract_text() or ""
-            lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-        else:
-            lang = mode
+        # 🔥 Detect language مرة واحدة
+        first_page_text = pdf.pages[0].extract_text() or ""
+        lang = "ar" if arabic_pattern.search(first_page_text) else "en"
 
         for page in pdf.pages[2:]:
+
+            # 🔥 Skip الصفحات الفاضية
+            if not page.extract_text():
+                continue
+
             tables = page.extract_tables()
             if not tables:
                 continue
@@ -66,33 +65,62 @@ def process_file(file, mode):
     return records
 
 # ================= UI =================
-st.title("🚀 Hawelha Telecom - Fast Mode")
+st.title("🚀 Hawelha Telecom — Ultra Fast Engine")
 
-files = st.file_uploader("Upload PDFs", type=["pdf"], accept_multiple_files=True)
+files = st.file_uploader(
+    "📂 ارفع ملفات PDF",
+    type=["pdf"],
+    accept_multiple_files=True
+)
 
-mode = st.selectbox("Mode", ["Auto", "ar", "en"])
-
-# ================= FAST PROCESS =================
+# ================= PROCESS =================
 if files:
-    if st.button("🔥 Start Fast Processing"):
+    if st.button("🔥 بدء المعالجة السريعة"):
 
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        total_files = len(files)
         all_data = []
 
+        # 🔥 Queue processing + Threads
         with ThreadPoolExecutor(max_workers=4) as executor:
-            results = executor.map(lambda f: process_file(f, mode), files)
 
-        for r in results:
-            all_data.extend(r)
+            futures = []
+            for f in files:
+                futures.append(executor.submit(process_file, f))
 
+            for i, future in enumerate(futures):
+
+                result = future.result()
+                all_data.extend(result)
+
+                progress = int(((i+1) / total_files) * 100)
+
+                progress_bar.progress(progress)
+                status_text.text(f"⚡ تم معالجة {i+1} من {total_files} ملف")
+
+        # ================= OUTPUT =================
         if all_data:
             df = pd.DataFrame(all_data)
 
-            st.success(f"⚡ تم معالجة {len(files)} ملف بسرعة")
+            st.success("🎉 تم تحويل كل الملفات بسرعة خارقة")
 
-            st.dataframe(df.head(20))
+            # KPI
+            c1, c2, c3 = st.columns(3)
+            c1.metric("عدد السجلات", len(df))
+            c2.metric("إجمالي الرسوم", int(df["رسوم شهرية"].sum()))
+            c3.metric("الإجمالي", int(df["إجمالي"].sum()))
 
+            st.dataframe(df.head(20), use_container_width=True)
+
+            # Excel
             output = io.BytesIO()
             df.to_excel(output, index=False)
             output.seek(0)
 
-            st.download_button("📥 Download Excel", output, "fast_output.xlsx")
+            st.download_button(
+                "📥 تحميل الملف النهائي",
+                output,
+                "hawelha_fast.xlsx"
+            )
