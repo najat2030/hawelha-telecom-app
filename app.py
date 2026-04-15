@@ -2,7 +2,6 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
-from datetime import datetime
 import io
 import base64
 import os
@@ -31,88 +30,124 @@ def load_logo():
 
 logo = load_logo()
 
-# ================= GREEN CORPORATE UI =================
+# ================= UI =================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap');
 
 html, body {
-    font-family: 'Cairo', sans-serif;
+    font-family: 'Tajawal', 'Cairo', sans-serif;
     background: #f8fafc;
 }
 
 /* HEADER */
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
-    padding: 40px 20px;
+    padding: 50px 20px;
     border-radius: 18px;
     text-align: center;
     color: white;
-    margin-bottom: 25px;
-    box-shadow: 0 10px 30px rgba(16,185,129,0.25);
+    margin-bottom: 30px;
 }
 
-/* BIG LOGO */
 .header img {
-    width: 420px;
+    width: 480px;
     max-width: 95%;
-    margin-bottom: 15px;
-    filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.2));
+    margin-bottom: 20px;
 }
 
-/* UPLOAD BOX */
+/* UPLOAD */
 .upload-box {
     background: white;
     border: 2px dashed #10b981;
     border-radius: 16px;
     padding: 45px;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 
 /* BUTTON */
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
-    font-size: 16px;
     font-weight: 700;
     padding: 12px;
     border-radius: 10px;
     width: 100%;
 }
 
-/* KPIs */
+/* KPI */
 .kpi {
     background: white;
     border-radius: 14px;
     padding: 18px;
     text-align: center;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
     border-top: 4px solid #10b981;
 }
 
 .kpi h2 {
     color: #059669;
-    margin: 0;
 }
 
 .kpi p {
     color: #64748b;
-    margin: 5px 0 0;
 }
 
-/* SUCCESS ANIMATION */
+/* SUCCESS */
 .success-box {
-    background: #ecfdf5;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
     border: 2px solid #10b981;
-    border-radius: 16px;
-    padding: 25px;
+    border-radius: 20px;
+    padding: 50px 20px;
     text-align: center;
+    margin-top: 30px;
     animation: pop 0.6s ease;
+    box-shadow: 0 10px 30px rgba(16,185,129,0.25);
+}
+
+.success-icon {
+    font-size: 70px;
+}
+
+.success-box h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: #065f46;
+}
+
+.success-box h2 {
+    font-size: 28px;
+    color: #047857;
+}
+
+.success-box p {
+    font-size: 18px;
+    color: #065f46;
+}
+
+/* FOOTER */
+.footer {
+    background: #ffffff;
+    border-top: 2px solid #10b981;
+    margin-top: 60px;
+    padding: 30px;
+    text-align: center;
+    border-radius: 12px;
+}
+
+.footer h3 {
+    color: #059669;
+    margin: 0;
+    font-size: 20px;
+}
+
+.footer p {
+    color: #6b7280;
+    margin-top: 5px;
+    font-size: 14px;
 }
 
 @keyframes pop {
-    0% { transform: scale(0.8); opacity: 0; }
+    0% { transform: scale(0.7); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
 }
 </style>
@@ -127,12 +162,6 @@ if logo:
         <p>PDF → Excel Automation System</p>
     </div>
     """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-    <div class="header">
-        <h1>Hawelha Telecom</h1>
-    </div>
-    """, unsafe_allow_html=True)
 
 # ================= HELPERS =================
 def normalize(t):
@@ -142,10 +171,9 @@ def extract_numbers(text):
     text = normalize(text)
     return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
 
-# ================= AR ENGINE =================
+# ================= AR =================
 def parse_ar(file):
     records = []
-
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
@@ -155,25 +183,18 @@ def parse_ar(file):
                     if not row:
                         i += 1
                         continue
-
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
                         phone = phone.group(1)
-
                         vals = extract_numbers(text)
-
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
-
                         vals = vals[::-1]
-
                         def g(i): return vals[i] if i < len(vals) else 0
-
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": g(0),
@@ -190,14 +211,12 @@ def parse_ar(file):
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
-
                     i += 1
     return records
 
-# ================= EN ENGINE =================
+# ================= EN =================
 def parse_en(file):
     records = []
-
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
@@ -207,14 +226,13 @@ def parse_en(file):
                     if not row:
                         i += 1
                         continue
-
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
                         phone = phone.group(1)
-                        vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-
+                        vals = extract_numbers(
+                            " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
+                        )
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
@@ -231,12 +249,9 @@ def parse_en(file):
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
-
                         i += 2
                         continue
-
                     i += 1
-
     return records
 
 # ================= EXCEL =================
@@ -251,7 +266,6 @@ def to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
-    <p>Drag & Drop your file</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -259,9 +273,7 @@ file = st.file_uploader("", type=["pdf"])
 
 # ================= MAIN =================
 if file:
-
     if st.button("🚀 Start Processing"):
-
         with st.spinner("Processing..."):
 
             if mode == "Auto 🤖":
@@ -274,16 +286,13 @@ if file:
             data = parse_ar(file) if lang == "ar" else parse_en(file)
 
             if data:
-
                 df = pd.DataFrame(data)
 
-                # ================= KPIS =================
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
-                total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
+                total_settlement = df["رسوم تسويات"].sum()
                 total_total = df["إجمالي"].sum()
 
-                # ================= DASHBOARD =================
                 st.markdown("## 📊 Dashboard")
 
                 c1, c2, c3, c4 = st.columns(4)
@@ -297,10 +306,12 @@ if file:
 
                 excel = to_excel(df)
 
-                # ================= SUCCESS ANIMATION =================
                 st.markdown("""
                 <div class="success-box">
-                    🎉 تم التحويل بنجاح! الملف جاهز للتحميل
+                    <div class="success-icon">🎉</div>
+                    <h1>تم تحويل الملف بنجاح</h1>
+                    <h2>الملف جاهز الآن للتحميل</h2>
+                    <p>يمكنك تحميل الملف ومراجعته فورًا</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -312,4 +323,12 @@ if file:
                 )
 
             else:
-                st.error("No data found")
+                st.error("لم يتم العثور على بيانات")
+
+# ================= FOOTER =================
+st.markdown("""
+<div class="footer">
+    <h3>Hawelha Telecom — Built by Najat El Bakry</h3>
+    <p>© 2026 All Rights Reserved</p>
+</div>
+""", unsafe_allow_html=True)
