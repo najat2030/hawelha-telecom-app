@@ -7,6 +7,7 @@ import io
 import base64
 import os
 
+
 # ================= CONFIG =================
 st.set_page_config(
     page_title="Hawelha Telecom | حوّلها تليكوم",
@@ -31,11 +32,11 @@ def load_logo():
 
 logo = load_logo()
 
-# عرض الشعار في أعلى الصفحة - تم تكبير الحجم لملء نصف الشاشة تقريباً
+# عرض الشعار في أعلى الصفحة - تم تكبير الحجم إلى 80% كما طلبت
 if logo:
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 30px;">
-        <img src="data:image/png;base64,{logo}" width="60%" style="max-width: 800px;">
+        <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
     </div>
     """, unsafe_allow_html=True)
 
@@ -187,7 +188,7 @@ st.markdown("""
         background: #f0fdf4;
         border: 2px dashed #10b981;
         border-radius: 15px;
-        padding: 1rem; /* تقليل الحشو لأننا حذفنا النصوص */
+        padding: 1rem;
         text-align: center;
         margin-bottom: 2rem;
     }
@@ -226,7 +227,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= INPUT =================
-# تم حذف النصوص والعنوان هنا حسب الطلب
 st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
 
 file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
@@ -236,7 +236,14 @@ if file:
 
     if st.button("🚀 Start Processing"):
 
-        with st.spinner("Processing..."):
+        # إنشاء عناصر شريط التقدم والنص قبل بدء المعالجة
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        try:
+            # محاكاة خطوات المعالجة لتحديث شريط التقدم
+            status_text.text("⏳ جاري قراءة ملف PDF...")
+            progress_bar.progress(10)
 
             if mode == "Auto 🤖":
                 with pdfplumber.open(file) as pdf:
@@ -244,11 +251,21 @@ if file:
                 lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
             else:
                 lang = "ar" if mode == "عربي 🇪" else "en"
+            
+            status_text.text(f" تم اكتشاف اللغة: {'العربية' if lang == 'ar' else 'English'}... جاري الاستخراج")
+            progress_bar.progress(30)
 
+            # استدعاء دالة الاستخراج المناسبة
             data = parse_ar(file) if lang == "ar" else parse_en(file)
+
+            status_text.text("📊 جاري تحويل البيانات إلى جدول...")
+            progress_bar.progress(70)
 
             if data:
                 df = pd.DataFrame(data)
+
+                status_text.text("✅ اكتملت المعالجة!")
+                progress_bar.progress(100)
 
                 # حساب الإجماليات للداشبورد
                 total_lines = len(df)
@@ -286,4 +303,11 @@ if file:
                 st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
 
             else:
+                progress_bar.empty()
+                status_text.empty()
                 st.error("No data found")
+        
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
