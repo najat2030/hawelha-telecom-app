@@ -33,53 +33,79 @@ logo = load_logo()
 
 # ================= UI =================
 st.markdown("""<style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
-.header { background: linear-gradient(135deg, #059669, #10b981); padding: 40px; border-radius: 18px; text-align:center; color:white; }
-.upload-box { background:white; border:2px dashed #10b981; border-radius:16px; padding:45px; text-align:center; margin-top:20px; }
-.stButton>button { background: linear-gradient(135deg, #059669, #10b981); color:white; border-radius:10px; width:100%; }
-.kpi { background:white; border-radius:14px; padding:18px; text-align:center; border-top:4px solid #10b981; }
-.success-box { background:#ecfdf5; border:2px solid #10b981; border-radius:16px; padding:25px; text-align:center; }
+body { font-family: 'Cairo', sans-serif; }
+.header {
+    background: linear-gradient(135deg, #059669, #10b981);
+    padding: 40px;
+    border-radius: 18px;
+    text-align: center;
+    color: white;
+}
+.upload-box {
+    background: white;
+    border: 2px dashed #10b981;
+    border-radius: 16px;
+    padding: 45px;
+    text-align: center;
+}
+.stButton>button {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    width: 100%;
+}
+.kpi {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    border-top: 4px solid #10b981;
+}
 </style>""", unsafe_allow_html=True)
 
 # ================= HEADER =================
 if logo:
     st.markdown(f"""
     <div class="header">
-        <img src="data:image/png;base64,{logo}" style="width:420px;">
+        <img src="data:image/png;base64,{logo}" width="300">
         <h1>Hawelha Telecom</h1>
     </div>
     """, unsafe_allow_html=True)
 
 # ================= HELPERS =================
 def normalize(t):
-    return (t or "").replace("−","-").replace("–","-").replace("—","-")
+    return (t or "").replace("−","-").replace("–","-")
 
-# 🔥 FIX النهائي للسالب (يدعم عربي + إنجليزي)
+# 🔥 FIX السالب يمين/شمال
 def extract_numbers(text):
-    if not text:
-        return []
+    text = normalize(text)
 
-    text = normalize(str(text))
+    numbers = re.findall(r'-?\d+(?:\.\d+)?|\d+-', text)
 
-    # (123) → -123
-    text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
+    clean = []
+    for n in numbers:
+        if n.endswith('-'):  # 15-
+            clean.append(-float(n[:-1]))
+        else:
+            clean.append(float(n))
 
-    # 15- → -15 (العربي)
-    text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
+    return clean
 
-    # - 15 → -15
-    text = re.sub(r'-\s+(\d)', r'-\1', text)
-
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-
-    return [float(n) for n in numbers]
-
-# ================= AR =================
-def parse_ar(file):
+# ================= PARSER =================
+def parse_file(file):
     records = []
+
     with pdfplumber.open(file) as pdf:
-        for page in pdf.pages[2:]:
+        total_pages = len(pdf.pages)
+
+        progress = st.progress(0)
+        status = st.empty()
+
+        for idx, page in enumerate(pdf.pages[2:]):
+
+            percent = int((idx / max(total_pages-2,1)) * 100)
+            progress.progress(percent)
+            status.text(f"📄 جاري معالجة الصفحة {idx+3} من {total_pages}")
+
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -102,7 +128,7 @@ def parse_ar(file):
                                 vals = nxt
                                 i += 1
 
-                        vals = vals[::-1]  # مهم للاتجاه العربي
+                        vals = vals[::-1]
 
                         def g(i): return vals[i] if i < len(vals) else 0
 
@@ -124,49 +150,9 @@ def parse_ar(file):
                         })
 
                     i += 1
-    return records
 
-# ================= EN =================
-def parse_en(file):
-    records = []
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages[2:]:
-            for table in page.extract_tables() or []:
-                i = 0
-                while i < len(table):
-                    row = table[i]
-                    if not row:
-                        i += 1
-                        continue
-
-                    text = " ".join([str(c) for c in row])
-                    phone = re.search(r'(01[0125]\d{8})', text)
-
-                    if phone:
-                        phone = phone.group(1)
-                        vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-
-                        records.append({
-                            "محمول": phone,
-                            "رسوم شهرية": vals[0] if len(vals)>0 else 0,
-                            "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
-                            "مكالمات محلية": vals[2] if len(vals)>2 else 0,
-                            "رسائل محلية": vals[3] if len(vals)>3 else 0,
-                            "إنترنت محلية": vals[4] if len(vals)>4 else 0,
-                            "مكالمات دولية": vals[5] if len(vals)>5 else 0,
-                            "رسائل دولية": vals[6] if len(vals)>6 else 0,
-                            "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
-                            "رسائل تجوال": vals[8] if len(vals)>8 else 0,
-                            "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
-                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
-                            "ضرائب": vals[11] if len(vals)>11 else 0,
-                            "إجمالي": vals[-1] if vals else 0
-                        })
-
-                        i += 2
-                        continue
-
-                    i += 1
+        progress.progress(100)
+        status.text("✅ تم الانتهاء")
 
     return records
 
@@ -194,43 +180,36 @@ if file:
 
         with st.spinner("Processing..."):
 
-            if mode == "Auto 🤖":
-                with pdfplumber.open(file) as pdf:
-                    text = pdf.pages[0].extract_text() or ""
-                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-            else:
-                lang = "ar" if mode == "عربي 🇪🇬" else "en"
-
-            data = parse_ar(file) if lang == "ar" else parse_en(file)
+            data = parse_file(file)
 
             if data:
+
                 df = pd.DataFrame(data)
 
-                st.markdown("## 📊 Dashboard")
-
                 # ================= KPIS =================
-total_lines = len(df)
-total_monthly = df["رسوم شهرية"].sum()
-total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
-total_total = df["إجمالي"].sum()
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
+                total_total = df["إجمالي"].sum()
 
-c1, c2, c3, c4 = st.columns(4)
+                c1, c2, c3, c4 = st.columns(4)
 
-c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-
-c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-
-c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
-
-c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+                c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+                c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
+                c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
                 st.dataframe(df.head(10), use_container_width=True)
 
                 excel = to_excel(df)
 
-                st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
+                st.success("🎉 تم التحويل بنجاح")
 
-                st.download_button("📥 تحميل Excel", excel, "hawelha.xlsx")
+                st.download_button(
+                    "📥 تحميل Excel",
+                    excel,
+                    file_name="hawelha.xlsx"
+                )
 
             else:
                 st.error("No data found")
