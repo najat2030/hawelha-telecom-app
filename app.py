@@ -91,23 +91,20 @@ if logo:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
-# 🔥 Regex pre-compiled (سرعة)
 PHONE_PATTERN = re.compile(r'(01[0125]\d{8})')
-NUMBER_PATTERN = re.compile(r'-?\d+(?:\.\d+)?|\d+-')
 
-# 🔥 FIX السالب يمين/شمال
+# 🔥 FIX نهائي للسالب
 def extract_numbers(text):
     text = normalize(text)
-    numbers = NUMBER_PATTERN.findall(text)
 
-    clean = []
-    for n in numbers:
-        if n.endswith('-'):
-            clean.append(-float(n[:-1]))
-        else:
-            clean.append(float(n))
+    # توحيد كل أشكال السالب
+    text = re.sub(r'(\d+)\s*-\b', r'-\1', text)
+    text = re.sub(r'(\d+)\s*-\s', r'-\1', text)
+    text = re.sub(r'-\s*(\d+)', r'-\1', text)
 
-    return clean
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+
+    return [float(x) for x in numbers]
 
 # ================= PARSER =================
 def parse_file(file):
@@ -121,7 +118,6 @@ def parse_file(file):
 
         for idx, page in enumerate(pdf.pages[2:]):
 
-            # 🔥 Skip الصفحات الفاضية (تسريع)
             text_page = page.extract_text()
             if not text_page or "01" not in text_page:
                 continue
