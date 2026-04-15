@@ -184,6 +184,8 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    
     .upload-box {
         background: #f0fdf4;
         border: 2px dashed #10b981;
@@ -222,6 +224,32 @@ st.markdown("""
         text-align: center;
         margin: 1rem 0;
         font-weight: bold;
+    }
+    
+    /* Footer Styles */
+    .footer-container {
+        margin-top: 4rem;
+        padding: 2rem;
+        text-align: center;
+        border-top: 1px solid #e5e7eb;
+        background: linear-gradient(to right, #f8fafc, #ffffff);
+        border-radius: 12px 12px 0 0;
+    }
+    .developer-name {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #059669;
+        margin: 0;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    .copyright-text {
+        font-family: 'Poppins', sans-serif;
+        font-size: 0.9rem;
+        color: #9ca3af;
+        margin-top: 0.5rem;
+        font-weight: 500;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -301,6 +329,14 @@ if file:
                 st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
 
                 st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
+
+                # Footer Section
+                st.markdown("""
+                <div class="footer-container">
+                    <p class="developer-name">Developed by Najat El Bakry</p>
+                    <p class="copyright-text">© 2026 All Rights Reserved</p>
+                </div>
+                """, unsafe_allow_html=True)
 
             else:
                 progress_bar.empty()
