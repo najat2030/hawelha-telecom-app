@@ -110,49 +110,38 @@ def to_excel(df):
 # =========================================================
 
 def build_ui():
-    # Import Google Font Cairo for better Arabic typography
+    # CSS Styles for Modern UI
     st.markdown("""
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Global Styles */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        
         body {
             font-family: 'Cairo', sans-serif !important;
             background-color: #f0fdf4; /* Light green tint */
         }
         
-        /* Header Styling */
         .main-header {
-            background: linear-gradient(135deg, #047857 0%, #10b981 100%);
-            padding: 2rem 1rem;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 2.5rem 2rem;
             border-radius: 20px;
             text-align: center;
-            color: white;
             margin-bottom: 2rem;
             box-shadow: 0 10px 25px rgba(16, 185, 129, 0.2);
-            position: relative;
-            overflow: hidden;
         }
         
         .logo-img {
-            max-width: 220px; /* Smaller logo as requested */
+            max-width: 220px;
             height: auto;
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
 
-        .app-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: 1px;
-        }
-
-        /* Upload Box Styling - Minimalist */
         .upload-container {
             background: white;
             border: 2px dashed #10b981;
             border-radius: 16px;
-            padding: 2rem;
+            padding: 3rem 2rem;
             text-align: center;
             transition: all 0.3s ease;
             margin-bottom: 2rem;
@@ -162,7 +151,6 @@ def build_ui():
             background: #ecfdf5;
         }
 
-        /* KPI Cards Styling */
         .kpi-card {
             background: white;
             padding: 1.5rem;
@@ -184,30 +172,32 @@ def build_ui():
             font-weight: 600;
         }
 
-        /* Footer Styling - Elegant & Large */
         .footer {
             margin-top: 4rem;
-            padding: 2rem;
+            padding: 2.5rem;
             text-align: center;
-            border-top: 1px solid #d1fae5;
             background: white;
             border-radius: 12px 12px 0 0;
-        }
-        .developer-name {
-            font-weight: 700;
-            font-size: 1.4rem; /* Larger font as requested */
-            color: #047857;
-            margin-bottom: 0.5rem;
-            letter-spacing: 0.5px;
-        }
-        .copyright {
-            font-size: 0.9rem;
-            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
         }
         
-        /* Button Styling */
+        .developer-name {
+            font-size: 2.2rem; /* Large Font as requested */
+            font-weight: 800;
+            color: #059669;
+            margin: 0;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .copyright {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-top: 0.5rem;
+        }
+
         .stButton>button {
-            background: linear-gradient(90deg, #047857 0%, #10b981 100%);
+            background: linear-gradient(90deg, #059669 0%, #10b981 100%);
             color: white;
             border: none;
             padding: 0.75rem 2rem;
@@ -224,23 +214,23 @@ def build_ui():
     </style>
     """, unsafe_allow_html=True)
 
-    # Header Section with Smaller Logo and No Subtitle
+    # Header Section: Logo Only (No "Hawelha Telecom" text)
     if logo:
         st.markdown(f"""
         <div class="main-header">
-            <img class="logo-img" src="data:image/png;base64,{logo}" alt="Hawelha Logo">
-            <h1 class="app-title">Hawelha Telecom</h1>
+            <img class="logo-img" src="data:image/png;base64,{logo}" alt="Logo">
         </div>
         """, unsafe_allow_html=True)
     else:
+        # Fallback if no logo
         st.markdown("""
         <div class="main-header">
-            <h1 class="app-title">Hawelha Telecom</h1>
+            <h1>نظام تحويل الفواتير</h1>
         </div>
         """, unsafe_allow_html=True)
 
-    # Upload Section - Minimalist (No Text Inside)
-    st.markdown('<div class="upload-container"></div>', unsafe_allow_html=True)
+    # Upload Section
+    st.markdown('<div class="upload-container"><h2>📁 ارفع ملف الفاتورة (PDF)</h2><p style="color:#6b7280">اسحب الملف هنا أو اضغط للاختيار</p></div>', unsafe_allow_html=True)
     file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
     return file
@@ -251,7 +241,7 @@ def show_dashboard(df):
     total_settlement = df["رسوم تسويات"].sum()
     total_total = df["إجمالي"].sum()
 
-    st.markdown("## 📊 لوحة المعلومات")
+    st.markdown("### 📊 لوحة المعلومات")
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -263,8 +253,6 @@ def show_dashboard(df):
         st.markdown(f'<div class="kpi-card"><div class="kpi-label">التسويات</div><div class="kpi-value">{total_settlement:,.2f} ج.م</div></div>', unsafe_allow_html=True)
     with c4:
         st.markdown(f'<div class="kpi-card"><div class="kpi-label">الإجمالي النهائي</div><div class="kpi-value">{total_total:,.2f} ج.م</div></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
 
 # ================= MAIN =================
 file = build_ui()
@@ -288,11 +276,11 @@ if file:
                 st.download_button(
                     "📥 تحميل ملف Excel",
                     excel,
-                    file_name="Hawelha_Invoice_Data.xlsx",
+                    file_name="hawelha_invoice_data.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
                 
-                # Footer with Name and Copyright
+                # Footer with Large Developer Name
                 st.markdown("""
                 <div class="footer">
                     <p class="developer-name">Developed by Najat El Bakry</p>
