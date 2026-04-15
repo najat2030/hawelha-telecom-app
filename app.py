@@ -34,45 +34,100 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
-* {
+html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
+    background-color: #0b1220;
+}
+
+/* MAIN CONTAINER */
+.block-container {
+    padding: 2rem 3rem;
 }
 
 /* HEADER */
 .main-header {
-    background: #0f172a;
-    color: white;
+    background: linear-gradient(135deg, #0f172a 0%, #111c33 100%);
+    border: 1px solid #1f2a44;
     padding: 2rem;
-    border-radius: 12px;
+    border-radius: 16px;
     text-align: center;
     margin-bottom: 2rem;
-    border: 1px solid #1f2937;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 
-/* UPLOAD */
+.main-header img {
+    max-height: 120px;
+    margin-bottom: 1rem;
+}
+
+.main-header p {
+    color: #94a3b8;
+}
+
+/* UPLOAD BOX */
 .upload-box {
-    background: #f8fafc;
-    border: 2px dashed #94a3b8;
-    border-radius: 12px;
-    padding: 2.5rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #1f2a44;
+    border-radius: 16px;
+    padding: 3rem;
     text-align: center;
+    transition: 0.3s;
 }
 
-/* STATS */
-.stats-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 1.5rem;
-    text-align: center;
+.upload-box:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+}
+
+.upload-box h2 {
+    color: #e2e8f0;
 }
 
 /* BUTTON */
 .stButton>button {
-    background: #1d4ed8;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
     color: white;
-    border-radius: 8px;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
     width: 100%;
+    box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+    transition: 0.3s;
+}
+
+.stButton>button:hover {
+    transform: translateY(-1px);
+}
+
+/* STATS */
+.stats-card {
+    background: linear-gradient(135deg, #111c33, #0f172a);
+    border: 1px solid #1f2a44;
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stats-card h3 {
+    color: #60a5fa;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.stats-card p {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+/* SIDEBAR */
+section[data-testid="stSidebar"] {
+    background-color: #0a0f1c;
+    border-right: 1px solid #1f2a44;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #e2e8f0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -83,18 +138,19 @@ logo_data = load_logo()
 if logo_data:
     st.markdown(f"""
     <div class="main-header">
-        <img src="data:image/png;base64,{logo_data}" width="250">
-        <p style="color:#94a3b8;">احترافي • سريع • دقيق</p>
+        <img src="data:image/png;base64,{logo_data}" width="220">
+        <h2 style="color:#e2e8f0;">Hawelha Telecom</h2>
+        <p>Enterprise Data Processing System</p>
     </div>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
     <div class="main-header">
-        <h1>Hawelwa Telecom</h1>
+        <h1>Hawelha Telecom</h1>
     </div>
     """, unsafe_allow_html=True)
 
-# ================= NORMALIZATION (FIX NEGATIVE ISSUE) =================
+# ================= TEXT NORMALIZATION =================
 def normalize_text(text):
     if not text:
         return ""
@@ -124,7 +180,7 @@ def extract_numbers(text):
             pass
     return values
 
-# ================= ARABIC =================
+# ================= ARABIC ENGINE =================
 def extract_etisalat_data_ar(uploaded_file):
     records = []
 
@@ -182,7 +238,7 @@ def extract_etisalat_data_ar(uploaded_file):
 
     return records
 
-# ================= ENGLISH =================
+# ================= ENGLISH ENGINE =================
 def extract_etisalat_data_en(uploaded_file):
     records = []
 
@@ -234,7 +290,7 @@ def extract_etisalat_data_en(uploaded_file):
 
     return records
 
-# ================= EXCEL =================
+# ================= EXCEL EXPORT =================
 def convert_df_to_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -242,16 +298,23 @@ def convert_df_to_excel(df):
     output.seek(0)
     return output
 
-# ================= UI =================
-st.title("📊 Hawelha Telecom")
+# ================= MAIN UI =================
+st.markdown("""
+<div class="upload-box">
+    <h2>📁 Upload PDF Invoice</h2>
+    <p>Enterprise-grade PDF to Excel Processing System</p>
+</div>
+""", unsafe_allow_html=True)
 
-uploaded_file = st.file_uploader("📁 ارفع PDF", type=["pdf"])
+uploaded_file = st.file_uploader("", type=["pdf"])
 
 if uploaded_file:
-    st.success(f"تم رفع: {uploaded_file.name}")
 
-    if st.button("🚀 بدء التحويل"):
-        with st.spinner("جاري المعالجة..."):
+    st.success(f"Uploaded: {uploaded_file.name}")
+
+    if st.button("🚀 Process File"):
+
+        with st.spinner("Processing..."):
 
             if mode == "Auto 🤖":
                 lang = detect_language(uploaded_file)
@@ -266,19 +329,21 @@ if uploaded_file:
                 records = extract_etisalat_data_en(uploaded_file)
 
             if records:
+
                 df = pd.DataFrame(records)
 
-                st.success(f"تم استخراج {len(df)} سجل")
+                st.success(f"Extracted {len(df)} records")
 
                 st.dataframe(df.head(10))
 
                 excel = convert_df_to_excel(df)
 
                 st.download_button(
-                    "📥 تحميل Excel",
+                    "📥 Download Excel",
                     excel,
-                    file_name="hawelha.xlsx",
+                    file_name="hawelha_telecom.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
+
             else:
-                st.error("لم يتم العثور على بيانات")
+                st.error("No data found")
