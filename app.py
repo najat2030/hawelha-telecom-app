@@ -35,7 +35,7 @@ logo = load_logo()
 # عرض الشعار في أعلى الصفحة - تم تكبير الحجم إلى 80% كما طلبت
 if logo:
     st.markdown(f"""
-    <div style="text-align: center; margin-bottom: 30px;">
+    <div style="text-align: center; margin-bottom: 10px;">
         <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
     </div>
     """, unsafe_allow_html=True)
@@ -184,7 +184,7 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Cairo:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
     
     .upload-box {
         background: #f0fdf4;
@@ -194,6 +194,44 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
+
+    /* Signature Box Style - Dashed Rectangle under Logo */
+    .signature-box {
+        border: 2px dashed #cbd5e1; /* Light gray dashed border */
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 0 auto 2.5rem auto; /* Centered with bottom margin */
+        max-width: 600px; /* Limit width for elegance */
+        background-color: #ffffff;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        text-align: center;
+    }
+
+    .developer-name-3d {
+        font-family: 'Poppins', sans-serif;
+        font-size: 2.2rem; /* Large size */
+        font-weight: 700;
+        color: #000000; /* Black Color as requested */
+        margin: 0;
+        letter-spacing: 1px;
+        /* 3D Effect using multiple text shadows */
+        text-shadow: 
+            1px 1px 0 #cccccc,
+            2px 2px 0 #c0c0c0,
+            3px 3px 0 #b0b0b0,
+            4px 4px 0 #a0a0a0,
+            5px 5px 10px rgba(0,0,0,0.3);
+        display: inline-block;
+    }
+
+    .copyright-text {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1rem;
+        color: #475569; /* Dark gray for copyright */
+        margin-top: 0.5rem;
+        font-weight: 500;
+    }
+    
     .kpi {
         background: white;
         padding: 1.5rem;
@@ -225,43 +263,6 @@ st.markdown("""
         margin: 1rem 0;
         font-weight: bold;
     }
-    
-    /* Footer Styles inside the Dashed Box */
-    .footer-dashed-box {
-        margin-top: 3rem;
-        padding: 2rem;
-        text-align: center;
-        border: 3px dashed #10b981; /* Green dashed border matching the theme */
-        border-radius: 20px;
-        background-color: #f0fdf4; /* Light green background */
-        box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.1);
-    }
-    
-    .developer-name-3d {
-        font-family: 'Poppins', sans-serif;
-        font-size: 2.5rem; /* Larger size */
-        font-weight: 700;
-        color: #ffffff; /* White text for contrast */
-        margin: 0;
-        letter-spacing: 1px;
-        /* 3D Effect using text-shadow */
-        text-shadow: 
-            1px 1px 0 #047857,
-            2px 2px 0 #047857,
-            3px 3px 0 #047857,
-            4px 4px 0 #047857,
-            5px 5px 10px rgba(0,0,0,0.3);
-        display: inline-block;
-        transform: perspective(500px) rotateX(10deg); /* Slight 3D tilt */
-    }
-    
-    .copyright-text {
-        font-family: 'Cairo', sans-serif;
-        font-size: 1.1rem;
-        color: #047857;
-        margin-top: 1rem;
-        font-weight: 600;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -269,6 +270,15 @@ st.markdown("""
 st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
 
 file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
+
+# ================= SIGNATURE BOX (Under Logo) =================
+# This is placed here to appear right after the logo and before the upload/main logic visual flow
+st.markdown("""
+<div class="signature-box">
+    <p class="developer-name-3d">Developed by Najat El Bakry</p>
+    <p class="copyright-text">© 2026 All Rights Reserved</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ================= MAIN =================
 if file:
@@ -340,14 +350,6 @@ if file:
                 st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
 
                 st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
-
-                # Footer Section inside Dashed Box with 3D Name
-                st.markdown("""
-                <div class="footer-dashed-box">
-                    <p class="developer-name-3d">Developed by Najat El Bakry</p>
-                    <p class="copyright-text">© 2026 All Rights Reserved</p>
-                </div>
-                """, unsafe_allow_html=True)
 
             else:
                 progress_bar.empty()
