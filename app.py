@@ -141,12 +141,11 @@ with st.sidebar:
     """)
     
     st.markdown("---")
-    st.info("💡 **ملاحظة:** يبدأ الاستخراج من صفحة 3")
+    st.info("💡 **ملاحظة:** النظام يكتشف لغة الفاتورة تلقائياً ويضبط الاتجاه.")
 
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
 
-# ✅ التصحيح هنا: استخدام الاسم الكامل + النقطتين
 if logo_
     st.markdown(f"""
     <div class="main-header">
@@ -166,21 +165,37 @@ else:
 
 # ========== دوال المعالجة ==========
 
-def extract_values_from_row(row):
+def detect_language(pdf):
     """
-    استخراج القيم من الصف مع الحفاظ على السالب
+    محاولة اكتشاف لغة الفاتورة من الصفحة الأولى أو الثانية
+    """
+    try:
+        # نفحص أول صفحتين للبحث عن كلمات مفتاحية عربية
+        for i in range(min(2, len(pdf.pages))):
+            page = pdf.pages[i]
+            text = page.extract_text()
+            if text:
+                # البحث عن كلمات عربية شائعة في فواتير اتصالات
+                if any(char.isalpha() and '\u0600' <= char <= '\u06FF' for char in text):
+                    return 'arabic'
+        return 'english' # افتراضي إذا لم نجد عربي
+    except:
+        return 'english'
+
+def extract_values_arabic(row):
+    """
+    استخراج القيم للفواتير العربية (كما في الكود الأول)
+    يحافظ على الترتيب كما يستخرجه pdfplumber للعربي
     """
     values = []
     if not row:
         return values
     
-    # دمج محتوى الخلايا في نص واحد
     row_text = ' '.join([str(cell).strip() for cell in row if cell])
     
-    # تنظيف النص: توحيد أشكال الشرطات السالبة المختلفة إلى شرطة إنجليزية قياسية
-    clean_text = row_text.replace('–', '-').replace('−', '-').replace('—', '-')
+    # تنظيف النص لدعم السالب بشكل أفضل
+    clean_text = row_text.replace('–', '-').replace('−', '-')
     
-    # استخراج الأرقام مع الإشارة (سالب أو موجب)
     numbers = re.findall(r'-?\d+\.?\d*', clean_text)
     
     for num in numbers:
@@ -192,44 +207,61 @@ def extract_values_from_row(row):
     
     return values
 
-def create_record(phone, values):
+def extract_values_english(row):
     """
-    توزيع القيم على الأعمدة حسب الترتيب في الإكسل
+    استخراج القيم للفواتير الإنجليزية (كما في الكود الثاني)
+    """
+    values = []
+    if not row:
+        return values
     
-    الترتيب المطلوب (نفس الإكسل):
-    0: رسوم شهرية
-    1: رسوم الخدمات
-    2: مكالمات محلية
-    3: رسائل محلية
-    4: إنترنت محلية
-    5: مكالمات دولية
-    6: رسائل دولية
-    7: مكالمات تجوال
-    8: رسائل تجوال
-    9: إنترنت تجوال
-    10: رسوم وتسويات أخرى
-    11: قيمة الضرائب
-    12: إجمالي
+    row_text = ' '.join([str(cell).strip() for cell in row if cell])
+    numbers = re.findall(r'-?\d+\.?\d*', row_text)
+    
+    for num in numbers:
+        try:
+            val = float(num)
+            values.append(val)
+        except:
+            pass
+    
+    return values
+
+def create_record(phone, values, is_arabic=True):
     """
+    توزيع القيم على الأعمدة
+    """
+    
+    # إذا كانت الفاتورة إنجليزية، نعكس القيم لأن pdfplumber يقرأ LTR
+    # بينما الترتيب المطلوب في الدالة يفترض أن index 0 هو الشهرية (التي تكون على اليمين بصرياً في الهيدر المختلط)
+    # ملاحظة: في الكود الإنجليزي الذي أرسلتيه، كنتِ تعكسين القيم.
+    if not is_arabic:
+        values = values[::-1]
+
+    def get_val(index, default=0.0):
+        if index < len(values):
+            return values[index]
+        return default
+
     return {
         'محمول': phone,
-        'رسوم شهرية': values[0] if len(values) > 0 else 0,
-        'رسوم الخدمات': values[1] if len(values) > 1 else 0,
-        'مكالمات محلية': values[2] if len(values) > 2 else 0,
-        'رسائل محلية': values[3] if len(values) > 3 else 0,
-        'إنترنت محلية': values[4] if len(values) > 4 else 0,
-        'مكالمات دولية': values[5] if len(values) > 5 else 0,
-        'رسائل دولية': values[6] if len(values) > 6 else 0,
-        'مكالمات تجوال': values[7] if len(values) > 7 else 0,
-        'رسائل تجوال': values[8] if len(values) > 8 else 0,
-        'إنترنت تجوال': values[9] if len(values) > 9 else 0,
-        'رسوم وتسويات اخري': values[10] if len(values) > 10 else 0,
-        'قيمة الضرائب': values[11] if len(values) > 11 else 0,
-        'إجمالي': values[12] if len(values) > 12 else (values[-1] if values else 0)
+        'رسوم شهرية': get_val(0),
+        'رسوم الخدمات': get_val(1),
+        'مكالمات محلية': get_val(2),
+        'رسائل محلية': get_val(3),
+        'إنترنت محلية': get_val(4),
+        'مكالمات دولية': get_val(5),
+        'رسائل دولية': get_val(6),
+        'مكالمات تجوال': get_val(7),
+        'رسائل تجوال': get_val(8),
+        'إنترنت تجوال': get_val(9),
+        'رسوم وتسويات اخري': get_val(10),
+        'قيمة الضرائب': get_val(11),
+        'إجمالي': get_val(12)
     }
 
-def parse_etisalat_table(table):
-    """معالجة جدول الفاتورة"""
+def parse_etisalat_table(table, is_arabic):
+    """معالجة جدول الفاتورة حسب اللغة"""
     records = []
     if not table or len(table) < 2:
         return records
@@ -240,39 +272,73 @@ def parse_etisalat_table(table):
         if not row:
             i += 1
             continue
+        
         row_text = ' '.join([str(cell) if cell else '' for cell in row])
         phone_match = re.search(r'(01[0125]\d{8})', row_text)
+        
         if phone_match:
             phone = phone_match.group(1)
             values = []
+            
+            # استخراج القيم من الصف التالي
             if i + 1 < len(table):
                 values_row = table[i + 1]
-                values = extract_values_from_row(values_row)
-            record = create_record(phone, values)
+                if is_arabic:
+                    values = extract_values_arabic(values_row)
+                else:
+                    values = extract_values_english(values_row)
+            
+            record = create_record(phone, values, is_arabic)
             records.append(record)
-            i += 2
+            i += 2 # تخطي صف القيم
         else:
             i += 1
+            
     return records
 
 def extract_etisalat_data(uploaded_file):
-    """استخراج البيانات من ملف PDF"""
+    """استخراج البيانات من ملف PDF مع كشف اللغة"""
     all_records = []
     
     with pdfplumber.open(uploaded_file) as pdf:
+        # 1. كشف اللغة
+        lang = detect_language(pdf)
+        is_arabic = (lang == 'arabic')
+        
+        st.session_state['detected_lang'] = "العربية" if is_arabic else "الإنجليزية"
+        
         # معالجة كل الصفحات من صفحة 3 فما فوق
-        for page_num in range(2, len(pdf.pages)):
+        start_page = 2
+        if len(pdf.pages) <= start_page:
+            start_page = 0
+            
+        for page_num in range(start_page, len(pdf.pages)):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
+            
             if tables:
                 for table in tables:
-                    page_records = parse_etisalat_table(table)
+                    page_records = parse_etisalat_table(table, is_arabic)
                     all_records.extend(page_records)
     
     return all_records
 
 def convert_df_to_excel(df):
     output = io.BytesIO()
+    
+    # ترتيب الأعمدة النهائي في الإكسل (نفس ترتيب الملف المرجعي)
+    columns_order = [
+        'محمول', 'إجمالي', 'قيمة الضرائب', 'رسوم وتسويات اخري',
+        'إنترنت تجوال', 'رسائل تجوال', 'مكالمات تجوال',
+        'رسائل دولية', 'مكالمات دولية',
+        'إنترنت محلية', 'رسائل محلية', 'مكالمات محلية',
+        'رسوم الخدمات', 'رسوم شهرية'
+    ]
+    
+    # التأكد من وجود الأعمدة
+    existing_cols = [col for col in columns_order if col in df.columns]
+    df = df[existing_cols]
+    
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='البيانات')
     output.seek(0)
@@ -282,7 +348,7 @@ def convert_df_to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 ارفع ملف الفاتورة (PDF)</h2>
-    <p>يدعم الملفات الكبيرة - يبدأ الاستخراج من صفحة 3</p>
+    <p>يدعم الملفات العربية والإنجليزية - يبدأ الاستخراج من صفحة 3</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -304,15 +370,23 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     df = pd.DataFrame(records)
-                    columns_order = [
-                        'محمول', 'رسوم شهرية', 'رسوم الخدمات',
-                        'مكالمات محلية', 'رسائل محلية', 'إنترنت محلية',
-                        'مكالمات دولية', 'رسائل دولية',
-                        'مكالمات تجوال', 'رسائل تجوال', 'إنترنت تجوال',
-                        'رسوم وتسويات اخري', 'قيمة الضرائب', 'إجمالي'
+                    
+                    # إعادة ترتيب الأعمدة للعرض فقط (LTR)
+                    display_columns = [
+                        'محمول', 'إجمالي', 'قيمة الضرائب', 'رسوم وتسويات اخري',
+                        'إنترنت تجوال', 'رسائل تجوال', 'مكالمات تجوال',
+                        'رسائل دولية', 'مكالمات دولية',
+                        'إنترنت محلية', 'رسائل محلية', 'مكالمات محلية',
+                        'رسوم الخدمات', 'رسوم شهرية'
                     ]
-                    df = df[columns_order]
+                    # تصفية الأعمدة الموجودة فقط
+                    final_cols = [c for c in display_columns if c in df.columns]
+                    df = df[final_cols]
+                    
                     progress_bar.progress(80)
+                    
+                    lang_display = st.session_state.get('detected_lang', 'غير معروف')
+                    st.info(f"🌐 تم اكتشاف لغة الفاتورة: **{lang_display}**")
                     
                     st.markdown("### 📊 إحصائيات التحويل:")
                     col1, col2, col3 = st.columns(3)
