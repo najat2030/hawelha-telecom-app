@@ -24,7 +24,7 @@ def load_logo():
 logo = load_logo()
 
 # =========================================================
-# ❌❌ DO NOT MODIFY BELOW THIS LINE (CORE LOGIC) ❌❌❌
+# ❌❌❌ DO NOT MODIFY BELOW THIS LINE (CORE LOGIC) ❌❌❌
 # =========================================================
 
 def normalize(text):
@@ -123,7 +123,7 @@ def build_ui():
         /* Header Styling */
         .main-header {
             background: linear-gradient(135deg, #047857 0%, #10b981 100%);
-            padding: 3rem 2rem;
+            padding: 2rem 1rem;
             border-radius: 20px;
             text-align: center;
             color: white;
@@ -134,31 +134,25 @@ def build_ui():
         }
         
         .logo-img {
-            max-width: 350px; /* Larger Logo */
+            max-width: 220px; /* Smaller logo as requested */
             height: auto;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
 
         .app-title {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 700;
             margin: 0;
             letter-spacing: 1px;
         }
 
-        .app-subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin-top: 0.5rem;
-        }
-
-        /* Upload Box Styling */
+        /* Upload Box Styling - Minimalist */
         .upload-container {
             background: white;
             border: 2px dashed #10b981;
             border-radius: 16px;
-            padding: 3rem;
+            padding: 2rem;
             text-align: center;
             transition: all 0.3s ease;
             margin-bottom: 2rem;
@@ -190,23 +184,25 @@ def build_ui():
             font-weight: 600;
         }
 
-        /* Footer Styling */
+        /* Footer Styling - Elegant & Large */
         .footer {
             margin-top: 4rem;
             padding: 2rem;
             text-align: center;
-            color: #047857;
             border-top: 1px solid #d1fae5;
+            background: white;
+            border-radius: 12px 12px 0 0;
         }
         .developer-name {
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.4rem; /* Larger font as requested */
             color: #047857;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
         }
         .copyright {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: #6b7280;
-            margin-top: 0.5rem;
         }
         
         /* Button Styling */
@@ -228,25 +224,23 @@ def build_ui():
     </style>
     """, unsafe_allow_html=True)
 
-    # Header Section with Large Logo
+    # Header Section with Smaller Logo and No Subtitle
     if logo:
         st.markdown(f"""
         <div class="main-header">
             <img class="logo-img" src="data:image/png;base64,{logo}" alt="Hawelha Logo">
             <h1 class="app-title">Hawelha Telecom</h1>
-            <p class="app-subtitle">نظام تحويل فواتير الاتصالات الذكي من PDF إلى Excel</p>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
         <div class="main-header">
             <h1 class="app-title">Hawelha Telecom</h1>
-            <p class="app-subtitle">نظام تحويل فواتير الاتصالات الذكي</p>
         </div>
         """, unsafe_allow_html=True)
 
-    # Upload Section
-    st.markdown('<div class="upload-container"><h2>📁 رفع ملف الفاتورة (PDF)</h2><p style="color:#6b7280">اسحب الملف هنا أو اضغط للاختيار</p></div>', unsafe_allow_html=True)
+    # Upload Section - Minimalist (No Text Inside)
+    st.markdown('<div class="upload-container"></div>', unsafe_allow_html=True)
     file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
     return file
