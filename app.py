@@ -8,7 +8,7 @@ import os
 
 # ================= CONFIG =================
 st.set_page_config(
-    page_title="Hawelha Telecom",
+    page_title="Hawelha Telecom | حوّلها تليكوم",
     page_icon="📊",
     layout="wide"
 )
@@ -33,110 +33,66 @@ logo = load_logo()
 # ================= UI =================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap');
 
-:root {
-    --green: #0f9d58;
-    --dark: #111827;
-    --gray: #6b7280;
-    --bg: #f9fafb;
-}
+html, body { font-family: 'Tajawal', sans-serif; background: #f6f8f7; }
+h1, h2, h3 { font-family: 'Cairo', sans-serif; font-weight: 800; }
 
-html, body {
-    font-family: 'Inter', sans-serif;
-    background: var(--bg);
-}
-
-/* HEADINGS */
-h1, h2, h3 {
-    font-family: 'Cairo', sans-serif;
-    font-weight: 800;
-    color: var(--dark);
-}
-
-/* HEADER */
 .header {
-    background: white;
-    padding: 30px;
-    border-radius: 16px;
-    margin-bottom: 25px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border: 1px solid #eee;
-}
-.header img {
-    height: 70px;
-}
-.header-title {
-    font-size: 26px;
-}
-
-/* MAIN CARD */
-.main-card {
-    background: white;
-    padding: 40px;
-    border-radius: 16px;
+    background: linear-gradient(135deg, #047857, #10b981);
+    padding: 60px 20px;
+    border-radius: 20px;
     text-align: center;
-    border: 1px solid #eee;
-    margin-bottom: 25px;
-}
-.main-card p {
-    color: var(--gray);
-}
-
-/* BUTTON */
-.stButton>button {
-    background: var(--green);
     color: white;
-    font-weight: 600;
-    padding: 14px;
-    border-radius: 10px;
+}
+.header img { width: 520px; }
+
+.upload-box {
+    background: white;
+    border-radius: 18px;
+    padding: 50px;
+    text-align: center;
+    margin-top: 20px;
 }
 
-/* KPI */
+.stButton>button {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    padding: 14px;
+    border-radius: 12px;
+}
+
 .kpi {
     background: white;
-    border-radius: 14px;
-    padding: 20px;
+    border-radius: 16px;
+    padding: 22px;
     text-align: center;
-    border: 1px solid #eee;
+    margin-top: 20px;
 }
-.kpi h2 {
-    font-size: 24px;
-}
-.kpi p {
-    color: var(--gray);
-}
+.kpi h2 { font-size: 28px; color: #065f46; }
 
-/* SUCCESS */
 .success-box {
-    background: #ecfdf5;
-    border: 1px solid #10b981;
-    border-radius: 14px;
-    padding: 40px;
+    background: white;
+    border-radius: 22px;
+    padding: 60px;
     text-align: center;
-    margin-top: 30px;
+    margin-top: 40px;
 }
 .success-box h1 {
-    font-size: 32px;
-    color: #065f46;
+    font-size: 46px;
+    color: #064e3b;
 }
 
-/* FOOTER */
 .footer {
-    margin-top: 60px;
+    margin-top: 80px;
     text-align: center;
 }
 .signature {
-    font-family: 'Cairo', sans-serif;
+    font-size: 22px;
     font-weight: 800;
-    font-size: 18px;
-    color: var(--green);
-}
-.copy {
-    color: var(--gray);
-    font-size: 13px;
+    background: linear-gradient(90deg, #047857, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -145,8 +101,8 @@ h1, h2, h3 {
 if logo:
     st.markdown(f"""
     <div class="header">
-        <div class="header-title">Hawelha Telecom</div>
         <img src="data:image/png;base64,{logo}">
+        <h1>Hawelha Telecom</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -154,13 +110,18 @@ if logo:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
+# 🔥 FIX هنا: نشيل رقم الموبايل قبل استخراج الأرقام
 def extract_numbers(text):
     text = normalize(text)
-    text = re.sub(r'01[0125]\d{8}', '', text)  # حذف رقم الموبايل
-    nums = re.findall(r'-?\d+(?:\.\d+)?', text)
-    return [float(x) for x in nums]
 
-# ================= PARSE AR =================
+    # حذف رقم الموبايل
+    text = re.sub(r'01[0125]\d{8}', '', text)
+
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+
+    return [float(x) for x in numbers]
+
+# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -193,16 +154,26 @@ def parse_ar(file):
                         def g(i): return values[i] if i < len(values) else 0
 
                         records.append({
-                            "محمول": str(phone),
+                            "محمول": str(phone),  # 🔥 FIX
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
-                            "إجمالي": g(12)
+                            "مكالمات محلية": g(2),
+                            "رسائل محلية": g(3),
+                            "إنترنت محلية": g(4),
+                            "مكالمات دولية": g(5),
+                            "رسائل دولية": g(6),
+                            "مكالمات تجوال": g(7),
+                            "رسائل تجوال": g(8),
+                            "إنترنت تجوال": g(9),
+                            "رسوم تسويات": g(10),
+                            "ضرائب": g(11),
+                            "إجمالي": g(12),
                         })
 
                     i += 1
     return records
 
-# ================= PARSE EN =================
+# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -227,7 +198,7 @@ def parse_en(file):
                             values = extract_numbers(next_row)
 
                         records.append({
-                            "محمول": str(phone),
+                            "محمول": str(phone),  # 🔥 FIX
                             "رسوم شهرية": values[0] if len(values)>0 else 0,
                             "رسوم الخدمات": values[1] if len(values)>1 else 0,
                             "إجمالي": values[-1] if values else 0
@@ -240,17 +211,11 @@ def parse_en(file):
     return records
 
 # ================= MAIN =================
-st.markdown("""
-<div class="main-card">
-    <h2>رفع ملف الفاتورة</h2>
-    <p>ارفع ملف PDF وسيتم تحويله إلى Excel</p>
-</div>
-""", unsafe_allow_html=True)
-
+st.markdown('<div class="upload-box"><h2>📁 Upload PDF</h2></div>', unsafe_allow_html=True)
 file = st.file_uploader("", type=["pdf"])
 
 if file:
-    if st.button("🚀 بدء التحويل"):
+    if st.button("🚀 Start Processing"):
 
         if mode == "Auto 🤖":
             with pdfplumber.open(file) as pdf:
@@ -264,10 +229,9 @@ if file:
         if data:
             df = pd.DataFrame(data)
 
-            c1, c2, c3 = st.columns(3)
+            c1, c2 = st.columns(2)
             c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-            c2.markdown(f'<div class="kpi"><h2>{df["رسوم شهرية"].sum():.0f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-            c3.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.0f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
             st.dataframe(df.head(10), use_container_width=True)
 
@@ -277,7 +241,8 @@ if file:
 
             st.markdown("""
             <div class="success-box">
-                <h1>✔ تم التحويل بنجاح</h1>
+                <h1>🎉 تم تحويل الملف بنجاح</h1>
+                <p>File ready for download</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -286,7 +251,8 @@ if file:
 # ================= FOOTER =================
 st.markdown("""
 <div class="footer">
-    <div class="signature">Hawelha Telecom — Built by Najat El Bakry</div>
-    <div class="copy">© 2026 All Rights Reserved</div>
+    <div>Hawelha Telecom</div>
+    <div class="signature">Built by Najat El Bakry</div>
+    <div>© 2026 All Rights Reserved</div>
 </div>
 """, unsafe_allow_html=True)
