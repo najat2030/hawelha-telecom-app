@@ -31,7 +31,7 @@ def load_logo():
 
 logo = load_logo()
 
-# ================= UI =================
+# ================= GREEN CORPORATE UI =================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
@@ -41,6 +41,7 @@ html, body {
     background: #f8fafc;
 }
 
+/* HEADER */
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
     padding: 40px 20px;
@@ -51,41 +52,68 @@ html, body {
     box-shadow: 0 10px 30px rgba(16,185,129,0.25);
 }
 
+/* BIG LOGO */
 .header img {
     width: 420px;
     max-width: 95%;
     margin-bottom: 15px;
+    filter: drop-shadow(0px 5px 10px rgba(0,0,0,0.2));
 }
 
+/* UPLOAD BOX */
 .upload-box {
     background: white;
     border: 2px dashed #10b981;
     border-radius: 16px;
     padding: 45px;
     text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 
+/* BUTTON */
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
+    font-size: 16px;
     font-weight: 700;
+    padding: 12px;
     border-radius: 10px;
+    width: 100%;
 }
 
+/* KPIs */
 .kpi {
     background: white;
     border-radius: 14px;
     padding: 18px;
     text-align: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
     border-top: 4px solid #10b981;
 }
 
+.kpi h2 {
+    color: #059669;
+    margin: 0;
+}
+
+.kpi p {
+    color: #64748b;
+    margin: 5px 0 0;
+}
+
+/* SUCCESS ANIMATION */
 .success-box {
     background: #ecfdf5;
     border: 2px solid #10b981;
     border-radius: 16px;
     padding: 25px;
     text-align: center;
+    animation: pop 0.6s ease;
+}
+
+@keyframes pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -108,25 +136,30 @@ else:
 
 # ================= HELPERS =================
 def normalize(t):
-    return (t or "").replace("−","-").replace("–","-")
+    return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
+# 🔥 FIX النهائي للسالب
 def extract_numbers(text):
-    text = normalize(text)
+    if not text:
+        return []
 
-    # توحيد السالب
-    text = text.replace("−", "-").replace("–", "-")
+    text = normalize(str(text))
 
-    # إصلاح - 50 → -50
-    text = re.sub(r'-\s+', '-', text)
-
-    # حذف رقم الموبايل
-    text = re.sub(r'01[0125]\d{8}', '', text)
+    # إصلاح - 123 → -123
+    text = re.sub(r'-\s+(\d)', r'-\1', text)
 
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
 
-    return [float(x) for x in numbers]
+    result = []
+    for n in numbers:
+        try:
+            result.append(float(n))
+        except:
+            pass
 
-# ================= AR =================
+    return result
+
+# ================= AR ENGINE =================
 def parse_ar(file):
     records = []
 
@@ -154,6 +187,7 @@ def parse_ar(file):
                                 vals = nxt
                                 i += 1
 
+                        # 🔥 مهم جدًا للاتجاه
                         vals = vals[::-1]
 
                         def g(i): return vals[i] if i < len(vals) else 0
@@ -178,7 +212,7 @@ def parse_ar(file):
                     i += 1
     return records
 
-# ================= EN =================
+# ================= EN ENGINE =================
 def parse_en(file):
     records = []
 
@@ -197,7 +231,6 @@ def parse_en(file):
 
                     if phone:
                         phone = phone.group(1)
-
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
 
                         records.append({
@@ -236,6 +269,7 @@ def to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
+    <p>Drag & Drop your file</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -243,6 +277,7 @@ file = st.file_uploader("", type=["pdf"])
 
 # ================= MAIN =================
 if file:
+
     if st.button("🚀 Start Processing"):
 
         with st.spinner("Processing..."):
@@ -257,15 +292,17 @@ if file:
             data = parse_ar(file) if lang == "ar" else parse_en(file)
 
             if data:
+
                 df = pd.DataFrame(data)
 
-                # ===== Dashboard =====
-                st.markdown("## 📊 Dashboard")
-
+                # ================= KPIS =================
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
                 total_settlement = df.get("رسوم تسويات", pd.Series([0])).sum()
                 total_total = df["إجمالي"].sum()
+
+                # ================= DASHBOARD =================
+                st.markdown("## 📊 Dashboard")
 
                 c1, c2, c3, c4 = st.columns(4)
 
@@ -280,14 +317,15 @@ if file:
 
                 st.markdown("""
                 <div class="success-box">
-                    🎉 تم التحويل بنجاح
+                    🎉 تم التحويل بنجاح! الملف جاهز للتحميل
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.download_button(
                     "📥 تحميل Excel",
                     excel,
-                    file_name="hawelha_telecom.xlsx"
+                    file_name="hawelha_telecom.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
             else:
