@@ -33,122 +33,108 @@ logo = load_logo()
 # ================= UI =================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Tajawal:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
 
 html, body {
-    font-family: 'Tajawal', 'Cairo', sans-serif;
-    background: #f8fafc;
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    background: #f6f8f7;
 }
 
 /* HEADER */
 .header {
-    background: linear-gradient(135deg, #059669, #10b981);
-    padding: 50px 20px;
-    border-radius: 18px;
+    background: linear-gradient(135deg, #047857, #10b981);
+    padding: 60px 20px;
+    border-radius: 20px;
     text-align: center;
     color: white;
-    margin-bottom: 30px;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
 }
-
 .header img {
-    width: 480px;
+    width: 520px;
     max-width: 95%;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 /* UPLOAD */
 .upload-box {
     background: white;
-    border: 2px dashed #10b981;
-    border-radius: 16px;
-    padding: 45px;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 50px;
     text-align: center;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.05);
 }
 
 /* BUTTON */
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
-    font-weight: 700;
-    padding: 12px;
-    border-radius: 10px;
-    width: 100%;
+    font-weight: 600;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
 }
 
 /* KPI */
 .kpi {
     background: white;
-    border-radius: 14px;
-    padding: 18px;
+    border-radius: 16px;
+    padding: 22px;
     text-align: center;
-    border-top: 4px solid #10b981;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.05);
 }
-
 .kpi h2 {
-    color: #059669;
+    color: #047857;
+    font-size: 26px;
+    font-weight: 700;
 }
-
 .kpi p {
-    color: #64748b;
+    color: #6b7280;
+    font-size: 14px;
 }
 
 /* SUCCESS */
 .success-box {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-    border: 2px solid #10b981;
-    border-radius: 20px;
-    padding: 50px 20px;
+    background: white;
+    border-radius: 22px;
+    padding: 60px 20px;
     text-align: center;
-    margin-top: 30px;
-    animation: pop 0.6s ease;
-    box-shadow: 0 10px 30px rgba(16,185,129,0.25);
+    margin-top: 40px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
 }
-
 .success-icon {
-    font-size: 70px;
+    font-size: 80px;
 }
-
 .success-box h1 {
-    font-size: 42px;
+    font-size: 40px;
     font-weight: 700;
-    color: #065f46;
+    color: #064e3b;
 }
-
 .success-box h2 {
-    font-size: 28px;
-    color: #047857;
+    font-size: 24px;
+    color: #059669;
 }
-
 .success-box p {
-    font-size: 18px;
-    color: #065f46;
+    font-size: 16px;
+    color: #6b7280;
 }
 
 /* FOOTER */
 .footer {
-    background: #ffffff;
-    border-top: 2px solid #10b981;
-    margin-top: 60px;
-    padding: 30px;
+    margin-top: 70px;
+    padding: 25px;
     text-align: center;
-    border-radius: 12px;
+    border-top: 1px solid #e5e7eb;
 }
-
 .footer h3 {
-    color: #059669;
-    margin: 0;
-    font-size: 20px;
+    font-weight: 600;
+    font-size: 16px;
+    color: #047857;
 }
-
 .footer p {
-    color: #6b7280;
-    margin-top: 5px;
-    font-size: 14px;
-}
-
-@keyframes pop {
-    0% { transform: scale(0.7); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+    font-size: 13px;
+    color: #9ca3af;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -288,19 +274,12 @@ if file:
             if data:
                 df = pd.DataFrame(data)
 
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlement = df["رسوم تسويات"].sum()
-                total_total = df["إجمالي"].sum()
-
-                st.markdown("## 📊 Dashboard")
-
+                # KPIs
                 c1, c2, c3, c4 = st.columns(4)
-
-                c1.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="kpi"><h2>{total_monthly:.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                c3.markdown(f'<div class="kpi"><h2>{total_settlement:.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
-                c4.markdown(f'<div class="kpi"><h2>{total_total:.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+                c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                c2.markdown(f'<div class="kpi"><h2>{df["رسوم شهرية"].sum():.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+                c3.markdown(f'<div class="kpi"><h2>{df["رسوم تسويات"].sum():.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
+                c4.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
                 st.dataframe(df.head(10), use_container_width=True)
 
@@ -310,8 +289,8 @@ if file:
                 <div class="success-box">
                     <div class="success-icon">🎉</div>
                     <h1>تم تحويل الملف بنجاح</h1>
-                    <h2>الملف جاهز الآن للتحميل</h2>
-                    <p>يمكنك تحميل الملف ومراجعته فورًا</p>
+                    <h2>File Processed Successfully</h2>
+                    <p>الملف جاهز الآن للتحميل — يمكنك استخدامه مباشرة</p>
                 </div>
                 """, unsafe_allow_html=True)
 
