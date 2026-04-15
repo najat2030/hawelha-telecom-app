@@ -110,18 +110,13 @@ if logo:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
-# 🔥 FIX هنا: نشيل رقم الموبايل قبل استخراج الأرقام
 def extract_numbers(text):
     text = normalize(text)
-
-    # حذف رقم الموبايل
     text = re.sub(r'01[0125]\d{8}', '', text)
+    nums = re.findall(r'-?\d+(?:\.\d+)?', text)
+    return [float(x) for x in nums]
 
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-
-    return [float(x) for x in numbers]
-
-# ================= AR =================
+# ================= PARSE AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -139,7 +134,6 @@ def parse_ar(file):
 
                     if phone_match:
                         phone = phone_match.group(1)
-
                         values = extract_numbers(text)
 
                         if i+1 < len(table):
@@ -154,26 +148,17 @@ def parse_ar(file):
                         def g(i): return values[i] if i < len(values) else 0
 
                         records.append({
-                            "محمول": str(phone),  # 🔥 FIX
+                            "المصدر": file.name,  # 🔥 جديد
+                            "محمول": str(phone),
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
-                            "مكالمات محلية": g(2),
-                            "رسائل محلية": g(3),
-                            "إنترنت محلية": g(4),
-                            "مكالمات دولية": g(5),
-                            "رسائل دولية": g(6),
-                            "مكالمات تجوال": g(7),
-                            "رسائل تجوال": g(8),
-                            "إنترنت تجوال": g(9),
-                            "رسوم تسويات": g(10),
-                            "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
 
                     i += 1
     return records
 
-# ================= EN =================
+# ================= PARSE EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -198,7 +183,8 @@ def parse_en(file):
                             values = extract_numbers(next_row)
 
                         records.append({
-                            "محمول": str(phone),  # 🔥 FIX
+                            "المصدر": file.name,  # 🔥 جديد
+                            "محمول": str(phone),
                             "رسوم شهرية": values[0] if len(values)>0 else 0,
                             "رسوم الخدمات": values[1] if len(values)>1 else 0,
                             "إجمالي": values[-1] if values else 0
@@ -211,29 +197,36 @@ def parse_en(file):
     return records
 
 # ================= MAIN =================
-st.markdown('<div class="upload-box"><h2>📁 Upload PDF</h2></div>', unsafe_allow_html=True)
-file = st.file_uploader("", type=["pdf"])
+st.markdown('<div class="upload-box"><h2>📁 ارفع ملفات PDF (يمكنك رفع أكثر من ملف)</h2></div>', unsafe_allow_html=True)
 
-if file:
-    if st.button("🚀 Start Processing"):
+files = st.file_uploader("", type=["pdf"], accept_multiple_files=True)
 
-        if mode == "Auto 🤖":
-            with pdfplumber.open(file) as pdf:
-                text = pdf.pages[0].extract_text() or ""
-            lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-        else:
-            lang = "ar" if mode == "عربي 🇪🇬" else "en"
+if files:
+    if st.button("🚀 بدء التحويل لكل الملفات"):
 
-        data = parse_ar(file) if lang == "ar" else parse_en(file)
+        all_data = []
 
-        if data:
-            df = pd.DataFrame(data)
+        for file in files:
 
-            c1, c2 = st.columns(2)
-            c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-            c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+            if mode == "Auto 🤖":
+                with pdfplumber.open(file) as pdf:
+                    text = pdf.pages[0].extract_text() or ""
+                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+            else:
+                lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-            st.dataframe(df.head(10), use_container_width=True)
+            data = parse_ar(file) if lang == "ar" else parse_en(file)
+            all_data.extend(data)
+
+        if all_data:
+            df = pd.DataFrame(all_data)
+
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد السجلات</p></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="kpi"><h2>{df["رسوم شهرية"].sum():.0f}</h2><p>إجمالي الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+            c3.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.0f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+
+            st.dataframe(df.head(20), use_container_width=True)
 
             output = io.BytesIO()
             df.to_excel(output, index=False)
@@ -241,12 +234,12 @@ if file:
 
             st.markdown("""
             <div class="success-box">
-                <h1>🎉 تم تحويل الملف بنجاح</h1>
-                <p>File ready for download</p>
+                <h1>🎉 تم تحويل كل الملفات بنجاح</h1>
+                <p>ملف Excel واحد يحتوي على كل البيانات</p>
             </div>
             """, unsafe_allow_html=True)
 
-            st.download_button("📥 تحميل Excel", output, "hawelha.xlsx")
+            st.download_button("📥 تحميل ملف Excel الموحد", output, "hawelha_all_files.xlsx")
 
 # ================= FOOTER =================
 st.markdown("""
