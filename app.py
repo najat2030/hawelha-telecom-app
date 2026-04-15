@@ -17,7 +17,6 @@ st.set_page_config(
 
 # ========== تحميل الشعار ==========
 def load_logo():
-    """تحميل الشعار إذا كان موجوداً"""
     logo_path = 'static/logo.png'
     if os.path.exists(logo_path):
         with open(logo_path, 'rb') as f:
@@ -40,91 +39,28 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(5,150,105,0.3);
     }
     .main-header h1 { font-size: 2.5rem; margin: 0; font-weight: 700; }
-    .main-header p { 
-        font-size: 1.3rem; 
-        margin: 1rem 0 0.5rem 0; 
-        opacity: 0.95; 
-    }
-    .logo-container { 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        margin-bottom: 1.5rem;
-    }
-    .logo-img { 
-        max-width: 95%; 
-        max-height: 250px; 
-        width: auto; 
-        height: auto;
-        border-radius: 15px; 
-        background: white; 
-        padding: 25px;
-        object-fit: contain;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    .upload-box {
-        background: #f0fdf4;
-        border: 3px dashed #10b981;
-        border-radius: 15px;
-        padding: 3rem 2rem;
-        text-align: center;
-    }
-    .stats-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-right: 4px solid #059669;
-    }
+    .main-header p { font-size: 1.3rem; margin: 1rem 0 0.5rem 0; opacity: 0.95; }
+    .logo-container { display: flex; justify-content: center; align-items: center; margin-bottom: 1.5rem; }
+    .logo-img { max-width: 95%; max-height: 250px; width: auto; height: auto; border-radius: 15px; background: white; padding: 25px; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .upload-box { background: #f0fdf4; border: 3px dashed #10b981; border-radius: 15px; padding: 3rem 2rem; text-align: center; }
+    .stats-card { background: white; border-radius: 10px; padding: 1.5rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-right: 4px solid #059669; }
     .stats-card h3 { color: #059669; margin: 0 0 0.5rem 0; font-size: 2rem; }
     .stats-card p { color: #6b7280; margin: 0; font-size: 0.9rem; }
-    .footer {
-        background: #1e293b;
-        color: white;
-        text-align: center;
-        padding: 2rem;
-        margin-top: 3rem;
-        border-radius: 10px;
-    }
-    .success-box {
-        background: #dcfce7;
-        border: 2px solid #16a34a;
-        border-radius: 10px;
-        padding: 1.5rem;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    .stButton>button {
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1.1rem;
-        font-weight: 600;
-        border-radius: 8px;
-        width: 100%;
-    }
-    .dataframe {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-    .dataframe th {
-        text-align: right !important;
-    }
-    .dataframe td {
-        text-align: right !important;
-    }
+    .footer { background: #1e293b; color: white; text-align: center; padding: 2rem; margin-top: 3rem; border-radius: 10px; }
+    .success-box { background: #dcfce7; border: 2px solid #16a34a; border-radius: 10px; padding: 1.5rem; text-align: center; margin: 1rem 0; }
+    .stButton>button { background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; border: none; padding: 0.75rem 2rem; font-size: 1.1rem; font-weight: 600; border-radius: 8px; width: 100%; }
+    .dataframe { direction: rtl !important; text-align: right !important; }
+    .dataframe th { text-align: right !important; }
+    .dataframe td { text-align: right !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ========== الشريط الجانبي ==========
 with st.sidebar:
     st.title("📋 قائمة التحويل")
-    
     st.markdown("""
-    ### 📊 الأعمدة المستخرجة (14):
-    1. محمول
+    ### 📊 الترتيب المعتمد (بعد الضبط):
+    1. الرقم (محمول)
     2. رسوم شهرية
     3. رسوم الخدمات
     4. مكالمات محلية
@@ -139,15 +75,12 @@ with st.sidebar:
     13. قيمة الضرائب
     14. إجمالي
     """)
-    
     st.markdown("---")
-    st.info("💡 **ملاحظة:** النظام يكتشف لغة الفاتورة تلقائياً ويضبط الاتجاه.")
+    st.info("💡 **ملاحظة:** تم ضبط اتجاه القراءة ليطابق الرؤية العربية (من اليمين لليسار)")
 
 # ========== الهيدر مع الشعار ==========
 logo_data = load_logo()
-
-# ✅ التصحيح النهائي هنا: استخدام الاسم الكامل + النقطتين
-if logo_
+if logo_data:
     st.markdown(f"""
     <div class="main-header">
         <div class="logo-container">
@@ -166,26 +99,8 @@ else:
 
 # ========== دوال المعالجة ==========
 
-def detect_language(pdf):
-    """
-    محاولة اكتشاف لغة الفاتورة من الصفحة الأولى أو الثانية
-    """
-    try:
-        for i in range(min(2, len(pdf.pages))):
-            page = pdf.pages[i]
-            text = page.extract_text()
-            if text:
-                # البحث عن أحرف عربية
-                if any(char.isalpha() and '\u0600' <= char <= '\u06FF' for char in text):
-                    return 'arabic'
-        return 'english'
-    except:
-        return 'english'
-
-def extract_values_from_row(row):
-    """
-    استخراج القيم من الصف مع الحفاظ على السالب
-    """
+def extract_numbers_from_row(row):
+    """استخراج جميع الأرقام من الصف"""
     values = []
     if not row:
         return values
@@ -193,11 +108,8 @@ def extract_values_from_row(row):
     # دمج محتوى الخلايا في نص واحد
     row_text = ' '.join([str(cell).strip() for cell in row if cell])
     
-    # تنظيف النص: توحيد أشكال الشرطات السالبة المختلفة إلى شرطة إنجليزية قياسية
-    clean_text = row_text.replace('–', '-').replace('−', '-').replace('—', '-')
-    
-    # استخراج الأرقام مع الإشارة (سالب أو موجب)
-    numbers = re.findall(r'-?\d+\.?\d*', clean_text)
+    # استخراج الأرقام (صحيحة وعشرية وسالبة)
+    numbers = re.findall(r'-?\d+\.?\d*', row_text)
     
     for num in numbers:
         try:
@@ -208,83 +120,12 @@ def extract_values_from_row(row):
     
     return values
 
-def create_record(phone, values, is_arabic=True):
-    """
-    توزيع القيم على الأعمدة حسب اللغة المكتشفة
-    """
-    
-    # إذا كانت الفاتورة إنجليزية، نعكس القيم لأن pdfplumber يقرأ LTR
-    # بينما الترتيب المطلوب في الدالة يفترض أن index 0 هو الشهرية (التي تكون على اليمين بصرياً في الهيدر المختلط)
-    if not is_arabic:
-        values = values[::-1]
-
-    def get_val(index, default=0.0):
-        if index < len(values):
-            return values[index]
-        return default
-
-    return {
-        'محمول': phone,
-        'رسوم شهرية': get_val(0),
-        'رسوم الخدمات': get_val(1),
-        'مكالمات محلية': get_val(2),
-        'رسائل محلية': get_val(3),
-        'إنترنت محلية': get_val(4),
-        'مكالمات دولية': get_val(5),
-        'رسائل دولية': get_val(6),
-        'مكالمات تجوال': get_val(7),
-        'رسائل تجوال': get_val(8),
-        'إنترنت تجوال': get_val(9),
-        'رسوم وتسويات اخري': get_val(10),
-        'قيمة الضرائب': get_val(11),
-        'إجمالي': get_val(12)
-    }
-
-def parse_etisalat_table(table, is_arabic):
-    """معالجة جدول الفاتورة حسب اللغة"""
-    records = []
-    if not table or len(table) < 2:
-        return records
-    
-    i = 0
-    while i < len(table):
-        row = table[i]
-        if not row:
-            i += 1
-            continue
-        
-        row_text = ' '.join([str(cell) if cell else '' for cell in row])
-        phone_match = re.search(r'(01[0125]\d{8})', row_text)
-        
-        if phone_match:
-            phone = phone_match.group(1)
-            values = []
-            
-            # استخراج القيم من الصف التالي
-            if i + 1 < len(table):
-                values_row = table[i + 1]
-                values = extract_values_from_row(values_row)
-            
-            record = create_record(phone, values, is_arabic)
-            records.append(record)
-            i += 2 # تخطي صف القيم
-        else:
-            i += 1
-            
-    return records
-
 def extract_etisalat_data(uploaded_file):
-    """استخراج البيانات من ملف PDF مع كشف اللغة"""
+    """استخراج البيانات من ملف PDF"""
     all_records = []
     
     with pdfplumber.open(uploaded_file) as pdf:
-        # 1. كشف اللغة
-        lang = detect_language(pdf)
-        is_arabic = (lang == 'arabic')
-        
-        st.session_state['detected_lang'] = "العربية" if is_arabic else "الإنجليزية"
-        
-        # معالجة كل الصفحات من صفحة 3 فما فوق
+        # البدء من صفحة 3
         start_page = 2
         if len(pdf.pages) <= start_page:
             start_page = 0
@@ -293,31 +134,118 @@ def extract_etisalat_data(uploaded_file):
             page = pdf.pages[page_num]
             tables = page.extract_tables()
             
-            if tables:
-                for table in tables:
-                    page_records = parse_etisalat_table(table, is_arabic)
-                    all_records.extend(page_records)
+            if not tables:
+                continue
+                
+            for table in tables:
+                if not table or len(table) < 2:
+                    continue
+                    
+                i = 0
+                while i < len(table):
+                    row = table[i]
+                    if not row:
+                        i += 1
+                        continue
+                    
+                    # دمج محتويات الصف للبحث عن رقم الهاتف
+                    row_text = ' '.join([str(cell).strip() for cell in row if cell])
+                    
+                    # البحث عن رقم محمول مصري
+                    phone_match = re.search(r'(01[0125]\d{8})', row_text)
+                    
+                    if phone_match:
+                        phone_number = phone_match.group(1)
+                        
+                        # البحث عن صف القيم (الصف التالي)
+                        values = []
+                        
+                        # نحاول استخراج القيم من الصف الحالي أولاً
+                        current_values = extract_numbers_from_row(row)
+                        
+                        # ثم من الصف التالي إذا وجد
+                        if i + 1 < len(table):
+                            next_row = table[i + 1]
+                            next_values = extract_numbers_from_row(next_row)
+                            
+                            # نختار الصف الذي يحتوي على عدد أكبر من القيم (عادة 13 قيمة أو أكثر)
+                            if len(next_values) >= 10:
+                                values = next_values
+                                i += 1  # تخطي الصف التالي لأنه تم استخدامه
+                            elif len(current_values) >= 10:
+                                values = current_values
+                        else:
+                            if len(current_values) >= 10:
+                                values = current_values
+                        
+                        # إنشاء سجل إذا وجدنا قيم
+                        if values:
+                            # ==========================================
+                            # الحل السحري: عكس القائمة!
+                            # الـ PDF بيقرأ من الشمال لليمين (إجمالي -> شهرية)
+                            # إحنا عايزين من اليمين لليسار (شهرية -> إجمالي)
+                            # ==========================================
+                            reversed_values = values[::-1]
+                            
+                            # دالة مساعدة لجلب القيمة بأمان
+                            def get_val(index, default=0.0):
+                                if index < len(reversed_values):
+                                    return reversed_values[index]
+                                return default
+
+                            record = {
+                                'محمول': phone_number,
+                                # التوزيع بناءً على القائمة المعكوسة (الآن القيمة 0 هي الشهرية)
+                                'رسوم شهرية': get_val(0),          
+                                'رسوم الخدمات': get_val(1),        
+                                'مكالمات محلية': get_val(2),       
+                                'رسائل محلية': get_val(3),         
+                                'إنترنت محلية': get_val(4),        
+                                'مكالمات دولية': get_val(5),       
+                                'رسائل دولية': get_val(6),         
+                                'مكالمات تجوال': get_val(7),       
+                                'رسائل تجوال': get_val(8),         
+                                'إنترنت تجوال': get_val(9),        
+                                'رسوم وتسويات اخري': get_val(10),  
+                                'قيمة الضرائب': get_val(11),       
+                                'إجمالي': get_val(12)              
+                            }
+                            all_records.append(record)
+                    
+                    i += 1
     
     return all_records
 
 def convert_df_to_excel(df):
+    """تحويل البيانات إلى ملف Excel قابل للتنزيل"""
     output = io.BytesIO()
     
-    # ترتيب الأعمدة النهائي في الإكسل (نفس ترتيب الملف المرجعي)
+    # ترتيب الأعمدة النهائي المطلوب في الإكسل (نفس ترتيب الملف المرفق)
+    # ملاحظة: في الإكسل نرتبهم من اليسار لليمين (محمول -> إجمالي)
     columns_order = [
-        'محمول', 'إجمالي', 'قيمة الضرائب', 'رسوم وتسويات اخري',
-        'إنترنت تجوال', 'رسائل تجوال', 'مكالمات تجوال',
-        'رسائل دولية', 'مكالمات دولية',
-        'إنترنت محلية', 'رسائل محلية', 'مكالمات محلية',
-        'رسوم الخدمات', 'رسوم شهرية'
+        'محمول',
+        'إجمالي',
+        'قيمة الضرائب',
+        'رسوم وتسويات اخري',
+        'إنترنت تجوال',
+        'رسائل تجوال',
+        'مكالمات تجوال',
+        'رسائل دولية',
+        'مكالمات دولية',
+        'إنترنت محلية',
+        'رسائل محلية',
+        'مكالمات محلية',
+        'رسوم الخدمات',
+        'رسوم شهرية'
     ]
     
-    # التأكد من وجود الأعمدة
+    # التأكد من ترتيب الأعمدة
     existing_cols = [col for col in columns_order if col in df.columns]
     df = df[existing_cols]
     
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='البيانات')
+    
     output.seek(0)
     return output
 
@@ -325,7 +253,7 @@ def convert_df_to_excel(df):
 st.markdown("""
 <div class="upload-box">
     <h2>📁 ارفع ملف الفاتورة (PDF)</h2>
-    <p>يدعم الملفات العربية والإنجليزية - يبدأ الاستخراج من صفحة 3</p>
+    <p>سيقوم النظام بتوزيع القيم بدقة: الرسوم الشهرية (45.5) في عمودها، والإجمالي (56.85) في عموده.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -335,7 +263,7 @@ if uploaded_file is not None:
     st.success(f"✅ تم رفع الملف: **{uploaded_file.name}**")
     
     if st.button("🚀 بدء التحويل الآن"):
-        with st.spinner('⏳ جاري معالجة الملف...'):
+        with st.spinner('⏳ جاري معالجة الملف وتوزيع القيم بدقة...'):
             progress_bar = st.progress(0)
             status_text = st.empty()
             
@@ -347,23 +275,7 @@ if uploaded_file is not None:
                     progress_bar.progress(50)
                     
                     df = pd.DataFrame(records)
-                    
-                    # إعادة ترتيب الأعمدة للعرض فقط (LTR)
-                    display_columns = [
-                        'محمول', 'إجمالي', 'قيمة الضرائب', 'رسوم وتسويات اخري',
-                        'إنترنت تجوال', 'رسائل تجوال', 'مكالمات تجوال',
-                        'رسائل دولية', 'مكالمات دولية',
-                        'إنترنت محلية', 'رسائل محلية', 'مكالمات محلية',
-                        'رسوم الخدمات', 'رسوم شهرية'
-                    ]
-                    # تصفية الأعمدة الموجودة فقط
-                    final_cols = [c for c in display_columns if c in df.columns]
-                    df = df[final_cols]
-                    
                     progress_bar.progress(80)
-                    
-                    lang_display = st.session_state.get('detected_lang', 'غير معروف')
-                    st.info(f"🌐 تم اكتشاف لغة الفاتورة: **{lang_display}**")
                     
                     st.markdown("### 📊 إحصائيات التحويل:")
                     col1, col2, col3 = st.columns(3)
@@ -403,7 +315,7 @@ if uploaded_file is not None:
                     st.markdown("""
                     <div class="success-box">
                         <h3>🎉 تم التحويل بنجاح!</h3>
-                        <p>اضغط على الزر أدناه لتنزيل الملف</p>
+                        <p>الملف جاهز للتنزيل بنفس ترتيب الأعمدة المطلوب</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
