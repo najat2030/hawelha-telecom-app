@@ -106,87 +106,77 @@ def to_excel(df):
     return out
 
 # =========================================================
-# ✅✅✅ UI SECTION ONLY (SAFE TO MODIFY) ✅✅✅
+# ✅ UI ONLY
 # =========================================================
 
 def build_ui():
     st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-        
-        body {
-            font-family: 'Cairo', sans-serif !important;
-            background-color: #f0fdf4;
-        }
-        
-        .kpi-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-top: 5px solid #10b981;
-            height: 100%;
-        }
-        .kpi-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #047857;
-        }
-        .kpi-label {
-            color: #6b7280;
-            font-size: 0.9rem;
-            font-weight: 600;
-        }
+    body {
+        font-family: 'Cairo', sans-serif !important;
+        background-color: #f0fdf4;
+    }
 
-        .footer {
-            margin-top: 4rem;
-            padding: 2.5rem;
-            text-align: center;
-        }
+    .header {
+        background: linear-gradient(135deg, #059669, #10b981);
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+    }
 
-        .developer-name {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #059669;
-        }
+    .header img {
+        width: 220px;
+    }
 
-        .copyright {
-            font-size: 0.9rem;
-            color: #9ca3af;
-        }
+    .upload-box {
+        background: white;
+        border: 2px dashed #10b981;
+        border-radius: 16px;
+        padding: 50px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
 
-        .stButton>button {
-            background: linear-gradient(90deg, #059669 0%, #10b981 100%);
-            color: white;
-            border-radius: 10px;
-            padding: 12px;
-            width: 100%;
-        }
+    .stButton>button {
+        font-size: 18px;
+        padding: 16px;
+        background: linear-gradient(90deg, #059669, #10b981);
+        color: white;
+        border-radius: 10px;
+        width: 100%;
+    }
+
+    .kpi {
+        background: white;
+        border-radius: 14px;
+        padding: 18px;
+        text-align: center;
+        border-top: 4px solid #10b981;
+    }
+
+    .success {
+        background:#ecfdf5;
+        border:2px solid #10b981;
+        padding:20px;
+        border-radius:12px;
+        text-align:center;
+        margin-top:20px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # 🔥 اللوجو الكبير في النص
     if logo:
         st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #059669, #10b981);
-            padding: 70px 20px;
-            border-radius: 25px;
-            text-align: center;
-            margin-bottom: 30px;
-        ">
-            <img src="data:image/png;base64,{logo}" style="
-                width: 420px;
-                max-width: 95%;
-                display: block;
-                margin: auto;
-                filter: drop-shadow(0px 10px 25px rgba(0,0,0,0.25));
-            ">
+        <div class="header">
+            <img src="data:image/png;base64,{logo}">
         </div>
         """, unsafe_allow_html=True)
 
-    file = st.file_uploader("", type=["pdf"])
+    st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
+
+    file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
     return file
 
@@ -196,26 +186,38 @@ def show_dashboard(df):
     total_settlement = df["رسوم تسويات"].sum()
     total_total = df["إجمالي"].sum()
 
-    st.markdown("### 📊 لوحة المعلومات")
+    st.markdown("## 📊 Dashboard")
 
     c1, c2, c3, c4 = st.columns(4)
 
-    c1.markdown(f'<div class="kpi-card"><div class="kpi-label">عدد الخطوط</div><div class="kpi-value">{total_lines}</div></div>', unsafe_allow_html=True)
-    c2.markdown(f'<div class="kpi-card"><div class="kpi-label">الرسوم الشهرية</div><div class="kpi-value">{total_monthly:,.2f}</div></div>', unsafe_allow_html=True)
-    c3.markdown(f'<div class="kpi-card"><div class="kpi-label">التسويات</div><div class="kpi-value">{total_settlement:,.2f}</div></div>', unsafe_allow_html=True)
-    c4.markdown(f'<div class="kpi-card"><div class="kpi-label">الإجمالي</div><div class="kpi-value">{total_total:,.2f}</div></div>', unsafe_allow_html=True)
+    c1.markdown(f'<div class="kpi"><h3>{total_lines}</h3><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+    c2.markdown(f'<div class="kpi"><h3>{total_monthly:.2f}</h3><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+    c3.markdown(f'<div class="kpi"><h3>{total_settlement:.2f}</h3><p>التسويات</p></div>', unsafe_allow_html=True)
+    c4.markdown(f'<div class="kpi"><h3>{total_total:.2f}</h3><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
 # ================= MAIN =================
 file = build_ui()
 
 if file:
+
+    st.info(f"📄 {file.name}")
+
     if st.button("🚀 بدء المعالجة"):
+
+        progress = st.progress(0)
+
         with st.spinner("جاري المعالجة..."):
+
+            progress.progress(40)
 
             data = parse_ar(file)
 
+            progress.progress(80)
+
             if data:
                 df = pd.DataFrame(data)
+
+                progress.progress(100)
 
                 show_dashboard(df)
 
@@ -223,19 +225,50 @@ if file:
 
                 excel = to_excel(df)
 
-                st.download_button(
-                    "📥 تحميل Excel",
-                    excel,
-                    file_name="hawelha_invoice_data.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
                 st.markdown("""
-                <div class="footer">
-                    <p class="developer-name">Developed by Najat El Bakry</p>
-                    <p class="copyright">© 2026 Hawelha Telecom. All Rights Reserved</p>
+                <div class="success">
+                    ✅ تم التحويل بنجاح
                 </div>
                 """, unsafe_allow_html=True)
 
+                st.download_button(
+                    "⬇️ تحميل Excel",
+                    excel,
+                    file_name="hawelha_invoice_data.xlsx"
+                )
+
             else:
-                st.error("⚠️ لم يتم العثور على بيانات")
+                st.error("No data found")
+
+# ================= FOOTER =================
+st.markdown("""
+<div style="
+margin-top:60px;
+padding:30px;
+text-align:center;
+background:white;
+border-radius:16px;
+box-shadow:0 4px 20px rgba(0,0,0,0.05);
+">
+
+<p style="
+font-size:26px;
+font-weight:800;
+background: linear-gradient(90deg, #059669, #10b981);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+margin:0;
+">
+Developed by Najat El Bakry
+</p>
+
+<p style="
+font-size:14px;
+color:#6b7280;
+margin-top:8px;
+">
+© 2026 Hawelha Telecom. All Rights Reserved
+</p>
+
+</div>
+""", unsafe_allow_html=True)
