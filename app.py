@@ -21,7 +21,7 @@ mode = st.radio(
     horizontal=True
 )
 
-# ================= LOGO (UNCHANGED) =================
+# ================= LOGO =================
 def load_logo():
     logo_path = 'static/logo.png'
     if os.path.exists(logo_path):
@@ -34,123 +34,100 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
-html, body, [class*="css"] {
+html, body {
+    background-color: #0a0f1c;
     font-family: 'Inter', sans-serif;
-    background-color: #0b1220;
-}
-
-/* MAIN CONTAINER */
-.block-container {
-    padding: 2rem 3rem;
 }
 
 /* HEADER */
 .main-header {
-    background: linear-gradient(135deg, #0f172a 0%, #111c33 100%);
-    border: 1px solid #1f2a44;
-    padding: 2rem;
+    background: linear-gradient(135deg, #020617, #0f172a);
+    border: 1px solid #1e293b;
+    padding: 30px;
     border-radius: 16px;
     text-align: center;
-    margin-bottom: 2rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    margin-bottom: 25px;
 }
 
 .main-header img {
-    max-height: 120px;
-    margin-bottom: 1rem;
+    width: 280px;
+    max-width: 90%;
+    margin-bottom: 15px;
 }
 
-.main-header p {
-    color: #94a3b8;
-}
-
-/* UPLOAD BOX */
+/* UPLOAD */
 .upload-box {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid #1f2a44;
+    background: #0f172a;
+    border: 1px solid #1e293b;
     border-radius: 16px;
-    padding: 3rem;
+    padding: 40px;
     text-align: center;
-    transition: 0.3s;
-}
-
-.upload-box:hover {
-    border-color: #3b82f6;
-    transform: translateY(-2px);
-}
-
-.upload-box h2 {
-    color: #e2e8f0;
+    color: white;
 }
 
 /* BUTTON */
 .stButton>button {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    background: linear-gradient(90deg, #2563eb, #1d4ed8);
     color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 10px;
     font-weight: 600;
+    border-radius: 10px;
+    padding: 12px;
+    border: none;
     width: 100%;
-    box-shadow: 0 4px 15px rgba(37,99,235,0.3);
-    transition: 0.3s;
 }
 
-.stButton>button:hover {
-    transform: translateY(-1px);
-}
-
-/* STATS */
-.stats-card {
-    background: linear-gradient(135deg, #111c33, #0f172a);
-    border: 1px solid #1f2a44;
+/* DASHBOARD CARDS */
+.kpi-card {
+    background: #0f172a;
+    border: 1px solid #1e293b;
     border-radius: 14px;
-    padding: 1.5rem;
+    padding: 20px;
     text-align: center;
 }
 
-.stats-card h3 {
-    color: #60a5fa;
-    font-size: 2rem;
-    margin: 0;
+.kpi-title {
+    color: #94a3b8;
+    font-size: 14px;
 }
 
-.stats-card p {
-    color: #94a3b8;
-    font-size: 0.85rem;
+.kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #38bdf8;
+}
+
+/* TABLE */
+.dataframe {
+    border-radius: 12px;
+    overflow: hidden;
 }
 
 /* SIDEBAR */
 section[data-testid="stSidebar"] {
-    background-color: #0a0f1c;
-    border-right: 1px solid #1f2a44;
-}
-
-section[data-testid="stSidebar"] * {
-    color: #e2e8f0 !important;
+    background-color: #050b18;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= LOGO DISPLAY =================
+# ================= LOGO =================
 logo_data = load_logo()
 
 if logo_data:
     st.markdown(f"""
     <div class="main-header">
-        <img src="data:image/png;base64,{logo_data}" width="220">
+        <img src="data:image/png;base64,{logo_data}">
         <h2 style="color:#e2e8f0;">Hawelha Telecom</h2>
-        <p>Enterprise Data Processing System</p>
+        <p style="color:#94a3b8;">Enterprise Billing Automation System</p>
     </div>
     """, unsafe_allow_html=True)
 else:
     st.markdown("""
     <div class="main-header">
-        <h1>Hawelha Telecom</h1>
+        <h2 style="color:white;">Hawelha Telecom</h2>
     </div>
     """, unsafe_allow_html=True)
 
-# ================= TEXT NORMALIZATION =================
+# ================= NORMALIZATION =================
 def normalize_text(text):
     if not text:
         return ""
@@ -181,7 +158,7 @@ def extract_numbers(text):
     return values
 
 # ================= ARABIC ENGINE =================
-def extract_etisalat_data_ar(uploaded_file):
+def extract_ar(uploaded_file):
     records = []
 
     with pdfplumber.open(uploaded_file) as pdf:
@@ -198,7 +175,6 @@ def extract_etisalat_data_ar(uploaded_file):
                         continue
 
                     row_text = normalize_text(' '.join([str(c) for c in row if c]))
-
                     phone_match = re.search(r'(01[0125]\d{8})', row_text)
 
                     if phone_match:
@@ -239,7 +215,7 @@ def extract_etisalat_data_ar(uploaded_file):
     return records
 
 # ================= ENGLISH ENGINE =================
-def extract_etisalat_data_en(uploaded_file):
+def extract_en(uploaded_file):
     records = []
 
     with pdfplumber.open(uploaded_file) as pdf:
@@ -290,7 +266,7 @@ def extract_etisalat_data_en(uploaded_file):
 
     return records
 
-# ================= EXCEL EXPORT =================
+# ================= EXCEL =================
 def convert_df_to_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -298,19 +274,17 @@ def convert_df_to_excel(df):
     output.seek(0)
     return output
 
-# ================= MAIN UI =================
+# ================= MAIN =================
 st.markdown("""
 <div class="upload-box">
     <h2>📁 Upload PDF Invoice</h2>
-    <p>Enterprise-grade PDF to Excel Processing System</p>
+    <p>Enterprise-grade PDF Processing System</p>
 </div>
 """, unsafe_allow_html=True)
 
 uploaded_file = st.file_uploader("", type=["pdf"])
 
 if uploaded_file:
-
-    st.success(f"Uploaded: {uploaded_file.name}")
 
     if st.button("🚀 Process File"):
 
@@ -323,16 +297,26 @@ if uploaded_file:
             else:
                 lang = "en"
 
-            if lang == "ar":
-                records = extract_etisalat_data_ar(uploaded_file)
-            else:
-                records = extract_etisalat_data_en(uploaded_file)
+            records = extract_ar(uploaded_file) if lang == "ar" else extract_en(uploaded_file)
 
             if records:
 
                 df = pd.DataFrame(records)
 
-                st.success(f"Extracted {len(df)} records")
+                # ================= KPIs =================
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlement = df["رسوم تسويات اخري"].sum() if "رسوم تسويات اخري" in df else 0
+                total_final = df["إجمالي"].sum()
+
+                st.markdown("## 📊 Dashboard Overview")
+
+                col1, col2, col3, col4 = st.columns(4)
+
+                col1.metric("Total Lines", total_lines)
+                col2.metric("Monthly Fees", f"{total_monthly:,.2f}")
+                col3.metric("Settlements", f"{total_settlement:,.2f}")
+                col4.metric("Total Amount", f"{total_final:,.2f}")
 
                 st.dataframe(df.head(10))
 
