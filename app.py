@@ -35,128 +35,64 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=Tajawal:wght@400;500;700&display=swap');
 
-html, body {
-    font-family: 'Tajawal', sans-serif;
-    background: #f6f8f7;
-}
+html, body { font-family: 'Tajawal', sans-serif; background: #f6f8f7; }
+h1, h2, h3 { font-family: 'Cairo', sans-serif; font-weight: 800; }
 
-/* HEADINGS */
-h1, h2, h3 {
-    font-family: 'Cairo', sans-serif;
-    font-weight: 800;
-}
-
-/* HEADER */
 .header {
     background: linear-gradient(135deg, #047857, #10b981);
     padding: 60px 20px;
     border-radius: 20px;
     text-align: center;
     color: white;
-    margin-bottom: 40px;
 }
-.header img {
-    width: 520px;
-    max-width: 95%;
-    margin-bottom: 25px;
-}
-.header h1 {
-    font-size: 42px;
-}
+.header img { width: 520px; }
 
-/* UPLOAD */
 .upload-box {
     background: white;
     border-radius: 18px;
     padding: 50px;
     text-align: center;
-    box-shadow: 0 6px 25px rgba(0,0,0,0.05);
+    margin-top: 20px;
 }
 
-/* BUTTON */
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
-    font-weight: 600;
     padding: 14px;
     border-radius: 12px;
 }
 
-/* KPI */
 .kpi {
     background: white;
     border-radius: 16px;
     padding: 22px;
     text-align: center;
-    box-shadow: 0 6px 25px rgba(0,0,0,0.05);
+    margin-top: 20px;
 }
-.kpi h2 {
-    font-family: 'Cairo', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: #065f46;
-}
-.kpi p {
-    color: #6b7280;
-}
+.kpi h2 { font-size: 28px; color: #065f46; }
 
-/* SUCCESS */
 .success-box {
     background: white;
     border-radius: 22px;
-    padding: 60px 20px;
+    padding: 60px;
     text-align: center;
     margin-top: 40px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-}
-.success-icon {
-    font-size: 80px;
 }
 .success-box h1 {
-    font-family: 'Cairo', sans-serif;
     font-size: 46px;
-    font-weight: 800;
     color: #064e3b;
 }
-.success-box h2 {
-    font-size: 24px;
-    color: #059669;
-}
-.success-box p {
-    font-size: 16px;
-    color: #6b7280;
-}
 
-/* FOOTER PREMIUM SIGNATURE 🔥 */
 .footer {
     margin-top: 80px;
-    padding: 35px;
     text-align: center;
-    border-top: 1px solid #e5e7eb;
 }
-
-.brand-line {
-    font-family: 'Cairo', sans-serif;
-    font-size: 20px;
-    font-weight: 700;
-    color: #065f46;
-}
-
 .signature {
-    font-family: 'Cairo', sans-serif;
     font-size: 22px;
     font-weight: 800;
     background: linear-gradient(90deg, #047857, #10b981);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    display: inline-block;
-    margin-top: 6px;
-}
-
-.copy {
-    margin-top: 6px;
-    font-size: 13px;
-    color: #9ca3af;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -167,7 +103,6 @@ if logo:
     <div class="header">
         <img src="data:image/png;base64,{logo}">
         <h1>Hawelha Telecom</h1>
-        <p>PDF → Excel Automation System</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -175,9 +110,16 @@ if logo:
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-")
 
+# 🔥 FIX هنا: نشيل رقم الموبايل قبل استخراج الأرقام
 def extract_numbers(text):
     text = normalize(text)
-    return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
+
+    # حذف رقم الموبايل
+    text = re.sub(r'01[0125]\d{8}', '', text)
+
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+
+    return [float(x) for x in numbers]
 
 # ================= AR =================
 def parse_ar(file):
@@ -191,20 +133,28 @@ def parse_ar(file):
                     if not row:
                         i += 1
                         continue
+
                     text = normalize(" ".join([str(c) for c in row if c]))
-                    phone = re.search(r'(01[0125]\d{8})', text)
-                    if phone:
-                        phone = phone.group(1)
-                        vals = extract_numbers(text)
+                    phone_match = re.search(r'(01[0125]\d{8})', text)
+
+                    if phone_match:
+                        phone = phone_match.group(1)
+
+                        values = extract_numbers(text)
+
                         if i+1 < len(table):
-                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
-                            if len(nxt) > len(vals):
-                                vals = nxt
+                            next_row = " ".join([str(c) for c in table[i+1] if c])
+                            next_vals = extract_numbers(next_row)
+                            if len(next_vals) > len(values):
+                                values = next_vals
                                 i += 1
-                        vals = vals[::-1]
-                        def g(i): return vals[i] if i < len(vals) else 0
+
+                        values = values[::-1]
+
+                        def g(i): return values[i] if i < len(values) else 0
+
                         records.append({
-                            "محمول": phone,
+                            "محمول": str(phone),  # 🔥 FIX
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
                             "مكالمات محلية": g(2),
@@ -219,6 +169,7 @@ def parse_ar(file):
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
+
                     i += 1
     return records
 
@@ -234,102 +185,74 @@ def parse_en(file):
                     if not row:
                         i += 1
                         continue
+
                     text = " ".join([str(c) for c in row])
-                    phone = re.search(r'(01[0125]\d{8})', text)
-                    if phone:
-                        phone = phone.group(1)
-                        vals = extract_numbers(
-                            " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
-                        )
+                    phone_match = re.search(r'(01[0125]\d{8})', text)
+
+                    if phone_match:
+                        phone = phone_match.group(1)
+
+                        values = []
+                        if i+1 < len(table):
+                            next_row = " ".join([str(c) for c in table[i+1] if c])
+                            values = extract_numbers(next_row)
+
                         records.append({
-                            "محمول": phone,
-                            "رسوم شهرية": vals[0] if len(vals)>0 else 0,
-                            "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
-                            "مكالمات محلية": vals[2] if len(vals)>2 else 0,
-                            "رسائل محلية": vals[3] if len(vals)>3 else 0,
-                            "إنترنت محلية": vals[4] if len(vals)>4 else 0,
-                            "مكالمات دولية": vals[5] if len(vals)>5 else 0,
-                            "رسائل دولية": vals[6] if len(vals)>6 else 0,
-                            "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
-                            "رسائل تجوال": vals[8] if len(vals)>8 else 0,
-                            "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
-                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
-                            "ضرائب": vals[11] if len(vals)>11 else 0,
-                            "إجمالي": vals[-1] if vals else 0
+                            "محمول": str(phone),  # 🔥 FIX
+                            "رسوم شهرية": values[0] if len(values)>0 else 0,
+                            "رسوم الخدمات": values[1] if len(values)>1 else 0,
+                            "إجمالي": values[-1] if values else 0
                         })
+
                         i += 2
                         continue
+
                     i += 1
     return records
 
-# ================= EXCEL =================
-def to_excel(df):
-    out = io.BytesIO()
-    with pd.ExcelWriter(out, engine="openpyxl") as w:
-        df.to_excel(w, index=False)
-    out.seek(0)
-    return out
-
-# ================= INPUT =================
-st.markdown("""
-<div class="upload-box">
-    <h2>📁 Upload PDF Invoice</h2>
-</div>
-""", unsafe_allow_html=True)
-
+# ================= MAIN =================
+st.markdown('<div class="upload-box"><h2>📁 Upload PDF</h2></div>', unsafe_allow_html=True)
 file = st.file_uploader("", type=["pdf"])
 
-# ================= MAIN =================
 if file:
     if st.button("🚀 Start Processing"):
-        with st.spinner("Processing..."):
 
-            if mode == "Auto 🤖":
-                with pdfplumber.open(file) as pdf:
-                    text = pdf.pages[0].extract_text() or ""
-                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-            else:
-                lang = "ar" if mode == "عربي 🇪🇬" else "en"
+        if mode == "Auto 🤖":
+            with pdfplumber.open(file) as pdf:
+                text = pdf.pages[0].extract_text() or ""
+            lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+        else:
+            lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-            data = parse_ar(file) if lang == "ar" else parse_en(file)
+        data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-            if data:
-                df = pd.DataFrame(data)
+        if data:
+            df = pd.DataFrame(data)
 
-                c1, c2, c3, c4 = st.columns(4)
-                c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="kpi"><h2>{df["رسوم شهرية"].sum():.2f}</h2><p>الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                c3.markdown(f'<div class="kpi"><h2>{df["رسوم تسويات"].sum():.2f}</h2><p>التسويات</p></div>', unsafe_allow_html=True)
-                c4.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+            c1, c2 = st.columns(2)
+            c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+            c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
 
-                st.dataframe(df.head(10), use_container_width=True)
+            st.dataframe(df.head(10), use_container_width=True)
 
-                excel = to_excel(df)
+            output = io.BytesIO()
+            df.to_excel(output, index=False)
+            output.seek(0)
 
-                st.markdown("""
-                <div class="success-box">
-                    <div class="success-icon">🎉</div>
-                    <h1>تم تحويل الملف بنجاح</h1>
-                    <h2>File Processed Successfully</h2>
-                    <p>الملف جاهز الآن للتحميل — يمكنك استخدامه مباشرة</p>
-                </div>
-                """, unsafe_allow_html=True)
+            st.markdown("""
+            <div class="success-box">
+                <h1>🎉 تم تحويل الملف بنجاح</h1>
+                <p>File ready for download</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-                st.download_button(
-                    "📥 تحميل Excel",
-                    excel,
-                    file_name="hawelha_telecom.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
-
-            else:
-                st.error("لم يتم العثور على بيانات")
+            st.download_button("📥 تحميل Excel", output, "hawelha.xlsx")
 
 # ================= FOOTER =================
 st.markdown("""
 <div class="footer">
-    <div class="brand-line">Hawelha Telecom</div>
+    <div>Hawelha Telecom</div>
     <div class="signature">Built by Najat El Bakry</div>
-    <div class="copy">© 2026 All Rights Reserved</div>
+    <div>© 2026 All Rights Reserved</div>
 </div>
 """, unsafe_allow_html=True)
