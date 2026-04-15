@@ -2,10 +2,10 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
-from datetime import datetime
 import io
 import base64
 import os
+import time
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -32,30 +32,16 @@ def load_logo():
 logo = load_logo()
 
 # ================= UI =================
-st.markdown("""
-<style>
+st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-
-html, body {
-    font-family: 'Cairo', sans-serif;
-    background: #f8fafc;
-}
-
+html, body { font-family: 'Cairo', sans-serif; background: #f8fafc; }
 .header {
     background: linear-gradient(135deg, #059669, #10b981);
-    padding: 40px 20px;
+    padding: 40px;
     border-radius: 18px;
     text-align: center;
     color: white;
-    margin-bottom: 25px;
 }
-
-.header img {
-    width: 420px;
-    max-width: 95%;
-    margin-bottom: 15px;
-}
-
 .upload-box {
     background: white;
     border: 2px dashed #10b981;
@@ -63,41 +49,17 @@ html, body {
     padding: 45px;
     text-align: center;
 }
-
 .stButton>button {
     background: linear-gradient(135deg, #059669, #10b981);
     color: white;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 12px;
-    border-radius: 10px;
-    width: 100%;
 }
+</style>""", unsafe_allow_html=True)
 
-.kpi {
-    background: white;
-    border-radius: 14px;
-    padding: 18px;
-    text-align: center;
-}
-
-.success-box {
-    background: #ecfdf5;
-    border: 2px solid #10b981;
-    border-radius: 16px;
-    padding: 25px;
-    text-align: center;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ================= HEADER =================
 if logo:
     st.markdown(f"""
     <div class="header">
-        <img src="data:image/png;base64,{logo}">
+        <img src="data:image/png;base64,{logo}" width="400">
         <h1>Hawelha Telecom</h1>
-        <p>PDF → Excel Automation System</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -107,27 +69,55 @@ def normalize(t):
 
 def extract_numbers(text):
     text = normalize(text)
+    text = re.sub(r'01[0125]\d{8}', '', text)  # حذف رقم الموبايل
     return [float(x) for x in re.findall(r'-?\d+(?:\.\d+)?', text)]
 
-# ================= PARSER =================
-def parse_file(file, lang):
+# ================= FAST ENGINE =================
+@st.cache_data(show_spinner=False)
+def process_file(file_bytes, mode):
+
     records = []
 
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages[2:]:
+    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+
+        # 🔥 تحديد اللغة بدون فتح الملف مرتين
+        if mode == "Auto 🤖":
+            text = pdf.pages[0].extract_text() or ""
+            lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+        else:
+            lang = "ar" if mode == "عربي 🇪🇬" else "en"
+
+        # 🔥 معالجة من صفحة 3 فقط
+        pages = pdf.pages[2:]
+
+        for page in pages:
             for table in page.extract_tables() or []:
-                for row in table:
+
+                i = 0
+                while i < len(table):
+                    row = table[i]
                     if not row:
+                        i += 1
                         continue
 
                     text = normalize(" ".join([str(c) for c in row if c]))
-                    phone = re.search(r'(01[0125]\d{8})', text)
+                    phone_match = re.search(r'(01[0125]\d{8})', text)
 
-                    if phone:
-                        phone = phone.group(1)
-                        vals = extract_numbers(text)[::-1]
+                    if phone_match:
+                        phone = phone_match.group(1)
 
-                        def g(i): return vals[i] if i < len(vals) else 0
+                        values = extract_numbers(text)
+
+                        if i+1 < len(table):
+                            next_row = " ".join([str(c) for c in table[i+1] if c])
+                            next_vals = extract_numbers(next_row)
+                            if len(next_vals) > len(values):
+                                values = next_vals
+                                i += 1
+
+                        values = values[::-1]
+
+                        def g(i): return values[i] if i < len(values) else 0
 
                         records.append({
                             "محمول": phone,
@@ -144,24 +134,24 @@ def parse_file(file, lang):
                             "رسوم تسويات": g(10),
                             "ضرائب": g(11),
                             "إجمالي": g(12),
-                            "اسم الملف": file.name
                         })
+
+                    i += 1
 
     return records
 
 # ================= EXCEL =================
 def to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False)
-    output.seek(0)
-    return output
+    out = io.BytesIO()
+    with pd.ExcelWriter(out, engine="openpyxl") as w:
+        df.to_excel(w, index=False)
+    out.seek(0)
+    return out
 
 # ================= INPUT =================
 st.markdown("""
 <div class="upload-box">
-    <h2>📁 Upload PDF Files</h2>
-    <p>Upload multiple invoices</p>
+    <h2>📁 Upload PDF Invoices</h2>
 </div>
 """, unsafe_allow_html=True)
 
@@ -169,48 +159,47 @@ files = st.file_uploader("", type=["pdf"], accept_multiple_files=True)
 
 # ================= MAIN =================
 if files:
+
+    st.success(f"✅ تم رفع {len(files)} ملف")
+
     if st.button("🚀 Start Processing"):
-        with st.spinner("Processing all files..."):
 
-            all_data = []
+        progress_bar = st.progress(0)
+        status = st.empty()
+        stats = st.empty()
 
-            for file in files:
+        all_data = []
+        start = time.time()
 
-                if mode == "Auto 🤖":
-                    with pdfplumber.open(file) as pdf:
-                        text = pdf.pages[0].extract_text() or ""
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-                else:
-                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
+        for i, f in enumerate(files):
 
-                data = parse_file(file, lang)
+            percent = int(((i+1)/len(files))*100)
 
-                if data:
-                    all_data.extend(data)
+            status.text(f"📄 {f.name}")
 
-            if all_data:
-                df = pd.DataFrame(all_data)
+            # 🔥 السرعة
+            elapsed = time.time() - start
+            speed = (i+1)/elapsed if elapsed>0 else 0
+            eta = (len(files)-(i+1))/speed if speed>0 else 0
 
-                # KPIs
-                c1, c2 = st.columns(2)
-                c1.markdown(f'<div class="kpi"><h2>{len(df)}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                c2.markdown(f'<div class="kpi"><h2>{df["إجمالي"].sum():.2f}</h2><p>الإجمالي</p></div>', unsafe_allow_html=True)
+            stats.text(f"⚡ {speed:.2f} ملف/ث | ⏱ {int(eta)} ثانية")
 
-                st.dataframe(df.head(10), use_container_width=True)
+            data = process_file(f.read(), mode)
 
-                excel = to_excel(df)
+            if data:
+                all_data.extend(data)
 
-                st.markdown("""
-                <div class="success-box">
-                    🎉 تم تحويل كل الملفات بنجاح!
-                </div>
-                """, unsafe_allow_html=True)
+            progress_bar.progress(percent)
 
-                st.download_button(
-                    "📥 تحميل Excel",
-                    excel,
-                    file_name="hawelha_all_files.xlsx"
-                )
+        if all_data:
 
-            else:
-                st.error("❌ لم يتم استخراج بيانات")
+            df = pd.DataFrame(all_data)
+            excel = to_excel(df)
+
+            st.success("🎉 تم التحويل بنجاح")
+
+            st.download_button(
+                "📥 تحميل Excel",
+                excel,
+                "hawelha.xlsx"
+            )
