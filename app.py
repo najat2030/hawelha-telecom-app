@@ -18,11 +18,11 @@ st.set_page_config(
 # ================= MODE =================
 mode = st.radio(
     "🌐 اختر وضع التحليل",
-    ["Auto 🤖", "عربي 🇪", "English 🌍"],
+    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
     horizontal=True
 )
 
-# ================= LOGO & HEADER UI =================
+# ================= LOGO =================
 def load_logo():
     path = "static/logo.png"
     if os.path.exists(path):
@@ -32,38 +32,12 @@ def load_logo():
 
 logo = load_logo()
 
-# عرض الشعار واسم المطور في أعلى الصفحة
+# عرض الشعار في أعلى الصفحة - تم تكبير الحجم إلى 80% كما طلبت
 if logo:
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 10px;">
-        <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px; border-radius: 10px;">
-        
-        <!-- Developer Name Section -->
-        <div style="margin-top: 25px;">
-            <p style="
-                font-family: 'Cinzel', serif; 
-                font-size: 1.6rem; 
-                font-weight: 700; 
-                color: #047857; /* Royal Green Color */
-                margin: 0;
-                letter-spacing: 1px;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-            ">Developed by Najat El Bakry</p>
-            
-            <p style="
-                font-family: 'Poppins', sans-serif; 
-                font-size: 0.9rem; 
-                color: #6b7280; 
-                margin-top: 5px;
-                font-weight: 500;
-            ">© 2026 All Rights Reserved</p>
-        </div>
+        <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
     </div>
-    
-    <!-- Import Fonts for the Header -->
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Poppins:wght@400;500&display=swap');
-    </style>
     """, unsafe_allow_html=True)
 
 # =========================================================
@@ -210,7 +184,8 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    /* Import Royal/Professional Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
     
     .upload-box {
         background: #f0fdf4;
@@ -219,7 +194,6 @@ st.markdown("""
         padding: 1rem;
         text-align: center;
         margin-bottom: 2rem;
-        margin-top: 2rem; /* Added space since header is larger now */
     }
     .kpi {
         background: white;
@@ -252,11 +226,52 @@ st.markdown("""
         margin: 1rem 0;
         font-weight: bold;
     }
+    
+    /* Signature Box Styles - Royal & Professional */
+    .signature-box {
+        border: 2px dashed #10b981; /* Green dashed border matching theme */
+        border-radius: 15px;
+        padding: 1.5rem 1rem;
+        margin: 0 auto 2rem auto; /* Centered with bottom margin */
+        max-width: 600px;
+        background-color: #f0fdf4; /* Very light green background */
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+    }
+
+    .developer-name-royal {
+        font-family: 'Cinzel Decorative', serif; /* Royal Font */
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #047857; /* Darker Green for contrast */
+        margin: 0;
+        letter-spacing: 1px;
+        /* No text-transform: uppercase here to keep it natural case */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .copyright-text-royal {
+        font-family: 'Playfair Display', serif; /* Elegant Serif Font */
+        font-size: 1rem;
+        color: #059669;
+        margin-top: 0.5rem;
+        font-style: italic;
+        font-weight: 500;
+    }
 </style>
 """, unsafe_allow_html=True)
 
+# ================= SIGNATURE BOX (Under Logo) =================
+# Placed here to appear right after the logo as requested
+st.markdown("""
+<div class="signature-box">
+    <p class="developer-name-royal">Developed by Najat El Bakry</p>
+    <p class="copyright-text-royal">© 2026 All Rights Reserved</p>
+</div>
+""", unsafe_allow_html=True)
+
 # ================= INPUT =================
-st.markdown('<div class="upload-box"><h3>📁 Upload PDF Invoice</h3></div>', unsafe_allow_html=True)
+st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
 
 file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
