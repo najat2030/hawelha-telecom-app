@@ -7,6 +7,7 @@ import io
 import base64
 import os
 import gc
+import sys
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -58,7 +59,6 @@ def extract_numbers(text):
     financial_values = []
     for n in numbers:
         clean_n = n.replace('-', '')
-        # استبعاد أرقام الهواتف المكونة من 11 رقم لمنع ظهورها في الأعمدة المالية
         if len(clean_n) == 11 and '.' not in clean_n:
             continue
         financial_values.append(float(n))
@@ -68,16 +68,17 @@ def extract_numbers(text):
 # ================= AR =================
 def parse_ar(file):
     records = []
+    # استخدام with لضمان إغلاق الملف وتحرير الذاكرة
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records
+        if len(pdf.pages) < 3: 
+            return records
         
         for page in pdf.pages[2:]:
-            # ✅ FIX: تخطي الصفحات التحليلية/البيانية لمنع الأخطاء
+            # ✅ FIX: تخطي الصفحات التحليلية/البيانية
             page_text = page.extract_text() or ""
-            # كلمات مفتاحية تشير إلى صفحات غير بيانات خطوط
             skip_keywords = ["تحليل", "خطط", "أسعار", "رسم بياني", "الدقائق", "المكالمات داخل الشبكة", "قيمة الفاتورة في آخر ثلاث شهور", "ملخص", "تقرير"]
             if any(keyword in page_text for keyword in skip_keywords):
-                continue  # تخطي هذه الصفحة تماماً
+                continue
 
             for table in page.extract_tables() or []:
                 i = 0
@@ -121,14 +122,15 @@ def parse_ar(file):
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records
+        if len(pdf.pages) < 3: 
+            return records
         
         for page in pdf.pages[2:]:
-            # ✅ FIX: تخطي الصفحات التحليلية/البيانية لمنع الأخطاء
+            # ✅ FIX: تخطي الصفحات التحليلية/البيانية
             page_text = page.extract_text() or ""
             skip_keywords = ["Analysis", "Plan", "Price", "Chart", "Minutes", "Calls within network", "Invoice value last three months", "Summary", "Report"]
             if any(keyword in page_text for keyword in skip_keywords):
-                continue  # تخطي هذه الصفحة تماماً
+                continue
 
             for table in page.extract_tables() or []:
                 i = 0
@@ -221,7 +223,6 @@ st.markdown("""
 # ================= INPUT =================
 st.markdown('<div class="upload-box"><h3>📁 Upload Multiple PDF Invoices</h3></div>', unsafe_allow_html=True)
 
-# ✅ FIX: Added a label string to prevent TypeError
 uploaded_files = st.file_uploader(
     "Choose PDF files",
     type=["pdf"],
@@ -268,23 +269,28 @@ if uploaded_files:
 
                     if 
                         all_data.extend(data)
+                        
+                    # ✅ MEMORY OPTIMIZATION: Force garbage collection after each file
+                    del data
+                    gc.collect()
 
                 except Exception as e:
                     st.warning(f"تم تخطي ملف {file.name} بسبب خطأ: {str(e)}")
                     continue
 
-            # ✅ FIX HERE: Corrected the syntax error from previous attempts
             if all_
+                # تحويل القائمة إلى DataFrame مرة واحدة في النهاية
                 df = pd.DataFrame(all_data)
+                
+                # تنظيف الذاكرة من القائمة الأصلية
+                del all_data
+                gc.collect()
 
-                # Optional: Clean up any potential phone number leakage in numeric columns
+                # تنظيف إضافي للبيانات (منع رقم الموبايل في الأعمدة الرقمية)
                 for col in df.columns:
                     if col != "محمول":
                         mask = df[col].astype(str).str.match(r'^01[0125]\d{8}$')
                         df.loc[mask, col] = 0
-
-                del all_data
-                gc.collect()
 
                 status_text.text("✅ اكتملت المعالجة!")
                 progress_bar.progress(100)
@@ -311,9 +317,15 @@ if uploaded_files:
                     st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
                 st.divider()
-                st.dataframe(df.head(50), use_container_width=True)
+                
+                # ✅ PERFORMANCE: عرض عدد أقل من الصفوف لتوفير ذاكرة المتصفح
+                st.dataframe(df.head(10), use_container_width=True)
 
                 excel = to_excel(df)
+                
+                # تنظيف الذاكرة بعد إنشاء الإكسل
+                del df
+                gc.collect()
 
                 st.markdown("""
                 <div class="success-box">
@@ -324,11 +336,9 @@ if uploaded_files:
 
                 st.download_button("📥 تحميل Excel الموحد", excel, excel_filename)
 
-                del df
-                gc.collect()
-
             else:
                 st.error("No data found in any of the uploaded files.")
 
         except Exception as e:
             st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
+            st.info("نصيحة: إذا كانت الملفات كبيرة جداً، حاول رفع عدد أقل من الملفات في المرة الواحدة لتجنب حدود ذاكرة السيرفر.")
