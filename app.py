@@ -324,8 +324,7 @@ if file:
                 # ✔️ Success Message: رسالة أوضح
                 st.markdown(f"""
                 <div class="success-box">
-                    <h3>🎉 تم التحويل بنجاح!</h3>
-                    <p>تم معالجة <strong>{total_lines}</strong> سجل بنجاح.<br>
+                    <h3>🎉 تم التحويل بنجاح!</h3
                 </div>
                 """, unsafe_allow_html=True)
 
