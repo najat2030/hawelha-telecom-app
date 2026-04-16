@@ -58,6 +58,12 @@ def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
+
+            # ✅ FIX: تجاهل صفحات التفاصيل
+            text = page.extract_text() or ""
+            if "تفصيلية" in text or "الاستهلاك" in text:
+                continue
+
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -65,18 +71,24 @@ def parse_ar(file):
                     if not row:
                         i += 1
                         continue
+
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
+
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(text)
+
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
+
                         vals = vals[::-1]
+
                         def g(i): return vals[i] if i < len(vals) else 0
+
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": g(0),
@@ -101,6 +113,12 @@ def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
+
+            # ✅ FIX: تجاهل صفحات التفاصيل
+            text = page.extract_text() or ""
+            if "Details" in text or "Usage" in text:
+                continue
+
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -108,11 +126,14 @@ def parse_en(file):
                     if not row:
                         i += 1
                         continue
+
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
+
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
+
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
@@ -143,19 +164,19 @@ def to_excel(df):
     return out
 
 # ================= INPUT =================
-file = st.file_uploader("رفع الفاتورة", type=["pdf"], label_visibility="collapsed")
+file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
 # ================= MAIN =================
 if file:
-
-    excel_filename = file.name.replace('.pdf', '') + "_Converted.xlsx"
+    original_filename = file.name.replace('.pdf', '')
+    excel_filename = f"{original_filename}_Converted.xlsx"
 
     if st.button("🚀 Start Processing"):
-
         progress_bar = st.progress(0)
         status_text = st.empty()
 
         try:
+            status_text.text("⏳ جاري القراءة...")
             progress_bar.progress(20)
 
             if mode == "Auto 🤖":
@@ -165,16 +186,14 @@ if file:
             else:
                 lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-            progress_bar.progress(50)
-
             data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-            progress_bar.progress(70)
+            progress_bar.progress(60)
 
             if data:
                 df = pd.DataFrame(data)
 
-                # FIX منع تكرار رقم الموبايل
+                # FIX
                 for col in df.columns:
                     if col != "محمول":
                         df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
@@ -184,7 +203,6 @@ if file:
 
                 progress_bar.progress(100)
 
-                # DASHBOARD
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
                 total_settlements = df["رسوم تسويات"].sum()
@@ -199,16 +217,9 @@ if file:
                 k3.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
                 k4.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
-                st.dataframe(df.head(20), use_container_width=True)
+                st.dataframe(df.head(20))
 
                 excel = to_excel(df)
-
-                st.markdown("""
-                <div class="success-box">
-                    <h3>🎉 تم التحويل بنجاح</h3>
-                </div>
-                """, unsafe_allow_html=True)
-
                 st.download_button("📥 تحميل Excel", excel, excel_filename)
 
                 del df
@@ -220,10 +231,9 @@ if file:
         except Exception as e:
             st.error(f"خطأ: {str(e)}")
 
-# ================= SIGNATURE =================
+# ================= FOOTER =================
 st.markdown("""
-<div style="text-align:center;margin-top:30px;">
-<p><b>Developed by Najat El Bakry</b></p>
-<p>© 2026 All Rights Reserved</p>
-</div>
-""", unsafe_allow_html=True)
+---
+Developed by Najat El Bakry  
+© 2026 All Rights Reserved
+""")
