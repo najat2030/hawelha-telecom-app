@@ -55,7 +55,6 @@ def extract_numbers(text):
     text = re.sub(r'-\s+(\d)', r'-\1', text)
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     
-    # Filter out phone numbers (11 digits) from financial values to prevent data corruption
     financial_values = []
     for n in numbers:
         clean_n = n.replace('-', '')
@@ -204,12 +203,12 @@ st.markdown("""
 # ================= INPUT =================
 st.markdown('<div class="upload-box"><h3>📁 Upload Multiple PDF Invoices</h3></div>', unsafe_allow_html=True)
 
-# ✅ FIX: Removed empty string label to prevent "Oh no" error
-# Using accept_multiple_files=True for batch processing
+# ✅ FIX: Added a label string to prevent TypeError
 uploaded_files = st.file_uploader(
-    type=["pdf"], 
-    label_visibility="collapsed", 
-    accept_multiple_files=True
+    "Choose PDF files",  # <-- Label is required internally even if hidden
+    type=["pdf"],
+    accept_multiple_files=True,
+    label_visibility="collapsed"  # <-- Hides it visually
 )
 
 # ================= SIGNATURE & COPYRIGHT =================
@@ -235,13 +234,11 @@ if uploaded_files:
             total_files = len(uploaded_files)
 
             for idx, file in enumerate(uploaded_files):
-                # Update Progress
                 progress_percent = int(((idx + 1) / total_files) * 100)
                 status_text.text(f"⏳ جاري معالجة الملف {idx+1} من {total_files}: {file.name}...")
                 progress_bar.progress(progress_percent)
 
                 try:
-                    # Determine Language
                     if mode == "Auto 🤖":
                         with pdfplumber.open(file) as pdf:
                             text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
@@ -249,23 +246,20 @@ if uploaded_files:
                     else:
                         lang = "ar" if mode == "عربي 🇪" else "en"
 
-                    # Extract Data using Logic Functions
                     data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-                    if data:
+                    if 
                         all_data.extend(data)
 
                 except Exception as e:
                     st.warning(f"تم تخطي ملف {file.name} بسبب خطأ: {str(e)}")
                     continue
 
-            if all_data:
+            if all_
                 df = pd.DataFrame(all_data)
 
-                # Optional: Clean up any potential phone number leakage in numeric columns
                 for col in df.columns:
                     if col != "محمول":
-                        # Check if the value looks like a phone number (11 digits) and replace with 0
                         mask = df[col].astype(str).str.match(r'^01[0125]\d{8}$')
                         df.loc[mask, col] = 0
 
@@ -275,7 +269,6 @@ if uploaded_files:
                 status_text.text("✅ اكتملت المعالجة!")
                 progress_bar.progress(100)
 
-                # ================= DASHBOARD =================
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
                 total_settlements = df["رسوم تسويات"].sum()
