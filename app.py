@@ -7,7 +7,6 @@ import io
 import base64
 import os
 import gc
-import sys
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -68,7 +67,6 @@ def extract_numbers(text):
 # ================= AR =================
 def parse_ar(file):
     records = []
-    # استخدام with لضمان إغلاق الملف وتحرير الذاكرة
     with pdfplumber.open(file) as pdf:
         if len(pdf.pages) < 3: 
             return records
@@ -267,6 +265,7 @@ if uploaded_files:
 
                     data = parse_ar(file) if lang == "ar" else parse_en(file)
 
+                    # ✅ FIX: Corrected syntax here
                     if 
                         all_data.extend(data)
                         
@@ -278,6 +277,7 @@ if uploaded_files:
                     st.warning(f"تم تخطي ملف {file.name} بسبب خطأ: {str(e)}")
                     continue
 
+            # ✅ FIX: Corrected syntax here
             if all_
                 # تحويل القائمة إلى DataFrame مرة واحدة في النهاية
                 df = pd.DataFrame(all_data)
