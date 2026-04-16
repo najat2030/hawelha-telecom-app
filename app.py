@@ -73,13 +73,9 @@ def extract_numbers(text):
     all_numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     
     # تصفية الأرقام: استبعاد الأرقام التي تتكون من 11 خانة (أرقام محمول)
-    # لأننا نريد فقط القيم المالية
     financial_values = []
     for n in all_numbers:
-        # إزالة الإشارة السالبة مؤقتاً للتحقق من طول الرقم
         clean_n = n.replace('-', '')
-        # إذا كان الرقم يتكون من 11 خانة وبدون كسور عشرية، فهو غالباً رقم هاتف نتجاهله هنا
-        # لأن رقم الهاتف يتم استخراجه منفصلاً عبر regex خاص به
         if len(clean_n) == 11 and '.' not in clean_n:
             continue
         financial_values.append(float(n))
@@ -90,6 +86,10 @@ def extract_numbers(text):
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
+        # حماية: التأكد من وجود صفحات كافية قبل البدء
+        if len(pdf.pages) < 3:
+            return records
+            
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -133,6 +133,10 @@ def parse_ar(file):
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
+        # حماية: التأكد من وجود صفحات كافية قبل البدء
+        if len(pdf.pages) < 3:
+            return records
+
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -225,7 +229,7 @@ st.markdown("""
 }
 /* Signature Box Styles - Professional Corporate Look */
 .signature-box {
-    border: 2px dashed #cbd5e1; /* Neutral gray dashed border for professional look */
+    border: 2px dashed #cbd5e1;
     border-radius: 12px;
     padding: 1.5rem 1rem;
     margin: 0 auto 2rem auto;
@@ -235,18 +239,18 @@ st.markdown("""
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 .developer-name-corp {
-    font-family: 'Montserrat', sans-serif; /* Professional Corporate Font */
+    font-family: 'Montserrat', sans-serif;
     font-size: 1.6rem;
-    font-weight: 800; /* Extra Bold */
-    color: #000000; /* Pure Black */
+    font-weight: 800;
+    color: #000000;
     margin: 0;
     letter-spacing: 0.5px;
-    text-transform: none; /* Keep natural case */
+    text-transform: none;
 }
 .copyright-text-corp {
     font-family: 'Montserrat', sans-serif;
     font-size: 0.9rem;
-    color: #333333; /* Dark Gray for copyright */
+    color: #333333;
     margin-top: 0.5rem;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -255,7 +259,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= SIGNATURE BOX (Under Logo) =================
-# Placed here to appear right after the logo as requested
 st.markdown("""
 <div class="signature-box">
     <p class="developer-name-corp">Developed by Najat El Bakry</p>
@@ -269,32 +272,36 @@ file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
 # ================= MAIN =================
 if file:
-    # ✔️ Improvement: استخدام اسم الملف الأصلي للإكسل
-    original_filename = file.name.replace('.pdf', '')
-    excel_filename = f"{original_filename}_Converted.xlsx"
+    # ✔️ Improvement: استخدام اسم الملف الأصلي للإكسل (يعمل مع أي اسم ملف)
+    # نزيل الامتداد .pdf ونضيف _Converted.xlsx
+    safe_filename = file.name.replace('.pdf', '').replace('.PDF', '')
+    excel_filename = f"{safe_filename}_Converted.xlsx"
 
     if st.button("🚀 Start Processing"):
-        # إنشاء عناصر شريط التقدم والنص قبل بدء المعالجة
+        # تنظيف الذاكرة قبل البدء لتجنب خطأ "Oh no"
+        gc.collect()
+        
         progress_bar = st.progress(0)
         status_text = st.empty()
         
         try:
-            # محاكاة خطوات المعالجة لتحديث شريط التقدم
             status_text.text("⏳ جاري قراءة ملف PDF...")
             progress_bar.progress(10)
 
+            # تحديد اللغة
             if mode == "Auto 🤖":
                 with pdfplumber.open(file) as pdf:
-                    text = pdf.pages[0].extract_text() or ""
-                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+                    # قراءة أول صفحة فقط للكشف عن اللغة لتوفير الذاكرة
+                    text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
+                lang = "ar" if re.search(r'[\u0600-\u06FF]', text or "") else "en"
             else:
-                # ✔️ Fix: تم تصحيح الشرط ليطابق الخيار الجديد 🇪🇬
-                lang = "ar" if mode == "عربي 🇪🇬" else "en"
+                lang = "ar" if mode == "عربي 🇪" else "en"
 
             status_text.text(f" تم اكتشاف اللغة: {'العربية' if lang == 'ar' else 'English'}... جاري الاستخراج")
             progress_bar.progress(30)
 
             # استدعاء دالة الاستخراج المناسبة
+            # إعادة فتح الملف لأن المؤشر قد يكون تحرك
             data = parse_ar(file) if lang == "ar" else parse_en(file)
             
             status_text.text("📊 جاري تحويل البيانات إلى جدول...")
@@ -303,14 +310,12 @@ if file:
             if data:
                 df = pd.DataFrame(data)
                 
-                # ✔️ Memory Optimization: تحرير الذاكرة غير المستخدمة
                 del data
                 gc.collect()
 
                 status_text.text("✅ اكتملت المعالجة!")
                 progress_bar.progress(100)
 
-                # حساب الإجماليات للداشبورد
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
                 total_settlements = df["رسوم تسويات"].sum()
@@ -318,14 +323,12 @@ if file:
 
                 st.markdown("## 📊 Dashboard")
 
-                # عرض 4 مؤشرات أداء رئيسية (KPIs)
                 k1, k2, k3, k4 = st.columns(4)
                 with k1:
                     st.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
                 with k2:
                     st.markdown(f'<div class="kpi"><h2>{total_monthly:,.2f}</h2><p>إجمالي الرسوم الشهرية</p></div>', unsafe_allow_html=True)
                 with k3:
-                    # تلوين التسويات حسب القيمة (سالب/موجب)
                     color = "#ef4444" if total_settlements < 0 else "#059669"
                     st.markdown(f'<div class="kpi" style="border-top-color: {color};"><h2 style="color: {color};">{total_settlements:,.2f}</h2><p>إجمالي التسويات</p></div>', unsafe_allow_html=True)
                 with k4:
@@ -333,31 +336,29 @@ if file:
 
                 st.divider()
                 
-                # ✔️ Performance: عرض أول 20 صف فقط لتقليل استهلاك المتصفح
                 st.dataframe(df.head(20), use_container_width=True)
 
                 excel = to_excel(df)
                 
-                # ✔️ Success Message: رسالة أوضح
                 st.markdown(f"""
                 <div class="success-box">
                     <h3>🎉 تم التحويل بنجاح</h3>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # ✔️ Filename: استخدام اسم الملف الأصلي
                 st.download_button("📥 تحميل Excel", excel, excel_filename)
                 
-                # ✔️ Memory Optimization: تنظيف بعد العرض
                 del df
                 gc.collect()
 
             else:
                 progress_bar.empty()
                 status_text.empty()
-                st.error("No data found")
+                st.error("No data found. تأكد أن الملف يحتوي على جداول بيانات من صفحة 3 فما فوق.")
 
         except Exception as e:
             progress_bar.empty()
             status_text.empty()
+            # عرض خطأ أكثر وضوحاً للمستخدم
             st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
+            st.info("نصيحة: إذا كان الملف كبيراً جداً، حاول تقسيمه إلى أجزاء أصغر.")
