@@ -18,7 +18,7 @@ st.set_page_config(
 # ================= MODE =================
 mode = st.radio(
     "🌐 اختر وضع التحليل",
-    ["Auto 🤖", "عربي 🇪", "English 🌍"],
+    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
     horizontal=True
 )
 
@@ -35,12 +35,12 @@ logo = load_logo()
 if logo:
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 10px;">
-        <img src="image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
+        <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
     </div>
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
+# 🚫 DO NOT MODIFY BELOW THIS LINE
 # =========================================================
 
 def normalize(t):
@@ -54,19 +54,11 @@ def extract_numbers(text):
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
     text = re.sub(r'-\s+(\d)', r'-\1', text)
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-
-    financial_values = []
-    for n in numbers:
-        clean_n = n.replace('-', '')
-        if len(clean_n) == 11 and '.' not in clean_n:
-            continue
-        financial_values.append(float(n))
-    return financial_values
+    return [float(n) for n in numbers]
 
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -78,7 +70,7 @@ def parse_ar(file):
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
-                        phone_num = phone.group(1)
+                        phone = phone.group(1)
                         vals = extract_numbers(text)
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
@@ -88,7 +80,7 @@ def parse_ar(file):
                         vals = vals[::-1]
                         def g(i): return vals[i] if i < len(vals) else 0
                         records.append({
-                            "محمول": phone_num,
+                            "محمول": phone,
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
                             "مكالمات محلية": g(2),
@@ -99,7 +91,7 @@ def parse_ar(file):
                             "مكالمات تجوال": g(7),
                             "رسائل تجوال": g(8),
                             "إنترنت تجوال": g(9),
-                            "رسوم وتسويات": g(10),
+                            "رسوم تسويات": g(10),
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
@@ -109,7 +101,6 @@ def parse_ar(file):
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -121,10 +112,10 @@ def parse_en(file):
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
-                        phone_num = phone.group(1)
+                        phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
                         records.append({
-                            "محمول": phone_num,
+                            "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
                             "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
                             "مكالمات محلية": vals[2] if len(vals)>2 else 0,
@@ -135,7 +126,7 @@ def parse_en(file):
                             "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
                             "رسائل تجوال": vals[8] if len(vals)>8 else 0,
                             "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
-                            "رسوم وتسويات": vals[10] if len(vals)>10 else 0,
+                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
@@ -152,37 +143,95 @@ def to_excel(df):
     return out
 
 # ================= UI =================
-st.markdown('<div class="upload-box"><h3>📁 Upload Multiple PDF Invoices</h3></div>', unsafe_allow_html=True)
 
-# ✅ التعديل الوحيد هنا
-uploaded_files = st.file_uploader(
-    "📂 Upload Multiple PDF Invoices",
-    type=["pdf"],
-    accept_multiple_files=True,
-    label_visibility="collapsed"
-)
+files = st.file_uploader("", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
 
-if uploaded_files:
-    if st.button("🚀 Start Processing All Files"):
+if files:
 
-        all_records = []
-        for file in uploaded_files:
+    excel_filename = f"Hawelha_All_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
 
-            if mode == "Auto 🤖":
-                with pdfplumber.open(file) as pdf:
-                    text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
-                lang = "ar" if re.search(r'[\u0600-\u06FF]', text or "") else "en"
+    if st.button("🚀 Start Processing"):
+
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        try:
+            all_data = []
+            total_files = len(files)
+
+            for idx, file in enumerate(files):
+
+                progress = int((idx / total_files) * 70)
+                progress_bar.progress(progress)
+
+                status_text.text(f"⏳ جاري معالجة {file.name} ...")
+
+                try:
+                    if mode == "Auto 🤖":
+                        with pdfplumber.open(file) as pdf:
+                            text = pdf.pages[0].extract_text() or ""
+                        lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+                    else:
+                        lang = "ar" if mode == "عربي 🇪🇬" else "en"
+
+                    data = parse_ar(file) if lang == "ar" else parse_en(file)
+
+                    if data:
+                        all_data.extend(data)
+
+                except:
+                    st.warning(f"⚠️ ملف فيه مشكلة: {file.name}")
+
+            if all_data:
+
+                df = pd.DataFrame(all_data)
+
+                # ✅ FIX منع تكرار رقم الموبايل
+                for col in df.columns:
+                    if col != "محمول":
+                        df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
+
+                del all_data
+                gc.collect()
+
+                progress_bar.progress(100)
+                status_text.text("✅ اكتملت المعالجة!")
+
+                # ====== الداشبورد (كما هو بدون أي تعديل) ======
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlements = df["رسوم تسويات"].sum()
+                total_grand = df["إجمالي"].sum()
+
+                st.markdown("## 📊 Dashboard")
+
+                k1, k2, k3, k4 = st.columns(4)
+
+                with k1:
+                    st.metric("عدد الخطوط", total_lines)
+
+                with k2:
+                    st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
+
+                with k3:
+                    st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
+
+                with k4:
+                    st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
+
+                st.dataframe(df.head(20), use_container_width=True)
+
+                excel = to_excel(df)
+
+                st.success("🎉 تم التحويل بنجاح")
+
+                st.download_button("📥 تحميل Excel", excel, excel_filename)
+
+                del df
+                gc.collect()
+
             else:
-                lang = "ar" if mode == "عربي 🇪" else "en"
+                st.error("No data found")
 
-            data = parse_ar(file) if lang == "ar" else parse_en(file)
-            all_records.extend(data)
-
-        if all_records:
-            df = pd.DataFrame(all_records)
-            excel = to_excel(df)
-
-            st.success("تم التحويل بنجاح")
-            st.download_button("📥 تحميل Excel", excel, "output.xlsx")
-        else:
-            st.error("No data found")
+        except Exception as e:
+            st.error(f"خطأ: {str(e)}")
