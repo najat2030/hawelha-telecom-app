@@ -16,7 +16,6 @@ st.set_page_config(
 )
 
 # ================= MODE =================
-# ✔️ Fix: تم تصحيح الرمز من 🇪 إلى 🇪🇬
 mode = st.radio(
     "🌐 اختر وضع التحليل",
     ["Auto 🤖", "عربي 🇪", "English 🌍"],
@@ -27,7 +26,7 @@ mode = st.radio(
 def load_logo():
     path = "static/logo.png"
     if os.path.exists(path):
-        with open(path, "rb") as f:
+        with open(path, 'rb') as f:
             return base64.b64encode(f.read()).decode()
     return None
 
@@ -56,7 +55,6 @@ def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
 # 🔥 FIX النهائي للسالب (يدعم عربي + إنجليزي)
-# ✅ FIX: استبعاد أرقام الهواتف (11 رقم) من القيم المالية لمنع ظهورها في الأعمدة الخاطئة
 def extract_numbers(text):
     if not text:
         return []
@@ -69,13 +67,12 @@ def extract_numbers(text):
     # - 15 → -15
     text = re.sub(r'-\s+(\d)', r'-\1', text)
     
-    # استخراج جميع الأرقام أولاً
-    all_numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     
-    # تصفية الأرقام: استبعاد الأرقام التي تتكون من 11 خانة (أرقام محمول)
     financial_values = []
-    for n in all_numbers:
+    for n in numbers:
         clean_n = n.replace('-', '')
+        # استبعاد أرقام الهواتف المكونة من 11 رقم لمنع ظهورها في الأعمدة المالية
         if len(clean_n) == 11 and '.' not in clean_n:
             continue
         financial_values.append(float(n))
@@ -86,10 +83,7 @@ def extract_numbers(text):
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        # حماية: التأكد من وجود صفحات كافية قبل البدء
-        if len(pdf.pages) < 3:
-            return records
-            
+        if len(pdf.pages) < 3: return records # حماية من الملفات القصيرة
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -101,17 +95,17 @@ def parse_ar(file):
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
-                        phone = phone.group(1)
+                        phone_num = phone.group(1)
                         vals = extract_numbers(text)
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
-                        vals = vals[::-1] # مهم للاتجاه العربي
+                        vals = vals[::-1] # عكس القيم للعربي
                         def g(i): return vals[i] if i < len(vals) else 0
                         records.append({
-                            "محمول": phone,
+                            "محمول": phone_num,
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
                             "مكالمات محلية": g(2),
@@ -122,7 +116,7 @@ def parse_ar(file):
                             "مكالمات تجوال": g(7),
                             "رسائل تجوال": g(8),
                             "إنترنت تجوال": g(9),
-                            "رسوم تسويات": g(10),
+                            "رسوم وتسويات": g(10),
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
@@ -133,10 +127,7 @@ def parse_ar(file):
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        # حماية: التأكد من وجود صفحات كافية قبل البدء
-        if len(pdf.pages) < 3:
-            return records
-
+        if len(pdf.pages) < 3: return records
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -148,10 +139,10 @@ def parse_en(file):
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
-                        phone = phone.group(1)
+                        phone_num = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
                         records.append({
-                            "محمول": phone,
+                            "محمول": phone_num,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
                             "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
                             "مكالمات محلية": vals[2] if len(vals)>2 else 0,
@@ -162,7 +153,7 @@ def parse_en(file):
                             "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
                             "رسائل تجوال": vals[8] if len(vals)>8 else 0,
                             "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
-                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
+                            "رسوم وتسويات": vals[10] if len(vals)>10 else 0,
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
@@ -186,7 +177,6 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
-/* Import Professional Corporate Font (Montserrat) */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
 .upload-box {
     background: #f0fdf4;
@@ -205,18 +195,8 @@ st.markdown("""
     border-top: 4px solid #10b981;
     height: 100%;
 }
-.kpi h2 {
-    color: #059669;
-    font-size: 1.8rem;
-    margin: 0.5rem 0;
-    font-weight: bold;
-}
-.kpi p {
-    color: #6b7280;
-    margin: 0;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
+.kpi h2 { color: #059669; font-size: 1.8rem; margin: 0.5rem 0; font-weight: bold; }
+.kpi p { color: #6b7280; margin: 0; font-size: 0.9rem; font-weight: 600; }
 .success-box {
     background: #dcfce7;
     border: 1px solid #16a34a;
@@ -227,7 +207,6 @@ st.markdown("""
     margin: 1rem 0;
     font-weight: bold;
 }
-/* Signature Box Styles - Professional Corporate Look */
 .signature-box {
     border: 2px dashed #cbd5e1;
     border-radius: 12px;
@@ -245,7 +224,6 @@ st.markdown("""
     color: #000000;
     margin: 0;
     letter-spacing: 0.5px;
-    text-transform: none;
 }
 .copyright-text-corp {
     font-family: 'Montserrat', sans-serif;
@@ -268,18 +246,18 @@ st.markdown("""
 
 # ================= INPUT =================
 st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
-file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
+
+# ✅ FIX HERE: Removed the empty string "" to prevent the error
+file = st.file_uploader(type=["pdf"], label_visibility="collapsed")
 
 # ================= MAIN =================
 if file:
-    # ✔️ Improvement: استخدام اسم الملف الأصلي للإكسل (يعمل مع أي اسم ملف)
-    # نزيل الامتداد .pdf ونضيف _Converted.xlsx
+    # استخدام اسم الملف الأصلي للإكسل
     safe_filename = file.name.replace('.pdf', '').replace('.PDF', '')
     excel_filename = f"{safe_filename}_Converted.xlsx"
 
     if st.button("🚀 Start Processing"):
-        # تنظيف الذاكرة قبل البدء لتجنب خطأ "Oh no"
-        gc.collect()
+        gc.collect() # تنظيف الذاكرة قبل البدء
         
         progress_bar = st.progress(0)
         status_text = st.empty()
@@ -288,10 +266,8 @@ if file:
             status_text.text("⏳ جاري قراءة ملف PDF...")
             progress_bar.progress(10)
 
-            # تحديد اللغة
             if mode == "Auto 🤖":
                 with pdfplumber.open(file) as pdf:
-                    # قراءة أول صفحة فقط للكشف عن اللغة لتوفير الذاكرة
                     text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
                 lang = "ar" if re.search(r'[\u0600-\u06FF]', text or "") else "en"
             else:
@@ -300,14 +276,12 @@ if file:
             status_text.text(f" تم اكتشاف اللغة: {'العربية' if lang == 'ar' else 'English'}... جاري الاستخراج")
             progress_bar.progress(30)
 
-            # استدعاء دالة الاستخراج المناسبة
-            # إعادة فتح الملف لأن المؤشر قد يكون تحرك
             data = parse_ar(file) if lang == "ar" else parse_en(file)
             
             status_text.text("📊 جاري تحويل البيانات إلى جدول...")
             progress_bar.progress(70)
 
-            if data:
+            if 
                 df = pd.DataFrame(data)
                 
                 del data
@@ -318,7 +292,7 @@ if file:
 
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
-                total_settlements = df["رسوم تسويات"].sum()
+                total_settlements = df["رسوم وتسويات"].sum()
                 total_grand = df["إجمالي"].sum()
 
                 st.markdown("## 📊 Dashboard")
@@ -354,11 +328,9 @@ if file:
             else:
                 progress_bar.empty()
                 status_text.empty()
-                st.error("No data found. تأكد أن الملف يحتوي على جداول بيانات من صفحة 3 فما فوق.")
+                st.error("No data found")
 
         except Exception as e:
             progress_bar.empty()
             status_text.empty()
-            # عرض خطأ أكثر وضوحاً للمستخدم
             st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
-            st.info("نصيحة: إذا كان الملف كبيراً جداً، حاول تقسيمه إلى أجزاء أصغر.")
