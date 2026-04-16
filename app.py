@@ -49,12 +49,10 @@ def normalize(t):
 def extract_numbers(text):
     if not text:
         return []
-
     text = normalize(str(text))
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
     text = re.sub(r'-\s+(\d)', r'-\1', text)
-
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
@@ -70,24 +68,18 @@ def parse_ar(file):
                     if not row:
                         i += 1
                         continue
-
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(text)
-
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
-
                         vals = vals[::-1]
-
                         def g(i): return vals[i] if i < len(vals) else 0
-
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": g(0),
@@ -119,14 +111,11 @@ def parse_en(file):
                     if not row:
                         i += 1
                         continue
-
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
@@ -217,13 +206,20 @@ if files:
 
                 df = pd.DataFrame(all_data)
 
-                # ✅ FIX المشكلة بدون لمس اللوجيك
+                # ================= FIX المشكلة =================
+                def clean_number(x):
+                    x = str(x).replace(".0", "").strip()
+                    if x.startswith("0"):
+                        x = x[1:]
+                    return x
+
+                mobile_clean = df["محمول"].astype(str).apply(clean_number)
+
                 for col in df.columns:
                     if col != "محمول":
-                        df.loc[
-                            df[col].astype(str).str.replace(".0","") == df["محمول"],
-                            col
-                        ] = 0
+                        df[col] = df[col].apply(
+                            lambda x: 0 if clean_number(x) in mobile_clean.values else x
+                        )
 
                 # ================= DASHBOARD =================
                 total_lines = len(df)
@@ -259,13 +255,6 @@ if files:
                     st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
                     st.write(failed_files)
 
-                # ================= SIGNATURE =================
-                st.markdown("""
-                <div style="text-align:center; margin-top:50px; opacity:0.7;">
-                    Developed by Najat El Bakry © 2026
-                </div>
-                """, unsafe_allow_html=True)
-
             else:
                 st.error("No data extracted")
 
@@ -273,3 +262,10 @@ if files:
             progress_bar.empty()
             status_text.empty()
             st.error(f"حدث خطأ: {str(e)}")
+
+# ================= SIGNATURE =================
+st.markdown("""
+<div style="text-align:center; margin-top:40px; font-weight:bold;">
+Developed by Najat El Bakry © 2026
+</div>
+""", unsafe_allow_html=True)
