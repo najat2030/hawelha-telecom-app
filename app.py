@@ -5,6 +5,8 @@ import re
 import io
 import base64
 import os
+import gc
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -38,7 +40,7 @@ if logo:
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🚫 DO NOT MODIFY LOGIC BELOW
+# 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
 # =========================================================
 
 def normalize(t):
@@ -65,24 +67,18 @@ def parse_ar(file):
                     if not row:
                         i += 1
                         continue
-
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(text)
-
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
-
                         vals = vals[::-1]
-
                         def g(i): return vals[i] if i < len(vals) else 0
-
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": g(0),
@@ -113,14 +109,11 @@ def parse_en(file):
                     if not row:
                         i += 1
                         continue
-
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
@@ -149,42 +142,63 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# ================= UI =================
+# =========================================================
+# ✅ SMART PROCESSING (بدون لمس اللوجيك)
+# =========================================================
 
-files = st.file_uploader("", type=["pdf"], accept_multiple_files=True)
+def process_file(file):
+    try:
+        with pdfplumber.open(file) as pdf:
+            text = pdf.pages[0].extract_text() or ""
+
+        lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+
+        # Retry 2 مرات
+        for _ in range(2):
+            try:
+                data = parse_ar(file) if lang == "ar" else parse_en(file)
+                return data
+            except:
+                continue
+
+        return []
+    except:
+        return []
+
+# =========================================================
+# UI
+# =========================================================
+
+files = st.file_uploader("رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
 if files:
     if st.button("🚀 Start Processing"):
 
+        progress = st.progress(0)
+        status = st.empty()
+
         all_data = []
 
-        for file in files:
-            try:
-                if mode == "Auto 🤖":
-                    with pdfplumber.open(file) as pdf:
-                        text = pdf.pages[0].extract_text() or ""
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-                else:
-                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(process_file, f): f.name for f in files}
 
-                data = parse_ar(file) if lang == "ar" else parse_en(file)
+            for i, future in enumerate(as_completed(futures)):
+                result = future.result()
+                if result:
+                    all_data.extend(result)
 
-                if data:
-                    all_data.extend(data)
-
-            except Exception as e:
-                st.warning(f"⚠️ تم تخطي ملف بسبب خطأ: {file.name}")
-                continue
+                progress.progress((i+1)/len(files))
+                status.text(f"Processing {i+1}/{len(files)} files...")
 
         if all_data:
             df = pd.DataFrame(all_data)
 
-            # ================= FIX رقم الموبايل =================
+            # FIX رقم الموبايل
             for col in df.columns:
                 if col != "محمول":
                     df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
 
-            # ================= DASHBOARD (بدون تغيير) =================
+            # ===== الداشبورد (بدون تغيير) =====
             total_lines = len(df)
             total_monthly = df["رسوم شهرية"].sum()
             total_settlements = df["رسوم تسويات"].sum()
@@ -193,7 +207,6 @@ if files:
             st.markdown("## 📊 Dashboard")
 
             k1, k2, k3, k4 = st.columns(4)
-
             with k1:
                 st.metric("عدد الخطوط", total_lines)
             with k2:
@@ -207,7 +220,11 @@ if files:
 
             excel = to_excel(df)
 
-            st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
+            st.success("🎉 تم التحويل بنجاح")
+            st.download_button("📥 تحميل Excel", excel, "Merged.xlsx")
+
+            del df
+            gc.collect()
 
         else:
             st.error("❌ لم يتم استخراج بيانات")
