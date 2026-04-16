@@ -184,8 +184,8 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
-    /* Import Royal/Professional Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+    /* Import Professional Corporate Font (Montserrat) */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
     
     .upload-box {
         background: #f0fdf4;
@@ -227,36 +227,35 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Signature Box Styles - Royal & Professional */
+    /* Signature Box Styles - Professional Corporate Look */
     .signature-box {
-        border: 2px dashed #10b981; /* Green dashed border matching theme */
-        border-radius: 15px;
+        border: 2px dashed #cbd5e1; /* Neutral gray dashed border for professional look */
+        border-radius: 12px;
         padding: 1.5rem 1rem;
-        margin: 0 auto 2rem auto; /* Centered with bottom margin */
+        margin: 0 auto 2rem auto;
         max-width: 600px;
-        background-color: #f0fdf4; /* Very light green background */
+        background-color: #ffffff;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    .developer-name-royal {
-        font-family: 'Cinzel Decorative', serif; /* Royal Font */
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #047857; /* Darker Green for contrast */
+    .developer-name-corp {
+        font-family: 'Montserrat', sans-serif; /* Professional Corporate Font */
+        font-size: 1.6rem;
+        font-weight: 800; /* Extra Bold */
+        color: #000000; /* Pure Black */
         margin: 0;
-        letter-spacing: 1px;
-        /* No text-transform: uppercase here to keep it natural case */
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        letter-spacing: 0.5px;
+        text-transform: none; /* Keep natural case */
     }
 
-    .copyright-text-royal {
-        font-family: 'Playfair Display', serif; /* Elegant Serif Font */
-        font-size: 1rem;
-        color: #059669;
+    .copyright-text-corp {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 0.9rem;
+        color: #333333; /* Dark Gray for copyright */
         margin-top: 0.5rem;
-        font-style: italic;
-        font-weight: 500;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -265,8 +264,8 @@ st.markdown("""
 # Placed here to appear right after the logo as requested
 st.markdown("""
 <div class="signature-box">
-    <p class="developer-name-royal">Developed by Najat El Bakry</p>
-    <p class="copyright-text-royal">© 2026 All Rights Reserved</p>
+    <p class="developer-name-corp">Developed by Najat El Bakry</p>
+    <p class="copyright-text-corp">© 2026 All Rights Reserved</p>
 </div>
 """, unsafe_allow_html=True)
 
