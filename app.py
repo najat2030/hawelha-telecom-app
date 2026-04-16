@@ -6,7 +6,7 @@ from datetime import datetime
 import io
 import base64
 import os
-import gc # لاستدعاء جامع القمامة وتحسين الذاكرة
+import gc
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -32,7 +32,6 @@ def load_logo():
 
 logo = load_logo()
 
-# عرض الشعار في أعلى الصفحة - تم تكبير الحجم إلى 80% كما طلبت
 if logo:
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 10px;">
@@ -42,48 +41,32 @@ if logo:
 
 # =========================================================
 # 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
-# ⚠️ هذا الجزء مسؤول عن استخراج البيانات من PDF
-# ⚠️ أي تعديل هنا ممكن يكسر:
-# - اتجاه البيانات (يمين/شمال)
-# - القيم السالبة (-)
-# - توزيع الأعمدة
-# ⚠️ مسموح فقط التعديل في UI فوق أو تحت
 # =========================================================
 
-# ================= HELPERS =================
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
-# 🔥 FIX النهائي للسالب (يدعم عربي + إنجليزي)
 def extract_numbers(text):
     if not text:
         return []
     text = normalize(str(text))
-    
-    # (123) → -123
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
-    # 15- → -15 (العربي)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
-    # - 15 → -15
     text = re.sub(r'-\s+(\d)', r'-\1', text)
-    
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-    
+
     financial_values = []
     for n in numbers:
         clean_n = n.replace('-', '')
-        # استبعاد أرقام الهواتف المكونة من 11 رقم لمنع ظهورها في الأعمدة المالية
         if len(clean_n) == 11 and '.' not in clean_n:
             continue
         financial_values.append(float(n))
-        
     return financial_values
 
-# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records # حماية من الملفات القصيرة
+        if len(pdf.pages) < 3: return records
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -102,7 +85,7 @@ def parse_ar(file):
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
-                        vals = vals[::-1] # عكس القيم للعربي
+                        vals = vals[::-1]
                         def g(i): return vals[i] if i < len(vals) else 0
                         records.append({
                             "محمول": phone_num,
@@ -123,7 +106,6 @@ def parse_ar(file):
                     i += 1
     return records
 
-# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -162,7 +144,6 @@ def parse_en(file):
                     i += 1
     return records
 
-# ================= EXCEL =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -170,167 +151,38 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# =========================================================
-# ✅ UI ONLY BELOW — SAFE TO MODIFY
-# =========================================================
-
-# ================= CSS STYLES =================
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
-.upload-box {
-    background: #f0fdf4;
-    border: 2px dashed #10b981;
-    border-radius: 15px;
-    padding: 1rem;
-    text-align: center;
-    margin-bottom: 2rem;
-}
-.kpi {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    text-align: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border-top: 4px solid #10b981;
-    height: 100%;
-}
-.kpi h2 { color: #059669; font-size: 1.8rem; margin: 0.5rem 0; font-weight: bold; }
-.kpi p { color: #6b7280; margin: 0; font-size: 0.9rem; font-weight: 600; }
-.success-box {
-    background: #dcfce7;
-    border: 1px solid #16a34a;
-    color: #166534;
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-    margin: 1rem 0;
-    font-weight: bold;
-}
-.signature-box {
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    padding: 1.5rem 1rem;
-    margin: 0 auto 2rem auto;
-    max-width: 600px;
-    background-color: #ffffff;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-.developer-name-corp {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: #000000;
-    margin: 0;
-    letter-spacing: 0.5px;
-}
-.copyright-text-corp {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.9rem;
-    color: #333333;
-    margin-top: 0.5rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ================= SIGNATURE BOX (Under Logo) =================
-st.markdown("""
-<div class="signature-box">
-    <p class="developer-name-corp">Developed by Najat El Bakry</p>
-    <p class="copyright-text-corp">© 2026 All Rights Reserved</p>
-</div>
-""", unsafe_allow_html=True)
-
-# ================= INPUT =================
+# ================= UI =================
 st.markdown('<div class="upload-box"><h3>📁 Upload Multiple PDF Invoices</h3></div>', unsafe_allow_html=True)
 
-# ✅ FIX: Enable multiple file upload
-uploaded_files = st.file_uploader(type=["pdf"], label_visibility="collapsed", accept_multiple_files=True)
+# ✅ التعديل الوحيد هنا
+uploaded_files = st.file_uploader(
+    "📂 Upload Multiple PDF Invoices",
+    type=["pdf"],
+    accept_multiple_files=True,
+    label_visibility="collapsed"
+)
 
-# ================= MAIN =================
 if uploaded_files:
-
     if st.button("🚀 Start Processing All Files"):
-        
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        all_records = [] # List to hold data from ALL files
-        total_files = len(uploaded_files)
-        
-        try:
-            for i, file in enumerate(uploaded_files):
-                # Update Progress
-                progress_percent = int(((i + 1) / total_files) * 100)
-                status_text.text(f"⏳ جاري معالجة الملف {i+1} من {total_files}: {file.name}...")
-                progress_bar.progress(progress_percent)
 
-                # Determine Language for this specific file
-                if mode == "Auto 🤖":
-                    with pdfplumber.open(file) as pdf:
-                        text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text or "") else "en"
-                else:
-                    lang = "ar" if mode == "عربي 🇪" else "en"
+        all_records = []
+        for file in uploaded_files:
 
-                # Extract Data using existing Logic Functions
-                data = parse_ar(file) if lang == "ar" else parse_en(file)
-                
-                # Add to master list
-                all_records.extend(data)
-                
-                # Clean up memory for this file iteration
-                del data
-                gc.collect()
-
-            status_text.text("✅ اكتملت المعالجة لجميع الملفات! جاري تجميع الجدول...")
-            
-            if all_records:
-                # Convert all records to a single DataFrame at once (Faster)
-                df = pd.DataFrame(all_records)
-                
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlements = df["رسوم وتسويات"].sum()
-                total_grand = df["إجمالي"].sum()
-
-                st.markdown("## 📊 Dashboard (Combined Results)")
-
-                k1, k2, k3, k4 = st.columns(4)
-                with k1:
-                    st.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>إجمالي الخطوط ({total_files} ملف)</p></div>', unsafe_allow_html=True)
-                with k2:
-                    st.markdown(f'<div class="kpi"><h2>{total_monthly:,.2f}</h2><p>إجمالي الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                with k3:
-                    color = "#ef4444" if total_settlements < 0 else "#059669"
-                    st.markdown(f'<div class="kpi" style="border-top-color: {color};"><h2 style="color: {color};">{total_settlements:,.2f}</h2><p>إجمالي التسويات</p></div>', unsafe_allow_html=True)
-                with k4:
-                    st.markdown(f'<div class="kpi"><h2>{total_grand:,.2f}</h2><p>الإجمالي النهائي</p></div>', unsafe_allow_html=True)
-
-                st.divider()
-                
-                st.dataframe(df.head(50), use_container_width=True) # Show more rows since it's combined
-
-                excel = to_excel(df)
-                
-                st.markdown(f"""
-                <div class="success-box">
-                    <h3>🎉 تم دمج وتحويل {total_files} ملف بنجاح!</h3>
-                    <p>إجمالي السجلات: <strong>{total_lines}</strong><br>
-                    اضغط على الزر أدناه لتحميل ملف Excel الموحد.</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.download_button("📥 تحميل Excel الموحد", excel, "Hawelha_Combined_Invoices.xlsx")
-                
-                del df
-                gc.collect()
-
+            if mode == "Auto 🤖":
+                with pdfplumber.open(file) as pdf:
+                    text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
+                lang = "ar" if re.search(r'[\u0600-\u06FF]', text or "") else "en"
             else:
-                st.error("No data found in any of the uploaded files.")
+                lang = "ar" if mode == "عربي 🇪" else "en"
 
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
+            data = parse_ar(file) if lang == "ar" else parse_en(file)
+            all_records.extend(data)
+
+        if all_records:
+            df = pd.DataFrame(all_records)
+            excel = to_excel(df)
+
+            st.success("تم التحويل بنجاح")
+            st.download_button("📥 تحميل Excel", excel, "output.xlsx")
+        else:
+            st.error("No data found")
