@@ -2,11 +2,11 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
+from datetime import datetime
 import io
 import base64
 import os
 import gc
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -49,13 +49,17 @@ def normalize(t):
 def extract_numbers(text):
     if not text:
         return []
+
     text = normalize(str(text))
+
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
     text = re.sub(r'-\s+(\d)', r'-\1', text)
+
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
+# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -67,18 +71,24 @@ def parse_ar(file):
                     if not row:
                         i += 1
                         continue
+
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
+
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(text)
+
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                             if len(nxt) > len(vals):
                                 vals = nxt
                                 i += 1
+
                         vals = vals[::-1]
+
                         def g(i): return vals[i] if i < len(vals) else 0
+
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": g(0),
@@ -98,6 +108,7 @@ def parse_ar(file):
                     i += 1
     return records
 
+# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -109,11 +120,14 @@ def parse_en(file):
                     if not row:
                         i += 1
                         continue
+
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
+
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
+
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
@@ -135,6 +149,7 @@ def parse_en(file):
                     i += 1
     return records
 
+# ================= EXCEL =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -142,89 +157,105 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# =========================================================
-# ✅ SMART PROCESSING (بدون لمس اللوجيك)
-# =========================================================
+# ================= UI =================
+st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
 
-def process_file(file):
-    try:
-        with pdfplumber.open(file) as pdf:
-            text = pdf.pages[0].extract_text() or ""
+files = st.file_uploader(
+    "Upload PDF Files",
+    type=["pdf"],
+    accept_multiple_files=True,
+    label_visibility="collapsed"
+)
 
-        lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-
-        # Retry 2 مرات
-        for _ in range(2):
-            try:
-                data = parse_ar(file) if lang == "ar" else parse_en(file)
-                return data
-            except:
-                continue
-
-        return []
-    except:
-        return []
-
-# =========================================================
-# UI
-# =========================================================
-
-files = st.file_uploader("رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
-
+# ================= MAIN =================
 if files:
+
     if st.button("🚀 Start Processing"):
 
-        progress = st.progress(0)
-        status = st.empty()
+        progress_bar = st.progress(0)
+        status_text = st.empty()
 
         all_data = []
+        failed_files = []
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            futures = {executor.submit(process_file, f): f.name for f in files}
+        try:
+            total_files = len(files)
 
-            for i, future in enumerate(as_completed(futures)):
-                result = future.result()
-                if result:
-                    all_data.extend(result)
+            for idx, file in enumerate(files):
 
-                progress.progress((i+1)/len(files))
-                status.text(f"Processing {i+1}/{len(files)} files...")
+                try:
+                    status_text.text(f"📄 Processing: {file.name}")
+                    progress_bar.progress(int((idx / total_files) * 100))
 
-        if all_data:
-            df = pd.DataFrame(all_data)
+                    if mode == "Auto 🤖":
+                        with pdfplumber.open(file) as pdf:
+                            text = pdf.pages[0].extract_text() or ""
+                        lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+                    else:
+                        lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-            # FIX رقم الموبايل
-            for col in df.columns:
-                if col != "محمول":
-                    df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
+                    for attempt in range(3):
+                        try:
+                            data = parse_ar(file) if lang == "ar" else parse_en(file)
+                            break
+                        except:
+                            if attempt == 2:
+                                raise
 
-            # ===== الداشبورد (بدون تغيير) =====
-            total_lines = len(df)
-            total_monthly = df["رسوم شهرية"].sum()
-            total_settlements = df["رسوم تسويات"].sum()
-            total_grand = df["إجمالي"].sum()
+                    if data:
+                        all_data.extend(data)
 
-            st.markdown("## 📊 Dashboard")
+                except Exception:
+                    failed_files.append(file.name)
+                    continue
 
-            k1, k2, k3, k4 = st.columns(4)
-            with k1:
-                st.metric("عدد الخطوط", total_lines)
-            with k2:
-                st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
-            with k3:
-                st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
-            with k4:
-                st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
+                gc.collect()
 
-            st.dataframe(df.head(20))
+            progress_bar.progress(100)
+            status_text.text("✅ اكتملت المعالجة!")
 
-            excel = to_excel(df)
+            if all_data:
 
-            st.success("🎉 تم التحويل بنجاح")
-            st.download_button("📥 تحميل Excel", excel, "Merged.xlsx")
+                df = pd.DataFrame(all_data)
 
-            del df
-            gc.collect()
+                # ================= DASHBOARD =================
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlements = df["رسوم تسويات"].sum()
+                total_grand = df["إجمالي"].sum()
 
-        else:
-            st.error("❌ لم يتم استخراج بيانات")
+                st.markdown("## 📊 Dashboard")
+
+                k1, k2, k3, k4 = st.columns(4)
+
+                with k1:
+                    st.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
+                with k2:
+                    st.markdown(f'<div class="kpi"><h2>{total_monthly:,.2f}</h2><p>إجمالي الرسوم الشهرية</p></div>', unsafe_allow_html=True)
+                with k3:
+                    color = "#ef4444" if total_settlements < 0 else "#059669"
+                    st.markdown(f'<div class="kpi" style="border-top-color: {color};"><h2 style="color: {color};">{total_settlements:,.2f}</h2><p>إجمالي التسويات</p></div>', unsafe_allow_html=True)
+                with k4:
+                    st.markdown(f'<div class="kpi"><h2>{total_grand:,.2f}</h2><p>الإجمالي النهائي</p></div>', unsafe_allow_html=True)
+
+                st.divider()
+
+                st.dataframe(df.head(20), use_container_width=True)
+
+                excel = to_excel(df)
+
+                st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
+
+                st.download_button("📥 تحميل Excel", excel, "hawelha_all_files.xlsx")
+
+                if failed_files:
+                    st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
+                    st.write(failed_files)
+
+            else:
+                st.error("No data extracted")
+
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"حدث خطأ: {str(e)}")
