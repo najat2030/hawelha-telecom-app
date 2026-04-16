@@ -184,7 +184,8 @@ def to_excel(df):
 # ================= CSS STYLES =================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    /* Import Royal/Professional Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
     
     .upload-box {
         background: #f0fdf4;
@@ -194,44 +195,6 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
     }
-
-    /* Signature Box Style - Dashed Rectangle under Logo */
-    .signature-box {
-        border: 2px dashed #cbd5e1; /* Light gray dashed border */
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 0 auto 2.5rem auto; /* Centered with bottom margin */
-        max-width: 600px; /* Limit width for elegance */
-        background-color: #ffffff;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        text-align: center;
-    }
-
-    .developer-name-3d {
-        font-family: 'Poppins', sans-serif;
-        font-size: 2.2rem; /* Large size */
-        font-weight: 700;
-        color: #000000; /* Black Color as requested */
-        margin: 0;
-        letter-spacing: 1px;
-        /* 3D Effect using multiple text shadows */
-        text-shadow: 
-            1px 1px 0 #cccccc,
-            2px 2px 0 #c0c0c0,
-            3px 3px 0 #b0b0b0,
-            4px 4px 0 #a0a0a0,
-            5px 5px 10px rgba(0,0,0,0.3);
-        display: inline-block;
-    }
-
-    .copyright-text {
-        font-family: 'Poppins', sans-serif;
-        font-size: 1rem;
-        color: #475569; /* Dark gray for copyright */
-        margin-top: 0.5rem;
-        font-weight: 500;
-    }
-    
     .kpi {
         background: white;
         padding: 1.5rem;
@@ -263,22 +226,54 @@ st.markdown("""
         margin: 1rem 0;
         font-weight: bold;
     }
+    
+    /* Signature Box Styles - Royal & Professional */
+    .signature-box {
+        border: 2px dashed #10b981; /* Green dashed border matching theme */
+        border-radius: 15px;
+        padding: 1.5rem 1rem;
+        margin: 0 auto 2rem auto; /* Centered with bottom margin */
+        max-width: 600px;
+        background-color: #f0fdf4; /* Very light green background */
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+    }
+
+    .developer-name-royal {
+        font-family: 'Cinzel Decorative', serif; /* Royal Font */
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #047857; /* Darker Green for contrast */
+        margin: 0;
+        letter-spacing: 1px;
+        /* No text-transform: uppercase here to keep it natural case */
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .copyright-text-royal {
+        font-family: 'Playfair Display', serif; /* Elegant Serif Font */
+        font-size: 1rem;
+        color: #059669;
+        margin-top: 0.5rem;
+        font-style: italic;
+        font-weight: 500;
+    }
 </style>
+""", unsafe_allow_html=True)
+
+# ================= SIGNATURE BOX (Under Logo) =================
+# Placed here to appear right after the logo as requested
+st.markdown("""
+<div class="signature-box">
+    <p class="developer-name-royal">Developed by Najat El Bakry</p>
+    <p class="copyright-text-royal">© 2026 All Rights Reserved</p>
+</div>
 """, unsafe_allow_html=True)
 
 # ================= INPUT =================
 st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
 
 file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
-
-# ================= SIGNATURE BOX (Under Logo) =================
-# This is placed here to appear right after the logo and before the upload/main logic visual flow
-st.markdown("""
-<div class="signature-box">
-    <p class="developer-name-3d">Developed by Najat El Bakry</p>
-    <p class="copyright-text">© 2026 All Rights Reserved</p>
-</div>
-""", unsafe_allow_html=True)
 
 # ================= MAIN =================
 if file:
