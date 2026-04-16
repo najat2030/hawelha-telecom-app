@@ -55,7 +55,7 @@ def extract_numbers(text):
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
-# ================= AR TABLE =================
+# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -104,7 +104,7 @@ def parse_ar(file):
                     i += 1
     return records
 
-# ================= EN TABLE =================
+# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -140,13 +140,23 @@ def parse_en(file):
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
+
                         i += 2
                         continue
+
                     i += 1
     return records
 
-# ================= SMART TEXT (الفواتير الفردي) =================
-def parse_smart_text(file):
+# ================= AI PARSER =================
+def smart_value_extractor(text, labels):
+    for label in labels:
+        pattern = rf"{label}.*?(-?\d+\.?\d*)"
+        match = re.search(pattern, text)
+        if match:
+            return float(match.group(1))
+    return 0
+
+def parse_ai(file):
     records = []
 
     with pdfplumber.open(file) as pdf:
@@ -160,26 +170,21 @@ def parse_smart_text(file):
 
     for phone in phones:
 
-        def find_value(label):
-            pattern = rf"{label}.*?(-?\d+\.?\d*)"
-            match = re.search(pattern, full_text)
-            return float(match.group(1)) if match else 0
-
         records.append({
             "محمول": phone,
-            "رسوم شهرية": find_value("الرسوم الشهرية"),
-            "رسوم الخدمات": find_value("رسوم الخدمات"),
-            "مكالمات محلية": find_value("مكالمات"),
-            "رسائل محلية": find_value("رسائل"),
-            "إنترنت محلية": find_value("إنترنت"),
-            "مكالمات دولية": find_value("دولي"),
-            "رسائل دولية": find_value("رسائل دولية"),
-            "مكالمات تجوال": find_value("تجوال"),
-            "رسائل تجوال": find_value("رسائل تجوال"),
-            "إنترنت تجوال": find_value("إنترنت تجوال"),
-            "رسوم تسويات": find_value("تسويات"),
-            "ضرائب": find_value("ضريبة"),
-            "إجمالي": find_value("إجمالي")
+            "رسوم شهرية": smart_value_extractor(full_text, ["الرسوم الشهرية", "خط التعليم"]),
+            "رسوم الخدمات": smart_value_extractor(full_text, ["رسوم الخدمات"]),
+            "مكالمات محلية": smart_value_extractor(full_text, ["مكالمات"]),
+            "رسائل محلية": smart_value_extractor(full_text, ["رسائل"]),
+            "إنترنت محلية": smart_value_extractor(full_text, ["إنترنت"]),
+            "مكالمات دولية": smart_value_extractor(full_text, ["دولي"]),
+            "رسائل دولية": smart_value_extractor(full_text, ["رسائل دولية"]),
+            "مكالمات تجوال": smart_value_extractor(full_text, ["تجوال"]),
+            "رسائل تجوال": smart_value_extractor(full_text, ["رسائل تجوال"]),
+            "إنترنت تجوال": smart_value_extractor(full_text, ["إنترنت تجوال"]),
+            "رسوم تسويات": smart_value_extractor(full_text, ["تسويات"]),
+            "ضرائب": smart_value_extractor(full_text, ["الضرائب", "ضريبة"]),
+            "إجمالي": smart_value_extractor(full_text, ["إجمالي", "المجموع"])
         })
 
     return records
@@ -192,9 +197,8 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# =========================================================
-# UI
-# =========================================================
+# ================= UI =================
+st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
 
 files = st.file_uploader(
     "Upload PDF Files",
@@ -203,79 +207,89 @@ files = st.file_uploader(
     label_visibility="collapsed"
 )
 
+# ================= MAIN =================
 if files:
 
     if st.button("🚀 Start Processing"):
 
-        progress = st.progress(0)
-        status = st.empty()
+        progress_bar = st.progress(0)
+        status_text = st.empty()
 
         all_data = []
+        failed_files = []
 
-        for i, file in enumerate(files):
+        try:
+            total_files = len(files)
 
-            status.text(f"Processing {file.name}")
+            for idx, file in enumerate(files):
 
-            try:
-                if mode == "Auto 🤖":
-                    with pdfplumber.open(file) as pdf:
-                        text = pdf.pages[0].extract_text() or ""
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-                else:
-                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
+                try:
+                    status_text.text(f"📄 Processing: {file.name}")
+                    progress_bar.progress(int((idx / total_files) * 100))
 
-                data = parse_ar(file) if lang == "ar" else parse_en(file)
+                    if mode == "Auto 🤖":
+                        with pdfplumber.open(file) as pdf:
+                            text = pdf.pages[0].extract_text() or ""
+                        lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+                    else:
+                        lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-                # لو فشل → fallback
-                if not data:
-                    data = parse_smart_text(file)
+                    data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-                # 🔥 FIX التكرار النهائي
-                for row in data:
-                    for k, v in row.items():
-                        if k != "محمول":
-                            if str(int(v)) == row["محمول"]:
-                                row[k] = 0
+                    # 🔥 fallback ذكي للفواتير الفردي
+                    if not data:
+                        data = parse_ai(file)
 
-                all_data.extend(data)
+                    if data:
+                        all_data.extend(data)
 
-            except:
-                continue
+                except Exception:
+                    failed_files.append(file.name)
+                    continue
 
-            progress.progress((i+1)/len(files))
-            gc.collect()
+                gc.collect()
 
-        if all_data:
+            progress_bar.progress(100)
+            status_text.text("✅ اكتملت المعالجة!")
 
-            df = pd.DataFrame(all_data)
+            if all_data:
 
-            total_lines = len(df)
-            total_monthly = df["رسوم شهرية"].sum()
-            total_settlements = df["رسوم تسويات"].sum()
-            total_grand = df["إجمالي"].sum()
+                df = pd.DataFrame(all_data)
 
-            st.markdown("## 📊 Dashboard")
+                # ================= DASHBOARD =================
+                total_lines = len(df)
+                total_monthly = df["رسوم شهرية"].sum()
+                total_settlements = df["رسوم تسويات"].sum()
+                total_grand = df["إجمالي"].sum()
 
-            k1, k2, k3, k4 = st.columns(4)
-            k1.metric("عدد الخطوط", total_lines)
-            k2.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
-            k3.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
-            k4.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
+                st.markdown("## 📊 Dashboard")
 
-            st.dataframe(df.head(20))
+                k1, k2, k3, k4 = st.columns(4)
 
-            excel = to_excel(df)
+                with k1:
+                    st.metric("عدد الخطوط", total_lines)
+                with k2:
+                    st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
+                with k3:
+                    st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
+                with k4:
+                    st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
-            st.success("🎉 تم التحويل بنجاح")
-            st.download_button("📥 تحميل Excel", excel, "hawelha_all.xlsx")
+                st.dataframe(df.head(20), use_container_width=True)
 
-        else:
-            st.error("❌ لا توجد بيانات")
+                excel = to_excel(df)
 
-# ================= SIGNATURE =================
-st.markdown("""
-<hr>
-<div style="text-align:center; color:gray; font-size:14px;">
-Developed by <b>Najat El Bakry</b> © 2026
-</div>
-""", unsafe_allow_html=True)
+                st.success("🎉 تم التحويل بنجاح")
+                st.download_button("📥 تحميل Excel", excel, "hawelha_all_files.xlsx")
+
+                if failed_files:
+                    st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
+                    st.write(failed_files)
+
+            else:
+                st.error("No data extracted")
+
+        except Exception as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(f"حدث خطأ: {str(e)}")
