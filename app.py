@@ -51,7 +51,6 @@ def extract_numbers(text):
         return []
 
     text = normalize(str(text))
-
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
     text = re.sub(r'-\s+(\d)', r'-\1', text)
@@ -218,6 +217,14 @@ if files:
 
                 df = pd.DataFrame(all_data)
 
+                # ✅ FIX المشكلة بدون لمس اللوجيك
+                for col in df.columns:
+                    if col != "محمول":
+                        df.loc[
+                            df[col].astype(str).str.replace(".0","") == df["محمول"],
+                            col
+                        ] = 0
+
                 # ================= DASHBOARD =================
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
@@ -251,6 +258,13 @@ if files:
                 if failed_files:
                     st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
                     st.write(failed_files)
+
+                # ================= SIGNATURE =================
+                st.markdown("""
+                <div style="text-align:center; margin-top:50px; opacity:0.7;">
+                    Developed by Najat El Bakry © 2026
+                </div>
+                """, unsafe_allow_html=True)
 
             else:
                 st.error("No data extracted")
