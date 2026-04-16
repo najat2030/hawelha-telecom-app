@@ -18,7 +18,7 @@ st.set_page_config(
 # ================= MODE =================
 mode = st.radio(
     "🌐 اختر وضع التحليل",
-    ["Auto 🤖", "عربي 🇪", "English 🌍"],
+    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
     horizontal=True
 )
 
@@ -35,14 +35,11 @@ logo = load_logo()
 if logo:
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 10px;">
-        <img src="image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
+        <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
     </div>
     """, unsafe_allow_html=True)
 
-# =========================================================
-# 🚫 DO NOT MODIFY BELOW THIS LINE (LOGIC & DATA)
-# =========================================================
-
+# ================= HELPERS =================
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
@@ -54,20 +51,12 @@ def extract_numbers(text):
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
     text = re.sub(r'-\s+(\d)', r'-\1', text)
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-    
-    financial_values = []
-    for n in numbers:
-        clean_n = n.replace('-', '')
-        if len(clean_n) == 11 and '.' not in clean_n:
-            continue
-        financial_values.append(float(n))
-        
-    return financial_values
+    return [float(n) for n in numbers]
 
+# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -79,7 +68,7 @@ def parse_ar(file):
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
-                        phone_num = phone.group(1)
+                        phone = phone.group(1)
                         vals = extract_numbers(text)
                         if i+1 < len(table):
                             nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
@@ -89,7 +78,7 @@ def parse_ar(file):
                         vals = vals[::-1]
                         def g(i): return vals[i] if i < len(vals) else 0
                         records.append({
-                            "محمول": phone_num,
+                            "محمول": phone,
                             "رسوم شهرية": g(0),
                             "رسوم الخدمات": g(1),
                             "مكالمات محلية": g(2),
@@ -107,10 +96,10 @@ def parse_ar(file):
                     i += 1
     return records
 
+# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
-        if len(pdf.pages) < 3: return records
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
                 i = 0
@@ -122,10 +111,10 @@ def parse_en(file):
                     text = " ".join([str(c) for c in row])
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
-                        phone_num = phone.group(1)
+                        phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
                         records.append({
-                            "محمول": phone_num,
+                            "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
                             "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
                             "مكالمات محلية": vals[2] if len(vals)>2 else 0,
@@ -145,6 +134,7 @@ def parse_en(file):
                     i += 1
     return records
 
+# ================= EXCEL =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -152,77 +142,13 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# =========================================================
-# ✅ UI ONLY BELOW — SAFE TO MODIFY
-# =========================================================
-
-# ================= CSS STYLES =================
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
-    .upload-box {
-        background: #f0fdf4;
-        border: 2px dashed #10b981;
-        border-radius: 15px;
-        padding: 1rem;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .success-box {
-        background: #dcfce7;
-        border: 1px solid #16a34a;
-        color: #166534;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        margin: 1rem 0;
-        font-weight: bold;
-    }
-    .signature-box {
-        text-align: center;
-        margin-top: 3rem;
-        padding: 1rem;
-        border-top: 1px solid #e5e7eb;
-    }
-    .developer-name {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 1.4rem;
-        font-weight: 800;
-        color: #000000;
-        margin: 0;
-    }
-    .copyright-text {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 0.9rem;
-        color: #6b7280;
-        margin-top: 0.5rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # ================= INPUT =================
-st.markdown('<div class="upload-box"><h3>📁 Upload Multiple PDF Invoices</h3></div>', unsafe_allow_html=True)
-
-# ✅ FIX: Added a label string to prevent TypeError
-uploaded_files = st.file_uploader(
-    "Choose PDF files",
-    type=["pdf"],
-    accept_multiple_files=True,
-    label_visibility="collapsed"
-)
-
-# ================= SIGNATURE & COPYRIGHT =================
-st.markdown("""
-<div class="signature-box">
-    <p class="developer-name">Developed by Najat El Bakry</p>
-    <p class="copyright-text">© 2026 All Rights Reserved</p>
-</div>
-""", unsafe_allow_html=True)
+file = st.file_uploader("رفع الفاتورة", type=["pdf"], label_visibility="collapsed")
 
 # ================= MAIN =================
-if uploaded_files:
+if file:
 
-    excel_filename = f"Hawelha_Combined_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    excel_filename = file.name.replace('.pdf', '') + "_Converted.xlsx"
 
     if st.button("🚀 Start Processing"):
 
@@ -230,86 +156,74 @@ if uploaded_files:
         status_text = st.empty()
 
         try:
-            all_data = []
-            total_files = len(uploaded_files)
+            progress_bar.progress(20)
 
-            for idx, file in enumerate(uploaded_files):
-                progress_percent = int(((idx + 1) / total_files) * 100)
-                status_text.text(f"⏳ جاري معالجة الملف {idx+1} من {total_files}: {file.name}...")
-                progress_bar.progress(progress_percent)
+            if mode == "Auto 🤖":
+                with pdfplumber.open(file) as pdf:
+                    text = pdf.pages[0].extract_text() or ""
+                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+            else:
+                lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-                try:
-                    if mode == "Auto 🤖":
-                        with pdfplumber.open(file) as pdf:
-                            text = pdf.pages[0].extract_text() if len(pdf.pages) > 0 else ""
-                        lang = "ar" if re.search(r'[\u0600-\u06FF]', text or "") else "en"
-                    else:
-                        lang = "ar" if mode == "عربي 🇪" else "en"
+            progress_bar.progress(50)
 
-                    data = parse_ar(file) if lang == "ar" else parse_en(file)
+            data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-                    if 
-                        all_data.extend(data)
+            progress_bar.progress(70)
 
-                except Exception as e:
-                    st.warning(f"تم تخطي ملف {file.name} بسبب خطأ: {str(e)}")
-                    continue
+            if data:
+                df = pd.DataFrame(data)
 
-            # ✅ FIX HERE: Corrected the syntax error
-            if all_
-                df = pd.DataFrame(all_data)
-
+                # FIX منع تكرار رقم الموبايل
                 for col in df.columns:
                     if col != "محمول":
-                        mask = df[col].astype(str).str.match(r'^01[0125]\d{8}$')
-                        df.loc[mask, col] = 0
+                        df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
 
-                del all_data
+                del data
                 gc.collect()
 
-                status_text.text("✅ اكتملت المعالجة!")
                 progress_bar.progress(100)
 
+                # DASHBOARD
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
                 total_settlements = df["رسوم تسويات"].sum()
                 total_grand = df["إجمالي"].sum()
 
-                st.markdown("## 📊 Dashboard (Combined Results)")
+                st.markdown("## 📊 Dashboard")
 
                 k1, k2, k3, k4 = st.columns(4)
 
-                with k1:
-                    st.metric("عدد الخطوط", total_lines)
+                k1.metric("عدد الخطوط", total_lines)
+                k2.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
+                k3.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
+                k4.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
-                with k2:
-                    st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
-
-                with k3:
-                    st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
-
-                with k4:
-                    st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
-
-                st.divider()
-                st.dataframe(df.head(50), use_container_width=True)
+                st.dataframe(df.head(20), use_container_width=True)
 
                 excel = to_excel(df)
 
                 st.markdown("""
                 <div class="success-box">
-                    <h3>🎉 تم دمج وتحويل جميع الملفات بنجاح!</h3>
-                    <p>اضغط على الزر أدناه لتحميل ملف Excel الموحد.</p>
+                    <h3>🎉 تم التحويل بنجاح</h3>
                 </div>
                 """, unsafe_allow_html=True)
 
-                st.download_button("📥 تحميل Excel الموحد", excel, excel_filename)
+                st.download_button("📥 تحميل Excel", excel, excel_filename)
 
                 del df
                 gc.collect()
 
             else:
-                st.error("No data found in any of the uploaded files.")
+                st.error("No data found")
 
         except Exception as e:
-            st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
+            st.error(f"خطأ: {str(e)}")
+
+# ================= SIGNATURE =================
+st.markdown("""
+<div style="text-align:center;margin-top:30px;">
+<p><b>Developed by Najat El Bakry</b></p>
+<p>© 2026 All Rights Reserved</p>
+</div>
+""", unsafe_allow_html=True)
