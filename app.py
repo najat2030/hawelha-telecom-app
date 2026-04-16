@@ -2,11 +2,9 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
-from datetime import datetime
 import io
 import base64
 import os
-
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -32,7 +30,6 @@ def load_logo():
 
 logo = load_logo()
 
-# عرض الشعار في أعلى الصفحة - تم تكبير الحجم إلى 80% كما طلبت
 if logo:
     st.markdown(f"""
     <div style="text-align: center; margin-bottom: 10px;">
@@ -41,40 +38,22 @@ if logo:
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
-# ⚠️ هذا الجزء مسؤول عن استخراج البيانات من PDF
-# ⚠️ أي تعديل هنا ممكن يكسر:
-# - اتجاه البيانات (يمين/شمال)
-# - القيم السالبة (-)
-# - توزيع الأعمدة
-# ⚠️ مسموح فقط التعديل في UI فوق أو تحت
+# 🚫 DO NOT MODIFY LOGIC BELOW
 # =========================================================
 
-# ================= HELPERS =================
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
-# 🔥 FIX النهائي للسالب (يدعم عربي + إنجليزي)
 def extract_numbers(text):
     if not text:
         return []
-
     text = normalize(str(text))
-
-    # (123) → -123
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
-
-    # 15- → -15 (العربي)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
-
-    # - 15 → -15
     text = re.sub(r'-\s+(\d)', r'-\1', text)
-
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-
     return [float(n) for n in numbers]
 
-# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -92,7 +71,6 @@ def parse_ar(file):
 
                     if phone:
                         phone = phone.group(1)
-
                         vals = extract_numbers(text)
 
                         if i+1 < len(table):
@@ -101,7 +79,7 @@ def parse_ar(file):
                                 vals = nxt
                                 i += 1
 
-                        vals = vals[::-1]  # مهم للاتجاه العربي
+                        vals = vals[::-1]
 
                         def g(i): return vals[i] if i < len(vals) else 0
 
@@ -121,11 +99,9 @@ def parse_ar(file):
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
-
                     i += 1
     return records
 
-# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -161,15 +137,11 @@ def parse_en(file):
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
-
                         i += 2
                         continue
-
                     i += 1
-
     return records
 
-# ================= EXCEL =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -177,180 +149,65 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# =========================================================
-# ✅ UI ONLY BELOW — SAFE TO MODIFY
-# =========================================================
+# ================= UI =================
 
-# ================= CSS STYLES =================
-st.markdown("""
-<style>
-    /* Import Professional Corporate Font (Montserrat) */
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&display=swap');
-    
-    .upload-box {
-        background: #f0fdf4;
-        border: 2px dashed #10b981;
-        border-radius: 15px;
-        padding: 1rem;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .kpi {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        border-top: 4px solid #10b981;
-        height: 100%;
-    }
-    .kpi h2 {
-        color: #059669;
-        font-size: 1.8rem;
-        margin: 0.5rem 0;
-        font-weight: bold;
-    }
-    .kpi p {
-        color: #6b7280;
-        margin: 0;
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-    .success-box {
-        background: #dcfce7;
-        border: 1px solid #16a34a;
-        color: #166534;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        margin: 1rem 0;
-        font-weight: bold;
-    }
-    
-    /* Signature Box Styles - Professional Corporate Look */
-    .signature-box {
-        border: 2px dashed #cbd5e1; /* Neutral gray dashed border for professional look */
-        border-radius: 12px;
-        padding: 1.5rem 1rem;
-        margin: 0 auto 2rem auto;
-        max-width: 600px;
-        background-color: #ffffff;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
+files = st.file_uploader("", type=["pdf"], accept_multiple_files=True)
 
-    .developer-name-corp {
-        font-family: 'Montserrat', sans-serif; /* Professional Corporate Font */
-        font-size: 1.6rem;
-        font-weight: 800; /* Extra Bold */
-        color: #000000; /* Pure Black */
-        margin: 0;
-        letter-spacing: 0.5px;
-        text-transform: none; /* Keep natural case */
-    }
-
-    .copyright-text-corp {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 0.9rem;
-        color: #333333; /* Dark Gray for copyright */
-        margin-top: 0.5rem;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ================= SIGNATURE BOX (Under Logo) =================
-# Placed here to appear right after the logo as requested
-st.markdown("""
-<div class="signature-box">
-    <p class="developer-name-corp">Developed by Najat El Bakry</p>
-    <p class="copyright-text-corp">© 2026 All Rights Reserved</p>
-</div>
-""", unsafe_allow_html=True)
-
-# ================= INPUT =================
-st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
-
-file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
-
-# ================= MAIN =================
-if file:
-
+if files:
     if st.button("🚀 Start Processing"):
 
-        # إنشاء عناصر شريط التقدم والنص قبل بدء المعالجة
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        all_data = []
 
-        try:
-            # محاكاة خطوات المعالجة لتحديث شريط التقدم
-            status_text.text("⏳ جاري قراءة ملف PDF...")
-            progress_bar.progress(10)
+        for file in files:
+            try:
+                if mode == "Auto 🤖":
+                    with pdfplumber.open(file) as pdf:
+                        text = pdf.pages[0].extract_text() or ""
+                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+                else:
+                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-            if mode == "Auto 🤖":
-                with pdfplumber.open(file) as pdf:
-                    text = pdf.pages[0].extract_text() or ""
-                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-            else:
-                lang = "ar" if mode == "عربي 🇪" else "en"
-            
-            status_text.text(f" تم اكتشاف اللغة: {'العربية' if lang == 'ar' else 'English'}... جاري الاستخراج")
-            progress_bar.progress(30)
+                data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-            # استدعاء دالة الاستخراج المناسبة
-            data = parse_ar(file) if lang == "ar" else parse_en(file)
+                if data:
+                    all_data.extend(data)
 
-            status_text.text("📊 جاري تحويل البيانات إلى جدول...")
-            progress_bar.progress(70)
+            except Exception as e:
+                st.warning(f"⚠️ تم تخطي ملف بسبب خطأ: {file.name}")
+                continue
 
-            if data:
-                df = pd.DataFrame(data)
+        if all_data:
+            df = pd.DataFrame(all_data)
 
-                status_text.text("✅ اكتملت المعالجة!")
-                progress_bar.progress(100)
+            # ================= FIX رقم الموبايل =================
+            for col in df.columns:
+                if col != "محمول":
+                    df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
 
-                # حساب الإجماليات للداشبورد
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlements = df["رسوم تسويات"].sum()
-                total_grand = df["إجمالي"].sum()
+            # ================= DASHBOARD (بدون تغيير) =================
+            total_lines = len(df)
+            total_monthly = df["رسوم شهرية"].sum()
+            total_settlements = df["رسوم تسويات"].sum()
+            total_grand = df["إجمالي"].sum()
 
-                st.markdown("## 📊 Dashboard")
+            st.markdown("## 📊 Dashboard")
 
-                # عرض 4 مؤشرات أداء رئيسية (KPIs)
-                k1, k2, k3, k4 = st.columns(4)
+            k1, k2, k3, k4 = st.columns(4)
 
-                with k1:
-                    st.markdown(f'<div class="kpi"><h2>{total_lines}</h2><p>عدد الخطوط</p></div>', unsafe_allow_html=True)
-                
-                with k2:
-                    st.markdown(f'<div class="kpi"><h2>{total_monthly:,.2f}</h2><p>إجمالي الرسوم الشهرية</p></div>', unsafe_allow_html=True)
-                
-                with k3:
-                    # تلوين التسويات حسب القيمة (سالب/موجب)
-                    color = "#ef4444" if total_settlements < 0 else "#059669"
-                    st.markdown(f'<div class="kpi" style="border-top-color: {color};"><h2 style="color: {color};">{total_settlements:,.2f}</h2><p>إجمالي التسويات</p></div>', unsafe_allow_html=True)
+            with k1:
+                st.metric("عدد الخطوط", total_lines)
+            with k2:
+                st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
+            with k3:
+                st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
+            with k4:
+                st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
-                with k4:
-                    st.markdown(f'<div class="kpi"><h2>{total_grand:,.2f}</h2><p>الإجمالي النهائي</p></div>', unsafe_allow_html=True)
+            st.dataframe(df.head(20))
 
-                st.divider()
+            excel = to_excel(df)
 
-                st.dataframe(df.head(20), use_container_width=True)
+            st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
 
-                excel = to_excel(df)
-
-                st.markdown('<div class="success-box">🎉 تم التحويل بنجاح</div>', unsafe_allow_html=True)
-
-                st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
-
-            else:
-                progress_bar.empty()
-                status_text.empty()
-                st.error("No data found")
-        
-        except Exception as e:
-            progress_bar.empty()
-            status_text.empty()
-            st.error(f"حدث خطأ أثناء المعالجة: {str(e)}")
+        else:
+            st.error("❌ لم يتم استخراج بيانات")
