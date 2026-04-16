@@ -58,17 +58,27 @@ def extract_numbers(text):
     financial_values = []
     for n in numbers:
         clean_n = n.replace('-', '')
+        # استبعاد أرقام الهواتف المكونة من 11 رقم لمنع ظهورها في الأعمدة المالية
         if len(clean_n) == 11 and '.' not in clean_n:
             continue
         financial_values.append(float(n))
         
     return financial_values
 
+# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
         if len(pdf.pages) < 3: return records
+        
         for page in pdf.pages[2:]:
+            # ✅ FIX: تخطي الصفحات التحليلية/البيانية لمنع الأخطاء
+            page_text = page.extract_text() or ""
+            # كلمات مفتاحية تشير إلى صفحات غير بيانات خطوط
+            skip_keywords = ["تحليل", "خطط", "أسعار", "رسم بياني", "الدقائق", "المكالمات داخل الشبكة", "قيمة الفاتورة في آخر ثلاث شهور", "ملخص", "تقرير"]
+            if any(keyword in page_text for keyword in skip_keywords):
+                continue  # تخطي هذه الصفحة تماماً
+
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -107,11 +117,19 @@ def parse_ar(file):
                     i += 1
     return records
 
+# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
         if len(pdf.pages) < 3: return records
+        
         for page in pdf.pages[2:]:
+            # ✅ FIX: تخطي الصفحات التحليلية/البيانية لمنع الأخطاء
+            page_text = page.extract_text() or ""
+            skip_keywords = ["Analysis", "Plan", "Price", "Chart", "Minutes", "Calls within network", "Invoice value last three months", "Summary", "Report"]
+            if any(keyword in page_text for keyword in skip_keywords):
+                continue  # تخطي هذه الصفحة تماماً
+
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -255,10 +273,11 @@ if uploaded_files:
                     st.warning(f"تم تخطي ملف {file.name} بسبب خطأ: {str(e)}")
                     continue
 
-            # ✅ FIX HERE: Corrected the syntax error
+            # ✅ FIX HERE: Corrected the syntax error from previous attempts
             if all_
                 df = pd.DataFrame(all_data)
 
+                # Optional: Clean up any potential phone number leakage in numeric columns
                 for col in df.columns:
                     if col != "محمول":
                         mask = df[col].astype(str).str.match(r'^01[0125]\d{8}$')
