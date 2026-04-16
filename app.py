@@ -142,9 +142,16 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# ================= UI =================
+# =========================================================
+# ✅ UI ONLY BELOW
+# =========================================================
 
-files = st.file_uploader("رفع الفواتير", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
+files = st.file_uploader(
+    "رفع الفواتير",
+    type=["pdf"],
+    accept_multiple_files=True,
+    label_visibility="collapsed"
+)
 
 # ================= SIGNATURE =================
 st.markdown("""
@@ -191,10 +198,9 @@ if files:
                     continue
 
             if all_data:
-
                 df = pd.DataFrame(all_data)
 
-                # FIX بدون لمس اللوجيك
+                # FIX منع تكرار رقم الموبايل داخل القيم
                 for col in df.columns:
                     if col != "محمول":
                         df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
@@ -231,7 +237,11 @@ if files:
 
                 excel = to_excel(df)
 
-                st.success("🎉 تم التحويل بنجاح")
+                st.markdown("""
+                <div class="success-box">
+                    <h3>🎉 تم التحويل بنجاح</h3>
+                </div>
+                """, unsafe_allow_html=True)
 
                 st.download_button("📥 تحميل Excel", excel, excel_filename)
 
