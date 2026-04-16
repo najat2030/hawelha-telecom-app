@@ -55,6 +55,22 @@ def extract_numbers(text):
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
+# 🔥 إزالة رقم الموبايل من القيم
+def clean_numbers(vals, phone):
+    phone_int = str(int(phone))
+    cleaned = []
+    for v in vals:
+        if str(int(v)) != phone_int:
+            cleaned.append(v)
+    return cleaned
+
+# 🔥 تصحيح رقم الموبايل
+def fix_phone(phone):
+    phone = str(phone)
+    if len(phone) == 10 and phone.startswith("1"):
+        return "0" + phone
+    return phone
+
 # ================= AR =================
 def parse_ar(file):
     records = []
@@ -81,6 +97,7 @@ def parse_ar(file):
                                 vals = nxt
                                 i += 1
 
+                        vals = clean_numbers(vals, phone)
                         vals = vals[::-1]
 
                         def g(i): return vals[i] if i < len(vals) else 0
@@ -124,6 +141,8 @@ def parse_en(file):
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
 
+                        vals = clean_numbers(vals, phone)
+
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
@@ -147,41 +166,46 @@ def parse_en(file):
                     i += 1
     return records
 
-# ================= AI FALLBACK =================
+# ================= AI (fallback) =================
 def parse_ai(file):
     records = []
+
     try:
         with pdfplumber.open(file) as pdf:
+            text = ""
             for page in pdf.pages:
-                text = normalize(page.extract_text() or "")
+                text += normalize(page.extract_text() or "")
 
-                phone_match = re.search(r'(01[0125]\d{8})', text)
-                if not phone_match:
-                    continue
+        phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', text)
+        if not phone_match:
+            return []
 
-                phone = phone_match.group(1)
+        phone = fix_phone(phone_match.group(1))
 
-                def find_value(label):
-                    pattern = rf"{label}.*?(-?\d+\.?\d*)"
-                    match = re.search(pattern, text)
-                    return float(match.group(1)) if match else 0
+        def get(label):
+            pattern = rf"{label}.*?(\d+\.?\d*)"
+            match = re.search(pattern, text)
+            return float(match.group(1)) if match else 0
 
-                records.append({
-                    "محمول": phone,
-                    "رسوم شهرية": find_value("الرسوم الشهرية"),
-                    "رسوم الخدمات": find_value("رسوم"),
-                    "مكالمات محلية": find_value("مكالمات"),
-                    "رسائل محلية": find_value("رسائل"),
-                    "إنترنت محلية": find_value("إنترنت"),
-                    "مكالمات دولية": find_value("دولي"),
-                    "رسائل دولية": find_value("رسائل دولية"),
-                    "مكالمات تجوال": find_value("تجوال"),
-                    "رسائل تجوال": find_value("رسائل تجوال"),
-                    "إنترنت تجوال": find_value("إنترنت تجوال"),
-                    "رسوم تسويات": find_value("تسويات"),
-                    "ضرائب": find_value("ضريبة"),
-                    "إجمالي": find_value("إجمالي")
-                })
+        record = {
+            "محمول": phone,
+            "رسوم شهرية": get("إجمالي الرسوم الشهرية"),
+            "رسوم الخدمات": get("رسوم الخدمات"),
+            "مكالمات محلية": get("مكالمات"),
+            "رسائل محلية": get("رسائل"),
+            "إنترنت محلية": get("الإنترنت"),
+            "مكالمات دولية": get("دولي"),
+            "رسائل دولية": get("رسائل دولية"),
+            "مكالمات تجوال": get("التجوال"),
+            "رسائل تجوال": get("رسائل التجوال"),
+            "إنترنت تجوال": get("إنترنت التجوال"),
+            "رسوم تسويات": get("تنمية موارد الدولة"),
+            "ضرائب": get("ضريبة"),
+            "إجمالي": get("إجمالي القيمة المستحقة")
+        }
+
+        records.append(record)
+
     except:
         return []
 
@@ -237,10 +261,7 @@ if files:
                     data = []
 
                 if not data:
-                    try:
-                        data = parse_ai(file)
-                    except:
-                        data = []
+                    data = parse_ai(file)
 
                 if data:
                     all_data.extend(data)
