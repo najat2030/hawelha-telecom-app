@@ -316,7 +316,9 @@ if file:
                 
                 st.markdown(f"""
                 <div class="success-box">
-                    <h3>🎉 تم التحويل بنجاح</h3>
+                    <h3>🎉 تم التحويل بنجاح!</h3>
+                    <p>تم معالجة <strong>{total_lines}</strong> سجل بنجاح.<br>
+                    اضغط على الزر أدناه لتحميل ملف Excel باسم: <code>{excel_filename}</code></p>
                 </div>
                 """, unsafe_allow_html=True)
 
