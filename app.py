@@ -144,7 +144,17 @@ def to_excel(df):
 
 # ================= UI =================
 
-files = st.file_uploader("", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
+files = st.file_uploader("رفع الفواتير", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
+
+# ================= SIGNATURE =================
+st.markdown("""
+<div style="text-align:center;margin-top:30px;">
+<p><b>Developed by Najat El Bakry</b></p>
+<p>© 2026 All Rights Reserved</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ================= MAIN =================
 
 if files:
 
@@ -161,9 +171,7 @@ if files:
 
             for idx, file in enumerate(files):
 
-                progress = int((idx / total_files) * 70)
-                progress_bar.progress(progress)
-
+                progress_bar.progress(int((idx / total_files) * 70))
                 status_text.text(f"⏳ جاري معالجة {file.name} ...")
 
                 try:
@@ -180,13 +188,13 @@ if files:
                         all_data.extend(data)
 
                 except:
-                    st.warning(f"⚠️ ملف فيه مشكلة: {file.name}")
+                    continue
 
             if all_data:
 
                 df = pd.DataFrame(all_data)
 
-                # ✅ FIX منع تكرار رقم الموبايل
+                # FIX بدون لمس اللوجيك
                 for col in df.columns:
                     if col != "محمول":
                         df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
@@ -197,7 +205,7 @@ if files:
                 progress_bar.progress(100)
                 status_text.text("✅ اكتملت المعالجة!")
 
-                # ====== الداشبورد (كما هو بدون أي تعديل) ======
+                # ================= DASHBOARD =================
                 total_lines = len(df)
                 total_monthly = df["رسوم شهرية"].sum()
                 total_settlements = df["رسوم تسويات"].sum()
