@@ -2,11 +2,9 @@ import streamlit as st
 import pdfplumber
 import pandas as pd
 import re
-from datetime import datetime
 import io
 import base64
 import os
-import gc
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -40,7 +38,7 @@ if logo:
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 🚫 DO NOT MODIFY BELOW THIS LINE 🚫
+# 🚫 DO NOT MODIFY LOGIC BELOW
 # =========================================================
 
 def normalize(t):
@@ -56,17 +54,10 @@ def extract_numbers(text):
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
-# ================= AR =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
-            text_full = page.extract_text() or ""
-
-            # 🔥 FIX crash (قطع الجزء التقيل)
-            if "خدمة الفوترة التحليلية" in text_full:
-                text_full = text_full.split("خدمة الفوترة التحليلية")[0]
-
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -108,21 +99,13 @@ def parse_ar(file):
                             "ضرائب": g(11),
                             "إجمالي": g(12),
                         })
-
                     i += 1
     return records
 
-# ================= EN =================
 def parse_en(file):
     records = []
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
-            text_full = page.extract_text() or ""
-
-            # 🔥 FIX crash
-            if "خدمة الفوترة التحليلية" in text_full:
-                text_full = text_full.split("خدمة الفوترة التحليلية")[0]
-
             for table in page.extract_tables() or []:
                 i = 0
                 while i < len(table):
@@ -136,10 +119,7 @@ def parse_en(file):
 
                     if phone:
                         phone = phone.group(1)
-
-                        vals = extract_numbers(
-                            " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
-                        )
+                        vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
 
                         records.append({
                             "محمول": phone,
@@ -157,14 +137,11 @@ def parse_en(file):
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
-
                         i += 2
                         continue
-
                     i += 1
     return records
 
-# ================= EXCEL =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -173,77 +150,64 @@ def to_excel(df):
     return out
 
 # ================= UI =================
-st.markdown('<div class="upload-box"></div>', unsafe_allow_html=True)
-file = st.file_uploader("", type=["pdf"], label_visibility="collapsed")
 
-if file:
-    excel_filename = file.name.replace('.pdf','') + "_Converted.xlsx"
+files = st.file_uploader("", type=["pdf"], accept_multiple_files=True)
 
+if files:
     if st.button("🚀 Start Processing"):
 
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        all_data = []
 
-        try:
-            progress_bar.progress(10)
+        for file in files:
+            try:
+                if mode == "Auto 🤖":
+                    with pdfplumber.open(file) as pdf:
+                        text = pdf.pages[0].extract_text() or ""
+                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
+                else:
+                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
 
-            if mode == "Auto 🤖":
-                with pdfplumber.open(file) as pdf:
-                    text = pdf.pages[0].extract_text() or ""
-                lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-            else:
-                lang = "ar" if mode == "عربي 🇪🇬" else "en"
+                data = parse_ar(file) if lang == "ar" else parse_en(file)
 
-            progress_bar.progress(30)
+                if data:
+                    all_data.extend(data)
 
-            data = parse_ar(file) if lang == "ar" else parse_en(file)
+            except Exception as e:
+                st.warning(f"⚠️ تم تخطي ملف بسبب خطأ: {file.name}")
+                continue
 
-            progress_bar.progress(70)
+        if all_data:
+            df = pd.DataFrame(all_data)
 
-            if data:
-                df = pd.DataFrame(data)
+            # ================= FIX رقم الموبايل =================
+            for col in df.columns:
+                if col != "محمول":
+                    df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
 
-                # 🔥 FIX تكرار رقم الموبايل
-                for col in df.columns:
-                    if col != "محمول":
-                        df.loc[df[col].astype(str).str.replace(".0","") == df["محمول"], col] = 0
+            # ================= DASHBOARD (بدون تغيير) =================
+            total_lines = len(df)
+            total_monthly = df["رسوم شهرية"].sum()
+            total_settlements = df["رسوم تسويات"].sum()
+            total_grand = df["إجمالي"].sum()
 
-                del data
-                gc.collect()
+            st.markdown("## 📊 Dashboard")
 
-                progress_bar.progress(100)
+            k1, k2, k3, k4 = st.columns(4)
 
-                total_lines = len(df)
-                total_monthly = df["رسوم شهرية"].sum()
-                total_settlements = df["رسوم تسويات"].sum()
-                total_grand = df["إجمالي"].sum()
+            with k1:
+                st.metric("عدد الخطوط", total_lines)
+            with k2:
+                st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
+            with k3:
+                st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
+            with k4:
+                st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
-                st.markdown("## 📊 Dashboard")
+            st.dataframe(df.head(20))
 
-                k1, k2, k3, k4 = st.columns(4)
+            excel = to_excel(df)
 
-                with k1:
-                    st.metric("عدد الخطوط", total_lines)
-                with k2:
-                    st.metric("الرسوم الشهرية", f"{total_monthly:,.2f}")
-                with k3:
-                    st.metric("التسويات", f"{total_settlements:,.2f}")
-                with k4:
-                    st.metric("الإجمالي", f"{total_grand:,.2f}")
+            st.download_button("📥 تحميل Excel", excel, "hawelha_invoice_data.xlsx")
 
-                st.dataframe(df.head(20), use_container_width=True)
-
-                excel = to_excel(df)
-
-                st.success("🎉 تم التحويل بنجاح")
-
-                st.download_button("📥 تحميل Excel", excel, excel_filename)
-
-                del df
-                gc.collect()
-
-            else:
-                st.error("No data found")
-
-        except Exception as e:
-            st.error(f"خطأ: {str(e)}")
+        else:
+            st.error("❌ لم يتم استخراج بيانات")
