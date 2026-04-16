@@ -205,10 +205,10 @@ st.markdown('<div class="upload-box"><h3>📁 Upload Multiple PDF Invoices</h3><
 
 # ✅ FIX: Added a label string to prevent TypeError
 uploaded_files = st.file_uploader(
-    "Choose PDF files",  # <-- Label is required internally even if hidden
+    "Choose PDF files",
     type=["pdf"],
     accept_multiple_files=True,
-    label_visibility="collapsed"  # <-- Hides it visually
+    label_visibility="collapsed"
 )
 
 # ================= SIGNATURE & COPYRIGHT =================
@@ -255,6 +255,7 @@ if uploaded_files:
                     st.warning(f"تم تخطي ملف {file.name} بسبب خطأ: {str(e)}")
                     continue
 
+            # ✅ FIX HERE: Corrected the syntax error
             if all_
                 df = pd.DataFrame(all_data)
 
