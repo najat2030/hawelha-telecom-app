@@ -14,12 +14,56 @@ st.set_page_config(
     layout="wide"
 )
 
-# ================= MODE =================
-mode = st.radio(
-    "🌐 اختر وضع التحليل",
-    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
-    horizontal=True
-)
+# ================= HIDE STREAMLIT =================
+hide_style = """
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+</style>
+"""
+st.markdown(hide_style, unsafe_allow_html=True)
+
+# ================= USERS =================
+df_users = pd.read_excel("users.xlsx")
+
+users = {
+    row["Username"]: {
+        "password": str(row["Password"]),
+        "role": row["Role"]
+    }
+    for _, row in df_users.iterrows()
+}
+
+# ================= LOGIN =================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+def login():
+    st.markdown("<h2 style='text-align:center;color:#0B6B3A;'>🔐 تسجيل الدخول</h2>", unsafe_allow_html=True)
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("دخول"):
+        if username in users and users[username]["password"] == password:
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.role = users[username]["role"]
+            st.rerun()
+        else:
+            st.error("بيانات غير صحيحة")
+
+if not st.session_state.logged_in:
+    login()
+    st.stop()
+
+# ================= SIDEBAR =================
+st.sidebar.markdown(f"👤 {st.session_state.username}")
+
+if st.sidebar.button("تسجيل خروج"):
+    st.session_state.logged_in = False
+    st.rerun()
 
 # ================= LOGO =================
 def load_logo():
@@ -37,6 +81,40 @@ if logo:
         <img src="data:image/png;base64,{logo}" width="80%" style="max-width: 1000px;">
     </div>
     """, unsafe_allow_html=True)
+
+# ================= TITLE =================
+st.markdown("""
+<h1 style='text-align: center; color: #0B6B3A;'>
+Hawelha Telecom System
+</h1>
+""", unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ================= ADMIN PANEL =================
+if st.session_state.role == "admin":
+    st.markdown("### ⚙️ لوحة الإدارة")
+
+    total_users = len(df_users)
+    admins = len(df_users[df_users["Role"] == "admin"])
+    users_count = len(df_users[df_users["Role"] == "user"])
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric("👥 المستخدمين", total_users)
+    c2.metric("👑 Admin", admins)
+    c3.metric("👤 Users", users_count)
+
+    st.dataframe(df_users, use_container_width=True)
+
+    st.markdown("<br><hr><br>", unsafe_allow_html=True)
+
+# ================= MODE =================
+mode = st.radio(
+    "🌐 اختر وضع التحليل",
+    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
+    horizontal=True
+)
 
 # =========================================================
 # 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
@@ -162,10 +240,9 @@ def parse_en(file):
                     i += 1
     return records
 
-# ================= AI FIXED =================
+# ================= AI =================
 def parse_ai(file):
     records = []
-
     try:
         with pdfplumber.open(file) as pdf:
             text = ""
@@ -314,3 +391,11 @@ if files:
 
         else:
             st.error("No data extracted")
+
+# ================= FOOTER =================
+st.markdown("""
+<hr>
+<div style='text-align: center; color: gray; font-size: 13px; margin-top: 30px;'>
+© 2026 Najat El Bakry — All Rights Reserved
+</div>
+""", unsafe_allow_html=True)
