@@ -42,13 +42,6 @@ div.stButton > button {
 div.stButton > button:hover {
     background-color: #166644;
 }
-
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0px 2px 10px rgba(0,0,0,0.05);
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -110,7 +103,7 @@ if logo:
     </div>
     """, unsafe_allow_html=True)
 
-# ================= HEADER TEXT =================
+# ================= HEADER =================
 st.markdown("""
 <div style='text-align: center; margin-top: 10px;'>
 <h3 style='color:#0B6B3A;'>
@@ -124,7 +117,7 @@ Simple • Fast • Accurate
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 
-# ================= ADMIN PANEL =================
+# ================= ADMIN =================
 if st.session_state.role == "admin":
     st.markdown("### ⚙️ لوحة الإدارة")
 
@@ -153,8 +146,6 @@ mode = st.radio(
 # 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
 # =========================================================
 
-# (اللوجيك كله زي ما هو 👇 بدون أي تغيير)
-
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
@@ -178,7 +169,162 @@ def fix_phone(phone):
         return "0" + phone
     return phone
 
-# (باقي الكود زي ما هو بدون لمس...)
+# ================= AR =================
+def parse_ar(file):
+    records = []
+    with pdfplumber.open(file) as pdf:
+        for page in pdf.pages[2:]:
+            for table in page.extract_tables() or []:
+                i = 0
+                while i < len(table):
+                    row = table[i]
+                    if not row:
+                        i += 1
+                        continue
+
+                    text = normalize(" ".join([str(c) for c in row if c]))
+                    phone = re.search(r'(01[0125]\d{8})', text)
+
+                    if phone:
+                        phone = phone.group(1)
+                        vals = extract_numbers(text)
+
+                        if i+1 < len(table):
+                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                            if len(nxt) > len(vals):
+                                vals = nxt
+                                i += 1
+
+                        vals = clean_numbers(vals, phone)
+                        vals = vals[::-1]
+
+                        def g(i): return vals[i] if i < len(vals) else 0
+
+                        records.append({
+                            "محمول": phone,
+                            "رسوم شهرية": g(0),
+                            "رسوم الخدمات": g(1),
+                            "مكالمات محلية": g(2),
+                            "رسائل محلية": g(3),
+                            "إنترنت محلية": g(4),
+                            "مكالمات دولية": g(5),
+                            "رسائل دولية": g(6),
+                            "مكالمات تجوال": g(7),
+                            "رسائل تجوال": g(8),
+                            "إنترنت تجوال": g(9),
+                            "رسوم تسويات": g(10),
+                            "ضرائب": g(11),
+                            "إجمالي": g(12),
+                        })
+                    i += 1
+    return records
+
+# ================= EN =================
+def parse_en(file):
+    records = []
+    with pdfplumber.open(file) as pdf:
+        for page in pdf.pages[2:]:
+            for table in page.extract_tables() or []:
+                i = 0
+                while i < len(table):
+                    row = table[i]
+                    if not row:
+                        i += 1
+                        continue
+
+                    text = " ".join([str(c) for c in row])
+                    phone = re.search(r'(01[0125]\d{8})', text)
+
+                    if phone:
+                        phone = phone.group(1)
+                        vals = extract_numbers(
+                            " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
+                        )
+
+                        vals = clean_numbers(vals, phone)
+
+                        records.append({
+                            "محمول": phone,
+                            "رسوم شهرية": vals[0] if len(vals)>0 else 0,
+                            "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
+                            "مكالمات محلية": vals[2] if len(vals)>2 else 0,
+                            "رسائل محلية": vals[3] if len(vals)>3 else 0,
+                            "إنترنت محلية": vals[4] if len(vals)>4 else 0,
+                            "مكالمات دولية": vals[5] if len(vals)>5 else 0,
+                            "رسائل دولية": vals[6] if len(vals)>6 else 0,
+                            "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
+                            "رسائل تجوال": vals[8] if len(vals)>8 else 0,
+                            "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
+                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
+                            "ضرائب": vals[11] if len(vals)>11 else 0,
+                            "إجمالي": vals[-1] if vals else 0
+                        })
+
+                        i += 2
+                        continue
+
+                    i += 1
+    return records
+
+# ================= AI =================
+def parse_ai(file):
+    records = []
+    try:
+        with pdfplumber.open(file) as pdf:
+            text = ""
+            for page in pdf.pages:
+                text += normalize(page.extract_text() or "")
+
+        phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', text)
+        if not phone_match:
+            return []
+
+        phone = fix_phone(phone_match.group(1))
+
+        def get(pattern):
+            match = re.search(pattern, text)
+            return float(match.group(1)) if match else 0
+
+        monthly = get(r'إجمالي الرسوم الشهرية.*?(\d+\.\d+)')
+
+        tax1 = get(r'ضريبة الجدول.*?(\d+\.\d+)')
+        tax2 = get(r'ضريبة القيمة المضافة.*?(\d+\.\d+)')
+        tax3 = get(r'ضريبة الدمغة.*?(\d+\.\d+)')
+        tax4 = get(r'تنمية موارد الدولة.*?(\d+\.\d+)')
+
+        taxes = tax1 + tax2 + tax3 + tax4
+
+        total = get(r'إجمالي القيمة المستحقة.*?(\d+\.\d+)')
+
+        records.append({
+            "محمول": phone,
+            "رسوم شهرية": monthly,
+            "رسوم الخدمات": 0,
+            "مكالمات محلية": 0,
+            "رسائل محلية": 0,
+            "إنترنت محلية": 0,
+            "مكالمات دولية": 0,
+            "رسائل دولية": 0,
+            "مكالمات تجوال": 0,
+            "رسائل تجوال": 0,
+            "إنترنت تجوال": 0,
+            "رسوم تسويات": 0,
+            "ضرائب": round(taxes, 2),
+            "إجمالي": total
+        })
+
+    except:
+        return []
+
+    return records
+
+# ================= EXCEL =================
+def to_excel(df):
+    out = io.BytesIO()
+    with pd.ExcelWriter(out, engine="openpyxl") as w:
+        df.to_excel(w, index=False)
+    out.seek(0)
+    return out
 
 # ================= UI =================
 files = st.file_uploader(
@@ -204,16 +350,16 @@ if files:
         for idx, file in enumerate(files):
 
             try:
-                status_text.markdown(
-                    f"<span style='color:#0B6B3A;'>📄 Processing: {file.name}</span>",
-                    unsafe_allow_html=True
-                )
+                status_text.text(f"📄 Processing: {file.name}")
 
                 progress_bar.progress(int((idx / total_files) * 100))
 
                 if mode == "Auto 🤖":
                     with pdfplumber.open(file) as pdf:
                         text = pdf.pages[0].extract_text() or ""
+
+                    file.seek(0)  # 🔥 الحل هنا
+
                     lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
                 else:
                     lang = "ar" if mode == "عربي 🇪🇬" else "en"
@@ -238,40 +384,12 @@ if files:
             gc.collect()
 
         progress_bar.progress(100)
-        status_text.markdown(
-            "<span style='color:green;'>✅ Completed Successfully</span>",
-            unsafe_allow_html=True
-        )
+        status_text.text("✅ اكتملت المعالجة!")
 
         if all_data:
-
             df = pd.DataFrame(all_data)
-
-            total_lines = len(df)
-            total_monthly = df["رسوم شهرية"].sum()
-            total_settlements = df["رسوم تسويات"].sum()
-            total_grand = df["إجمالي"].sum()
-
-            st.markdown("## 📊 Dashboard")
-
-            k1, k2, k3, k4 = st.columns(4)
-
-            k1.metric("عدد الخطوط", total_lines)
-            k2.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
-            k3.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
-            k4.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
-
-            st.dataframe(df.head(20), use_container_width=True)
-
-            excel = to_excel(df)
-
             st.success("🎉 تم التحويل بنجاح")
-            st.download_button("📥 تحميل Excel", excel, "hawelha_all_files.xlsx")
-
-            if failed_files:
-                st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
-                st.write(failed_files)
-
+            st.download_button("📥 تحميل Excel", to_excel(df), "output.xlsx")
         else:
             st.error("No data extracted")
 
