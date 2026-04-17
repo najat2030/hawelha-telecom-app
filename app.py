@@ -11,12 +11,10 @@ import gc
 st.set_page_config(page_title="Nagat Telecom", layout="wide", page_icon="📊")
 
 # ================= STYLE & THEME =================
-# الألوان الأساسية - مستوحاة من التصميم المطلوب
+# الألوان الأساسية
 PRIMARY_COLOR = "#0B6B3A"  # أخضر ملكي
-SECONDARY_COLOR = "#F8F9FA" # خلفية فاتحة جداً
+BG_COLOR = "#F4F6F8"       # خلفية رمادية فاتحة جداً
 CARD_BG = "#FFFFFF"        # خلفية البطاقات بيضاء
-TEXT_COLOR = "#2C3E50"     # لون النص الأساسي
-MUTED_TEXT = "#7F8C8D"     # لون النص الثانوي
 
 st.markdown(f"""
 <style>
@@ -25,9 +23,8 @@ st.markdown(f"""
 
     /* Global Styles */
     .stApp {{
-        background-color: {SECONDARY_COLOR};
+        background-color: {BG_COLOR};
         font-family: 'Tajawal', sans-serif;
-        color: {TEXT_COLOR};
     }}
 
     /* Hide Streamlit Elements */
@@ -35,14 +32,17 @@ st.markdown(f"""
     footer {{visibility: hidden;}}
     header {{visibility: hidden;}}
 
-    /* Login Page Background - Using a placeholder, replace with your logo if needed */
+    /* Login Page Background - REPLACE THE URL BELOW WITH YOUR LOGO IMAGE URL */
+    /* If you have a local image, you can use base64 encoding or place it in a folder and serve it */
     .login-background {{
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1920&auto=format&fit=crop'); 
+        background-size: cover;
+        background-position: center;
         z-index: -1;
     }}
     
@@ -51,7 +51,7 @@ st.markdown(f"""
         background: rgba(255, 255, 255, 0.95);
         padding: 40px;
         border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.18);
@@ -60,189 +60,73 @@ st.markdown(f"""
         text-align: center;
     }}
 
-    /* Dashboard Header - Professional Look */
+    /* Dashboard Header */
     .dashboard-header {{
         display: flex;
         justify-content: space-between;
         align-items: center;
         background: white;
-        padding: 20px 30px;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-        margin-bottom: 40px;
-        border-bottom: 3px solid {PRIMARY_COLOR};
-    }}
-    
-    .header-logo-section {{
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }}
-    
-    .header-logo-img {{
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        object-fit: contain;
-        background: white;
-        padding: 5px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }}
-    
-    .header-text h1 {{
-        margin: 0;
-        font-size: 28px;
-        color: {PRIMARY_COLOR};
-        font-weight: 700;
-    }}
-    
-    .header-text p {{
-        margin: 5px 0 0 0;
-        font-size: 16px;
-        color: {MUTED_TEXT};
-        font-weight: 500;
+        padding: 15px 30px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        margin-bottom: 30px;
     }}
 
-    /* User Profile Section */
-    .user-profile {{
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        background: {SECONDARY_COLOR};
-        padding: 10px 20px;
-        border-radius: 50px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }}
-    
-    .user-avatar {{
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: {PRIMARY_COLOR};
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 18px;
-    }}
-
-    /* Metric Cards - Premium Design */
+    /* Metric Cards */
     .metric-card {{
         background: white;
-        padding: 30px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        border: none;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        border-right: 5px solid {PRIMARY_COLOR};
+        transition: transform 0.2s;
     }}
-    
-    .metric-card::before {{
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 5px;
-        height: 100%;
-        background: {PRIMARY_COLOR};
-        border-radius: 0 20px 20px 0;
-    }}
-    
     .metric-card:hover {{
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
     }}
-    
-    .metric-icon {{
-        font-size: 24px;
-        margin-bottom: 15px;
-        opacity: 0.8;
-    }}
-    
     .metric-title {{
-        color: {MUTED_TEXT};
+        color: #666;
         font-size: 16px;
         font-weight: 500;
         margin-bottom: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
     }}
-    
     .metric-value {{
         color: {PRIMARY_COLOR};
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 700;
-        line-height: 1.2;
-    }}
-    
-    .metric-value.total {{
-        color: #004d40;
-        font-size: 36px;
     }}
 
     /* Buttons */
     div.stButton > button {{
         background-color: {PRIMARY_COLOR};
         color: white;
-        border-radius: 12px;
-        padding: 12px 24px;
-        font-weight: 600;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: bold;
         border: none;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(11, 107, 58, 0.2);
     }}
-    
     div.stButton > button:hover {{
         background-color: #085a30;
-        box-shadow: 0 6px 20px rgba(11, 107, 58, 0.3);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(11, 107, 58, 0.3);
     }}
 
     /* Inputs */
     .stTextInput > div > div > input {{
-        border-radius: 12px;
-        border: 2px solid #e0e0e0;
-        padding: 15px;
-        font-size: 16px;
-        transition: all 0.3s ease;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        padding: 12px;
     }}
     
-    .stTextInput > div > div > input:focus {{
-        border-color: {PRIMARY_COLOR};
-        box-shadow: 0 0 0 3px rgba(11, 107, 58, 0.1);
-    }}
-    
-    /* File Uploader */
-    .stFileUploader > div > div > div > div {{
-        border-radius: 15px;
-        border: 2px dashed #ccc;
-        background: white;
-        padding: 30px;
-    }}
-
     /* Footer */
     .footer {{
         text-align: center;
-        color: {MUTED_TEXT};
-        font-size: 14px;
-        margin-top: 60px;
-        padding: 30px;
-        border-top: 1px solid #e0e0e0;
-        background: white;
-        border-radius: 20px 20px 0 0;
-    }}
-
-    /* Success Message */
-    .success-message {{
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        color: #155724;
+        color: #888;
+        font-size: 12px;
+        margin-top: 50px;
         padding: 20px;
-        border-radius: 15px;
-        border-left: 5px solid #28a745;
-        margin: 20px 0;
-        font-weight: 500;
+        border-top: 1px solid #e0e0e0;
     }}
 
 </style>
@@ -271,17 +155,19 @@ def login_page():
     # Background Overlay
     st.markdown('<div class="login-background"></div>', unsafe_allow_html=True)
     
-    # Centered Container
+    # Centered Container using columns to approximate centering in Streamlit
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
         st.markdown("""
         <div class="login-card">
-            <img src="https://github.com/najatbakry.png" style="width:80px; height:80px; border-radius:50%; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.1);" alt="Logo">
-            <h1 style="color:#0B6B3A; margin-bottom: 10px;">نجات تيليكوم</h1>
+            <h1 style="color:#0B6B3A; margin-bottom: 30px;">نجات تيليكوم</h1>
             <p style="color:#666; margin-bottom: 30px;">منصة تحليل الفواتير الذكية</p>
         </div>
         """, unsafe_allow_html=True)
+        
+        # We inject the form inside the card via HTML/CSS is tricky in Streamlit directly without custom components,
+        # so we style the standard inputs to look good within the centered column.
         
         username = st.text_input("", placeholder="اسم المستخدم 👤")
         password = st.text_input("", placeholder="كلمة المرور 🔒", type="password")
@@ -301,30 +187,24 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ================= DASHBOARD HEADER =================
-# Get first letter of username for avatar
-user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
+col1, col2 = st.columns([6, 2])
 
-st.markdown(f"""
-<div class="dashboard-header">
-    <div class="header-logo-section">
-        <img src="https://github.com/najatbakry.png" class="header-logo-img" alt="Company Logo">
-        <div class="header-text">
-            <h1>Nagat Telecom</h1>
-            <p>Convert PDF invoices to Excel instantly</p>
+with col1:
+    st.markdown(f"""
+    <div class="dashboard-header">
+        <div style="display:flex; align-items:center; gap:15px;">
+            <div style="background:{PRIMARY_COLOR}; color:white; padding:10px; border-radius:10px;">📊</div>
+            <div>
+                <h2 style="margin:0; color:#333;">لوحة التحكم</h2>
+                <span style="font-size:14px; color:#666;">مرحباً بك، {st.session_state.username}</span>
+            </div>
         </div>
     </div>
-    <div class="user-profile">
-        <div class="user-avatar">{user_initial}</div>
-        <span>{st.session_state.username}</span>
-        <button onclick="document.querySelector('[data-testid=\'stSidebarCollapsedControl\']').click()" style="background:none; border:none; cursor:pointer; font-size:18px;">⚙️</button>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# Logout Button (Hidden in header, shown in sidebar or bottom)
-with st.sidebar:
-    st.markdown("### الإعدادات")
-    if st.button("🚪 تسجيل الخروج", use_container_width=True):
+with col2:
+    st.write("") # Spacer
+    if st.button("🚪 تسجيل الخروج"):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -346,7 +226,7 @@ mode = st.radio(
 )
 
 # =========================================================
-# 🚫 DO NOT MODIFY BELOW THIS LINE (Logic Preserved) 🚫
+# 🚫🚫 DO NOT MODIFY BELOW THIS LINE (Logic Preserved) 🚫
 # =========================================================
 
 def normalize(t):
@@ -553,7 +433,7 @@ if files:
                 data = parse_en(file)
             elif mode == "Auto 🤖":
                 data = parse_ar(file)
-                if not 
+                if not data:
                     data = parse_en(file)
                 if not data:
                     data = parse_ai(file)
@@ -561,7 +441,7 @@ if files:
                 data = parse_ar(file)
                 
             # Fallback to AI if specific parsers fail
-            if not 
+            if not data:
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -570,7 +450,7 @@ if files:
         progress_bar.progress(100)
         status_text.empty()
 
-        if all_
+        if all_data:
             df_result = pd.DataFrame(all_data)
             
             # Calculations
@@ -594,8 +474,7 @@ if files:
             with m1:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon">📱</div>
-                    <div class="metric-title">إجمالي الخطوط</div>
+                    <div class="metric-title">📱 إجمالي الخطوط</div>
                     <div class="metric-value">{total_lines}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -603,8 +482,7 @@ if files:
             with m2:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon">💰</div>
-                    <div class="metric-title">الرسوم الشهرية</div>
+                    <div class="metric-title">💰 الرسوم الشهرية</div>
                     <div class="metric-value">{fmt_curr(sum_monthly)}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -612,8 +490,7 @@ if files:
             with m3:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon">🧾</div>
-                    <div class="metric-title">رسوم التسويات</div>
+                    <div class="metric-title">🧾 رسوم التسويات</div>
                     <div class="metric-value">{fmt_curr(sum_settlements)}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -621,22 +498,20 @@ if files:
             with m4:
                 st.markdown(f"""
                 <div class="metric-card">
-                    <div class="metric-icon">🏛️</div>
-                    <div class="metric-title">إجمالي الضرائب</div>
+                    <div class="metric-title">🏛️ إجمالي الضرائب</div>
                     <div class="metric-value">{fmt_curr(sum_taxes)}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
             with m5:
                 st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-icon">💎</div>
-                    <div class="metric-title">الإجمالي الكلي</div>
-                    <div class="metric-value total">{fmt_curr(sum_total)}</div>
+                <div class="metric-card" style="border-right-color: #004d40;">
+                    <div class="metric-title">💎 الإجمالي الكلي</div>
+                    <div class="metric-value" style="color:#004d40;">{fmt_curr(sum_total)}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            st.markdown('<div class="success-message">✅ تم الانتهاء من معالجة الملفات بنجاح!</div>', unsafe_allow_html=True)
+            st.success("✅ تم الانتهاء من معالجة الملفات بنجاح!")
             
             st.markdown("---")
             st.markdown("### 📋 تفاصيل البيانات")
