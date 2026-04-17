@@ -160,39 +160,48 @@ def parse_en(file):
                     i += 1
     return records
 
-# ================= AI FIXED =================
+# ================= AI FIXED (النسخة المعدلة للفواتير الفردية) =================
 def parse_ai(file):
     records = []
-
     try:
         with pdfplumber.open(file) as pdf:
             text = ""
             for page in pdf.pages:
                 text += normalize(page.extract_text() or "")
 
+        # البحث عن رقم الهاتف
         phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', text)
         if not phone_match:
             return []
 
         phone = fix_phone(phone_match.group(1))
 
-        def get(pattern):
-            match = re.search(pattern, text)
-            return float(match.group(1)) if match else 0
+        # دالة مرنة لاستخراج الرقم بعد مسمى معين مع تجاهل النصوص والرموز
+        def get_value(patterns, full_text):
+            for pattern in patterns:
+                regex = pattern + r'.*?(\d[\d,.]*)'
+                match = re.search(regex, full_text)
+                if match:
+                    val = match.group(1).replace(',', '')
+                    try:
+                        return float(val)
+                    except:
+                        continue
+            return 0.0
 
-        # ✅ الرسوم الشهرية
-        monthly = get(r'إجمالي الرسوم الشهرية.*?(\d+\.\d+)')
+        # ✅ استخراج الرسوم الشهرية
+        monthly = get_value([r'إجمالي الرسوم الشهرية', r'الرسوم الشهرية'], text)
 
-        # ✅ الضرائب (جمع)
-        tax1 = get(r'ضريبة الجدول.*?(\d+\.\d+)')
-        tax2 = get(r'ضريبة القيمة المضافة.*?(\d+\.\d+)')
-        tax3 = get(r'ضريبة الدمغة.*?(\d+\.\d+)')
-        tax4 = get(r'تنمية موارد الدولة.*?(\d+\.\d+)')
+        # ✅ استخراج الضرائب وتجميعها (الجدول، القيمة المضافة، الدمغة، التنمية)
+        t_table = get_value([r'ضريبة الجدول'], text)
+        t_vat = get_value([r'ضريبة القيمة المضافة'], text)
+        t_stamp = get_value([r'ضريبة الدمغة'], text)
+        t_dev = get_value([r'رسم تنمية موارد الدولة'], text)
+        
+        total_taxes = round(t_table + t_vat + t_stamp + t_dev, 2)
 
-        taxes = tax1 + tax2 + tax3 + tax4
-
-        # ✅ الإجمالي
-        total = get(r'إجمالي القيمة المستحقة.*?(\d+\.\d+)')
+        # ✅ استخراج الإجمالي النهائي (إجمالي القيمة المستحقة)
+        total_due = get_value([r'إجمالي القيمة المستحقة', r'الإجمالي المستحق'], text)
 
         records.append({
             "محمول": phone,
@@ -207,8 +216,8 @@ def parse_ai(file):
             "رسائل تجوال": 0,
             "إنترنت تجوال": 0,
             "رسوم تسويات": 0,
-            "ضرائب": round(taxes, 2),
-            "إجمالي": total
+            "ضرائب": total_taxes,
+            "إجمالي": total_due
         })
 
     except:
