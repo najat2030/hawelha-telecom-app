@@ -8,40 +8,64 @@ import os
 import gc
 
 # ================= CONFIG =================
-st.set_page_config(
-    page_title="Nagat Telecom",
-    layout="wide"
-)
+st.set_page_config(page_title="Nagat Telecom", layout="wide")
 
 # ================= STYLE =================
 st.markdown("""
 <style>
+
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
 
+/* Gradient background */
 .stApp {
-    background-color: #F8F9FA;
+    background: linear-gradient(180deg, #0B6B3A 0%, #0B6B3A 30%, #F4F6F8 30%);
 }
 
-.block-container {
-    padding-top: 2rem;
+/* Login background logo */
+[data-testid="stAppViewContainer"] {
+    background-image: url("static/logo.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
-h1, h2, h3 {
-    color: #0B6B3A;
+/* Login box */
+.login-box {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    width: 350px;
+    margin: auto;
+    margin-top: 120px;
+    box-shadow: 0px 4px 20px rgba(0,0,0,0.2);
+    text-align: center;
 }
 
+/* Cards */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0px 2px 10px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+/* Buttons */
 div.stButton > button {
-    background-color: #1F8A5F;
+    background-color: #0B6B3A;
     color: white;
-    border-radius: 10px;
-    padding: 10px 25px;
+    border-radius: 8px;
+    padding: 10px 20px;
 }
 
-div.stButton > button:hover {
-    background-color: #166644;
+/* Titles */
+.title {
+    color:#0B6B3A;
+    font-weight:bold;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -61,7 +85,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 def login():
-    st.markdown("<h2 style='text-align:center;color:#0B6B3A;'>🔐 تسجيل الدخول</h2>", unsafe_allow_html=True)
+    st.markdown("<div class='login-box'>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#0B6B3A;'>تسجيل الدخول</h3>", unsafe_allow_html=True)
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
@@ -75,65 +100,43 @@ def login():
         else:
             st.error("بيانات غير صحيحة")
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
 if not st.session_state.logged_in:
     login()
     st.stop()
 
-# ================= SIDEBAR =================
-st.sidebar.markdown(f"👤 {st.session_state.username}")
-
-if st.sidebar.button("تسجيل خروج"):
-    st.session_state.logged_in = False
-    st.rerun()
-
-# ================= LOGO =================
-def load_logo():
-    path = "static/logo.png"
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    return None
-
-logo = load_logo()
-
-if logo:
-    st.markdown(f"""
-    <div style="text-align: center;">
-        <img src="data:image/png;base64,{logo}" width="60%">
-    </div>
-    """, unsafe_allow_html=True)
-
 # ================= HEADER =================
-st.markdown("""
-<div style='text-align: center; margin-top: 10px;'>
-<h3 style='color:#0B6B3A;'>
-Convert PDF invoices to Excel instantly ⚡
-</h3>
-<p style='color: gray; font-size:14px;'>
-Simple • Fast • Accurate
-</p>
+st.markdown(f"""
+<div style='display:flex;justify-content:space-between;align-items:center;
+background:white;padding:15px 25px;border-radius:12px;margin-top:-80px;
+box-shadow:0px 2px 10px rgba(0,0,0,0.1);'>
+
+<div style='font-size:20px;font-weight:bold;color:#0B6B3A;'>
+📊 Dashboard
+</div>
+
+<div>
+Welcome, <b>{st.session_state.username}</b>
+</div>
+
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # ================= ADMIN =================
 if st.session_state.role == "admin":
-    st.markdown("### ⚙️ لوحة الإدارة")
-
-    total_users = len(df_users)
-    admins = len(df_users[df_users["Role"] == "admin"])
-    users_count = len(df_users[df_users["Role"] == "user"])
+    st.markdown("### ⚙️ Admin Panel")
 
     c1, c2, c3 = st.columns(3)
+    c1.metric("Users", len(df_users))
+    c2.metric("Admins", len(df_users[df_users["Role"] == "admin"]))
+    c3.metric("Users", len(df_users[df_users["Role"] == "user"]))
 
-    c1.metric("👥 المستخدمين", total_users)
-    c2.metric("👑 Admin", admins)
-    c3.metric("👤 Users", users_count)
+    st.dataframe(df_users)
 
-    st.dataframe(df_users, use_container_width=True)
-
-    st.markdown("<br><hr><br>", unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
 
 # ================= MODE =================
 mode = st.radio(
@@ -327,76 +330,35 @@ def to_excel(df):
     return out
 
 # ================= UI =================
-files = st.file_uploader(
-    "Upload PDF Files",
-    type=["pdf"],
-    accept_multiple_files=True,
-    label_visibility="collapsed"
-)
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= MAIN =================
 if files:
-
     if st.button("🚀 Start Processing"):
-
         progress_bar = st.progress(0)
-        status_text = st.empty()
-
         all_data = []
-        failed_files = []
-
-        total_files = len(files)
 
         for idx, file in enumerate(files):
-
-            try:
-                status_text.text(f"📄 Processing: {file.name}")
-
-                progress_bar.progress(int((idx / total_files) * 100))
-
-                if mode == "Auto 🤖":
-                    with pdfplumber.open(file) as pdf:
-                        text = pdf.pages[0].extract_text() or ""
-
-                    file.seek(0)  # 🔥 الحل هنا
-
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-                else:
-                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
-
-                data = []
-
-                try:
-                    data = parse_ar(file) if lang == "ar" else parse_en(file)
-                except:
-                    data = []
-
-                if not data:
-                    data = parse_ai(file)
-
-                if data:
-                    all_data.extend(data)
-
-            except:
-                failed_files.append(file.name)
-                continue
-
-            gc.collect()
-
-        progress_bar.progress(100)
-        status_text.text("✅ اكتملت المعالجة!")
+            data = parse_ar(file) if mode != "English 🌍" else parse_en(file)
+            if not data:
+                data = parse_ai(file)
+            all_data.extend(data)
+            progress_bar.progress((idx+1)/len(files))
 
         if all_data:
             df = pd.DataFrame(all_data)
             st.success("🎉 تم التحويل بنجاح")
-            st.download_button("📥 تحميل Excel", to_excel(df), "output.xlsx")
-        else:
-            st.error("No data extracted")
+
+            st.markdown("<div class='card'>", unsafe_allow_html=True)
+            st.dataframe(df)
+            st.download_button("📥 Download Excel", to_excel(df))
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # ================= FOOTER =================
 st.markdown("""
 <hr>
-<div style='text-align: center; color: gray; font-size: 13px;'>
+<div style='text-align:center;color:gray;font-size:13px;'>
 © 2026 Najat El Bakry — All Rights Reserved
 </div>
 """, unsafe_allow_html=True)
