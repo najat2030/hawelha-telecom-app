@@ -42,15 +42,20 @@ def parse_ar(file):
     records = []
     try:
         with pdfplumber.open(file) as pdf:
-            for page in pdf.pages[2:]:
+            # ✅ التعديل الوحيد هنا
+            for page in pdf.pages:
+
                 tables = page.extract_tables()
                 if not tables: continue
+
                 for table in tables:
                     for i, row in enumerate(table):
                         try:
                             if not row: continue
+
                             text = normalize(" ".join([str(c) for c in row if c]))
                             phone = re.search(r'(01[0125]\d{8})', text)
+
                             if phone:
                                 p_val = phone.group(1)
                                 vals = extract_numbers(text)
