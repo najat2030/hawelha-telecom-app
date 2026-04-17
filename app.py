@@ -57,11 +57,7 @@ def extract_numbers(text):
 
 def clean_numbers(vals, phone):
     phone_int = str(int(phone))
-    cleaned = []
-    for v in vals:
-        if str(int(v)) != phone_int:
-            cleaned.append(v)
-    return cleaned
+    return [v for v in vals if str(int(v)) != phone_int]
 
 def fix_phone(phone):
     phone = str(phone)
@@ -103,7 +99,7 @@ def parse_ar(file):
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": g(0),
-                            "رسوم الخدمات": g(1),
+                            "رسوم خدمات": g(1),
                             "مكالمات محلية": g(2),
                             "رسائل محلية": g(3),
                             "إنترنت محلية": g(4),
@@ -144,7 +140,7 @@ def parse_en(file):
                         records.append({
                             "محمول": phone,
                             "رسوم شهرية": vals[0] if len(vals)>0 else 0,
-                            "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
+                            "رسوم خدمات": vals[1] if len(vals)>1 else 0,
                             "مكالمات محلية": vals[2] if len(vals)>2 else 0,
                             "رسائل محلية": vals[3] if len(vals)>3 else 0,
                             "إنترنت محلية": vals[4] if len(vals)>4 else 0,
@@ -164,54 +160,71 @@ def parse_en(file):
                     i += 1
     return records
 
-# ================= AI (FIXED ONLY) =================
+# ================= AI FIXED (النسخة المطورة لفك التشفير) =================
 def parse_ai(file):
     records = []
-
     try:
         with pdfplumber.open(file) as pdf:
-            text = ""
-            for page in pdf.pages:
-                text += normalize(page.extract_text() or "")
+            page = pdf.pages[0]
+            # استخراج النص بطريقتين لضمان القراءة (العادية وعبر الكلمات)
+            text = page.extract_text() or ""
+            words = page.extract_words()
+            full_text_from_words = " ".join([w['text'] for w in words])
+            combined_text = normalize(text + " " + full_text_from_words)
 
-        phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', text)
-        if not phone_match:
-            return []
+            # 1. استخراج رقم المحمول
+            phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', combined_text)
+            phone = fix_phone(phone_match.group(1)) if phone_match else "Unknown"
 
-        phone = fix_phone(phone_match.group(1))
+            # 2. وظيفة البحث عن الأرقام القريبة من كلمات مفتاحية
+            def find_numeric_near(keyword, text_to_search):
+                # نبحث عن الكلمة ثم نأخذ أول رقم يظهر بعدها مباشرة
+                pattern = keyword + r'.*?(\d+[\d,.]*)'
+                match = re.search(pattern, text_to_search, re.DOTALL)
+                if match:
+                    val = match.group(1).replace(',', '')
+                    try: return float(val)
+                    except: return 0.0
+                return 0.0
 
-        # ✅ الرسوم الشهرية
-        monthly_match = re.search(r'إجمالي\s*الرسوم\s*الشهرية.*?(\d+\.\d+)', text)
-        monthly = float(monthly_match.group(1)) if monthly_match else 0
+            # ✅ الرسوم الشهرية
+            monthly = find_numeric_near("إجمالي الرسوم الشهرية", combined_text)
+            if monthly == 0: # محاولة بديلة
+                monthly = find_numeric_near("الرسوم الشهرية", combined_text)
 
-        # ✅ الضرائب (تجميع)
-        tax_values = re.findall(r'(?:ضريبة|رسم).*?(\d+\.\d+)', text)
-        taxes = sum([float(t) for t in tax_values]) if tax_values else 0
+            # ✅ الضرائب (تجميع شامل)
+            tax_keywords = ["ضريبة الجدول", "ضريبة القيمة المضافة", "ضريبة الدمغة", "رسم تنمية موارد الدولة"]
+            total_taxes = 0.0
+            for tk in tax_keywords:
+                total_taxes += find_numeric_near(tk, combined_text)
+            
+            total_taxes = round(total_taxes, 2)
 
-        # ✅ الإجمالي
-        total_match = re.search(r'إجمالي\s*القيمة\s*المستحقة.*?(\d+\.\d+)', text)
-        total = float(total_match.group(1)) if total_match else 0
+            # ✅ الإجمالي النهائي
+            total_due = find_numeric_near("إجمالي القيمة المستحقة", combined_text)
+            if total_due == 0:
+                 # محاولة أخيرة بالبحث عن أكبر رقم في أسفل الصفحة
+                 all_nums = extract_numbers(combined_text)
+                 if all_nums: total_due = max(all_nums)
 
-        records.append({
-            "محمول": phone,
-            "رسوم شهرية": monthly,
-            "رسوم الخدمات": 0,
-            "مكالمات محلية": 0,
-            "رسائل محلية": 0,
-            "إنترنت محلية": 0,
-            "مكالمات دولية": 0,
-            "رسائل دولية": 0,
-            "مكالمات تجوال": 0,
-            "رسائل تجوال": 0,
-            "إنترنت تجوال": 0,
-            "رسوم تسويات": 0,
-            "ضرائب": round(taxes, 2),
-            "إجمالي": total
-        })
-
+            records.append({
+                "محمول": phone,
+                "رسوم شهرية": monthly,
+                "رسوم خدمات": 0,
+                "مكالمات محلية": 0,
+                "رسائل محلية": 0,
+                "إنترنت محلية": 0,
+                "مكالمات دولية": 0,
+                "رسائل دولية": 0,
+                "مكالمات تجوال": 0,
+                "رسائل تجوال": 0,
+                "إنترنت تجوال": 0,
+                "رسوم تسويات": 0,
+                "ضرائب": total_taxes,
+                "إجمالي": total_due
+            })
     except:
         return []
-
     return records
 
 # ================= EXCEL =================
@@ -249,25 +262,29 @@ if files:
                 status_text.text(f"📄 Processing: {file.name}")
                 progress_bar.progress(int((idx / total_files) * 100))
 
-                if mode == "Auto 🤖":
-                    with pdfplumber.open(file) as pdf:
-                        text = pdf.pages[0].extract_text() or ""
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-                else:
-                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
+                # التحقق من اللغة ونوع الملف
+                with pdfplumber.open(file) as pdf:
+                    first_page_text = pdf.pages[0].extract_text() or ""
+                
+                # إذا كانت الصفحة الأولى تحتوي على عدد قليل من الكلمات، غالباً هي فاتورة فردية
+                is_single_invoice = "إجمالي القيمة المستحقة" in first_page_text or len(first_page_text.split()) < 200
 
-                data = []
-
-                try:
-                    data = parse_ar(file) if lang == "ar" else parse_en(file)
-                except:
-                    data = []
-
-                if not data:
+                if is_single_invoice:
                     data = parse_ai(file)
+                else:
+                    if mode == "Auto 🤖":
+                        lang = "ar" if re.search(r'[\u0600-\u06FF]', first_page_text) else "en"
+                    else:
+                        lang = "ar" if mode == "عربي 🇪🇬" else "en"
+                    
+                    data = parse_ar(file) if lang == "ar" else parse_en(file)
 
                 if data:
                     all_data.extend(data)
+                else:
+                    # محاولة أخيرة بـ AI إذا فشل التحليل التقليدي
+                    data = parse_ai(file)
+                    if data: all_data.extend(data)
 
             except:
                 failed_files.append(file.name)
@@ -279,8 +296,14 @@ if files:
         status_text.text("✅ اكتملت المعالجة!")
 
         if all_data:
-
             df = pd.DataFrame(all_data)
+            
+            # تنظيف البيانات من أي قيم نصية في الأعمدة الرقمية
+            numeric_cols = ["رسوم شهرية", "رسوم خدمات", "مكالمات محلية", "رسائل محلية", "إنترنت محلية", 
+                            "مكالمات دولية", "رسائل دولية", "مكالمات تجوال", "رسائل تجوال", "إنترنت تجوال", 
+                            "رسوم تسويات", "ضرائب", "إجمالي"]
+            for col in numeric_cols:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
             total_lines = len(df)
             total_monthly = df["رسوم شهرية"].sum()
@@ -288,28 +311,19 @@ if files:
             total_grand = df["إجمالي"].sum()
 
             st.markdown("## 📊 Dashboard")
-
             k1, k2, k3, k4 = st.columns(4)
+            with k1: st.metric("عدد الخطوط", total_lines)
+            with k2: st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
+            with k3: st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
+            with k4: st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
 
-            with k1:
-                st.metric("عدد الخطوط", total_lines)
-            with k2:
-                st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
-            with k3:
-                st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
-            with k4:
-                st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
-
-            st.dataframe(df.head(20), use_container_width=True)
-
+            st.dataframe(df, use_container_width=True)
             excel = to_excel(df)
-
             st.success("🎉 تم التحويل بنجاح")
             st.download_button("📥 تحميل Excel", excel, "hawelha_all_files.xlsx")
 
             if failed_files:
                 st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
                 st.write(failed_files)
-
         else:
-            st.error("No data extracted")
+            st.error("No data extracted. Please check the PDF format.")
