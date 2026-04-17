@@ -134,6 +134,7 @@ def parse_en(file):
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
+
                         vals = clean_numbers(vals, phone)
 
                         records.append({
@@ -152,12 +153,14 @@ def parse_en(file):
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
+
                         i += 2
                         continue
+
                     i += 1
     return records
 
-# ================= AI (fallback) =================
+# ================= AI FIXED =================
 def parse_ai(file):
     records = []
 
@@ -173,33 +176,23 @@ def parse_ai(file):
 
         phone = fix_phone(phone_match.group(1))
 
-        def find_value(patterns):
-            for p in patterns:
-                match = re.search(p, text)
-                if match:
-                    try:
-                        return float(match.group(1))
-                    except:
-                        continue
-            return 0
+        def get(pattern):
+            match = re.search(pattern, text)
+            return float(match.group(1)) if match else 0
 
-        monthly = find_value([
-            r'إجمالي الرسوم الشهرية.*?(\d+\.\d+)',
-            r'الرسوم الشهرية.*?(\d+\.\d+)'
-        ])
+        # ✅ الرسوم الشهرية
+        monthly = get(r'إجمالي الرسوم الشهرية.*?(\d+\.\d+)')
 
-        taxes = find_value([
-            r'ضريبة.*?(\d+\.\d+)',
-            r'القيمة المضافة.*?(\d+\.\d+)'
-        ])
+        # ✅ الضرائب (جمع)
+        tax1 = get(r'ضريبة الجدول.*?(\d+\.\d+)')
+        tax2 = get(r'ضريبة القيمة المضافة.*?(\d+\.\d+)')
+        tax3 = get(r'ضريبة الدمغة.*?(\d+\.\d+)')
+        tax4 = get(r'تنمية موارد الدولة.*?(\d+\.\d+)')
 
-        total = find_value([
-            r'إجمالي القيمة المستحقة.*?(\d+\.\d+)',
-            r'الإجمالي.*?(\d+\.\d+)'
-        ])
+        taxes = tax1 + tax2 + tax3 + tax4
 
-        if monthly == 0 and taxes == 0 and total == 0:
-            return []
+        # ✅ الإجمالي
+        total = get(r'إجمالي القيمة المستحقة.*?(\d+\.\d+)')
 
         records.append({
             "محمول": phone,
@@ -214,7 +207,7 @@ def parse_ai(file):
             "رسائل تجوال": 0,
             "إنترنت تجوال": 0,
             "رسوم تسويات": 0,
-            "ضرائب": taxes,
+            "ضرائب": round(taxes, 2),
             "إجمالي": total
         })
 
