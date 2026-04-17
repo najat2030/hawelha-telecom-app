@@ -7,284 +7,651 @@ import base64
 import os
 import gc
 
-# ================= 1. CONFIG & ROYAL STYLE =================
-# قمنا بتغيير العنوان ليتناسب مع التصميم الجديد الفخم
-st.set_page_config(page_title="Hawelha System | Convert PDF to Excel", page_icon="📊", layout="wide")
+# ================= CONFIG =================
+st.set_page_config(page_title="Nagat Telecom", layout="wide", page_icon="📊")
 
-def apply_elite_theme():
-    # تصميم CSS مخصص لمحاكاة الصورة الأخيرة (الفخامة والتنظيم)
-    st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-    
-    /* الأساسيات وتغيير الخط لـ Poppins للمظهر العصري */
-    * { font-family: 'Poppins', sans-serif; }
-    .stApp { background-color: #F0F2F5; } /* خلفية رمادية فاتحة جداً لإبراز البطاقات */
-    
-    /* إخفاء عناصر سترمليت الافتراضية */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+# ================= STYLE & THEME =================
+# الألوان الأساسية - مستوحاة من التصميم المطلوب
+PRIMARY_COLOR = "#0B6B3A"  # أخضر ملكي
+SECONDARY_COLOR = "#F8F9FA" # خلفية فاتحة جداً
+CARD_BG = "#FFFFFF"        # خلفية البطاقات بيضاء
+TEXT_COLOR = "#2C3E50"     # لون النص الأساسي
+MUTED_TEXT = "#7F8C8D"     # لون النص الثانوي
 
-    /* صندوق تسجيل الدخول الفخم */
-    .login-box {
+st.markdown(f"""
+<style>
+    /* Import Font */
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+
+    /* Global Styles */
+    .stApp {{
+        background-color: {SECONDARY_COLOR};
+        font-family: 'Tajawal', sans-serif;
+        color: {TEXT_COLOR};
+    }}
+
+    /* Hide Streamlit Elements */
+    #MainMenu {{visibility: hidden;}}
+    footer {{visibility: hidden;}}
+    header {{visibility: hidden;}}
+
+    /* Login Page Background - Using a placeholder, replace with your logo if needed */
+    .login-background {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        z-index: -1;
+    }}
+    
+    /* Glassmorphism Card for Login */
+    .login-card {{
+        background: rgba(255, 255, 255, 0.95);
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        max-width: 450px;
+        margin: 100px auto;
+        text-align: center;
+    }}
+
+    /* Dashboard Header - Professional Look */
+    .dashboard-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         background: white;
-        padding: 50px;
-        border-radius: 25px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.08);
-        border-top: 8px solid #004d40;
-        margin-top: 50px;
-        text-align: center;
-    }
-
-    /* الهيدر الجديد (بدون الخلفية الخضراء وبدون الخط الفاصل) */
-    .elite-header {
-        text-align: center;
+        padding: 20px 30px;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         margin-bottom: 40px;
-        padding: 20px 0;
-    }
-    .elite-header h1 {
-        color: #004d40;
-        font-weight: 700;
-        font-size: 2.5rem;
+        border-bottom: 3px solid {PRIMARY_COLOR};
+    }}
+    
+    .header-logo-section {{
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }}
+    
+    .header-logo-img {{
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        object-fit: contain;
+        background: white;
+        padding: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }}
+    
+    .header-text h1 {{
         margin: 0;
-    }
-    .elite-header p {
-        color: #666;
-        font-size: 1.1rem;
-        margin-top: 10px;
-    }
+        font-size: 28px;
+        color: {PRIMARY_COLOR};
+        font-weight: 700;
+    }}
+    
+    .header-text p {{
+        margin: 5px 0 0 0;
+        font-size: 16px;
+        color: {MUTED_TEXT};
+        font-weight: 500;
+    }}
 
-    /* تصميم البطاقات (Cards) لمحاكاة الصورة الأخيرة */
-    .elite-card {
+    /* User Profile Section */
+    .user-profile {{
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        background: {SECONDARY_COLOR};
+        padding: 10px 20px;
+        border-radius: 50px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }}
+    
+    .user-avatar {{
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: {PRIMARY_COLOR};
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 18px;
+    }}
+
+    /* Metric Cards - Premium Design */
+    .metric-card {{
         background: white;
         padding: 30px;
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-        margin-bottom: 25px;
-        border: 1px solid #EAEAEA;
-    }
-    .card-title {
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        border: none;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }}
+    
+    .metric-card::before {{
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+        background: {PRIMARY_COLOR};
+        border-radius: 0 20px 20px 0;
+    }}
+    
+    .metric-card:hover {{
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+    }}
+    
+    .metric-icon {{
+        font-size: 24px;
+        margin-bottom: 15px;
+        opacity: 0.8;
+    }}
+    
+    .metric-title {{
+        color: {MUTED_TEXT};
+        font-size: 16px;
+        font-weight: 500;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }}
+    
+    .metric-value {{
+        color: {PRIMARY_COLOR};
+        font-size: 32px;
+        font-weight: 700;
+        line-height: 1.2;
+    }}
+    
+    .metric-value.total {{
         color: #004d40;
-        font-weight: 600;
-        font-size: 1.3rem;
-        margin-bottom: 20px;
-        border-right: 5px solid #004d40; /* لمسة جمالية على اليمين للملف العربي */
-        padding-right: 15px;
-    }
+        font-size: 36px;
+    }}
 
-    /* بطاقات الداش بورد (Data Overview) */
-    .metric-card-elite {
-        background: #F8F9FA;
+    /* Buttons */
+    div.stButton > button {{
+        background-color: {PRIMARY_COLOR};
+        color: white;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 600;
+        border: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(11, 107, 58, 0.2);
+    }}
+    
+    div.stButton > button:hover {{
+        background-color: #085a30;
+        box-shadow: 0 6px 20px rgba(11, 107, 58, 0.3);
+        transform: translateY(-2px);
+    }}
+
+    /* Inputs */
+    .stTextInput > div > div > input {{
+        border-radius: 12px;
+        border: 2px solid #e0e0e0;
+        padding: 15px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+    }}
+    
+    .stTextInput > div > div > input:focus {{
+        border-color: {PRIMARY_COLOR};
+        box-shadow: 0 0 0 3px rgba(11, 107, 58, 0.1);
+    }}
+    
+    /* File Uploader */
+    .stFileUploader > div > div > div > div {{
+        border-radius: 15px;
+        border: 2px dashed #ccc;
+        background: white;
+        padding: 30px;
+    }}
+
+    /* Footer */
+    .footer {{
+        text-align: center;
+        color: {MUTED_TEXT};
+        font-size: 14px;
+        margin-top: 60px;
+        padding: 30px;
+        border-top: 1px solid #e0e0e0;
+        background: white;
+        border-radius: 20px 20px 0 0;
+    }}
+
+    /* Success Message */
+    .success-message {{
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        color: #155724;
         padding: 20px;
         border-radius: 15px;
-        text-align: center;
-        border: 1px solid #EEE;
+        border-left: 5px solid #28a745;
+        margin: 20px 0;
+        font-weight: 500;
+    }}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ================= USERS DATA LOADING =================
+try:
+    df_users = pd.read_excel("users.xlsx")
+    users = {
+        row["Username"]: {
+            "password": str(row["Password"]),
+            "role": row["Role"]
+        }
+        for _, row in df_users.iterrows()
     }
-    .metric-label-elite { color: #888; font-size: 14px; margin-bottom: 5px; }
-    .metric-value-elite { color: #004d40; font-size: 28px; font-weight: 700; }
-
-    /* الأزرار الخضراء الموحدة والفخمة */
-    div.stButton > button {
-        background: linear-gradient(135deg, #004d40 0%, #00695c 100%) !important;
-        color: white !important;
-        border-radius: 10px !important;
-        border: none !important;
-        padding: 12px 30px !important;
-        font-weight: 600 !important;
-        font-size: 1rem !important;
-        width: 100%;
-        transition: all 0.3s ease-in-out;
-    }
-    div.stButton > button:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(0,77,64,0.2) !important;
-    }
-    
-    /* تنسيق خاص لزر تسجيل الخروج */
-    .st_logout_btn button {
-        background: #f8d7da !important;
-        color: #721c24 !important;
-        border: 1px solid #f5c6cb !important;
-    }
-    
-    /* تنسيق قائمة الخيارات (Radio) */
-    div[data-testid="stRadio"] > label { font-weight: 600; color: #004d40; }
-    div[data-testid="stRadio"] label { font-size: 1rem; }
-
-    </style>
-    """, unsafe_allow_html=True)
-
-apply_elite_theme()
-
-# ================= 2. AUTHENTICATION (قراءة من ملف Excel) =================
-# دالة لجلب البيانات الخام من GitHub لتجنب خطأ 404
-@st.cache_data(ttl=600, show_spinner=False) # كاش لمدة 10 دقائق لسرعة الأداء
-def load_github_users():
-    try:
-        # ⚠️ استبدل هذا الرابط برابط RAW الخاص بملف users.xlsx على GitHub
-        raw_url = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/users.xlsx"
-        df = pd.read_excel(raw_url)
-        return df
-    except Exception as e:
-        st.error(f"خطأ في الاتصال بقاعدة البيانات: {e}")
-        return None
-
-def login_screen():
-    col1, col2, col3 = st.columns([1, 1.8, 1])
-    with col2:
-        st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        # اللوجو
-        if os.path.exists("static/logo.png"):
-            st.image("static/logo.png", width=250)
-        
-        st.markdown("<h1 style='color:#004d40; margin-bottom:10px;'>Secure Login</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#777; margin-bottom:30px;'>Please enter your credentials to access Hawelha System</p>", unsafe_allow_html=True)
-        
-        u_in = st.text_input("Username", key="u_field", placeholder="e.g. noga")
-        p_in = st.text_input("Password", type="password", key="p_field", placeholder="••••••••")
-        
-        if st.button("Login to System"):
-            df_users = load_github_users()
-            if df_users is not None:
-                # التأكد من أسماء الأعمدة username و password في ملف الإكسيل
-                user_match = df_users[(df_users['username'].astype(str) == u_in) & 
-                                      (df_users['password'].astype(str) == p_in)]
-                
-                if not user_match.empty:
-                    st.session_state['logged_in'] = True
-                    st.session_state['username'] = u_in
-                    st.session_state['role'] = user_match.iloc[0]['role']
-                    st.rerun()
-                else:
-                    st.error("❌ Invalid Username or Password")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-
-if not st.session_state['logged_in']:
-    login_screen()
+except FileNotFoundError:
+    st.error("ملف users.xlsx غير موجود. يرجى التأكد من وجوده في نفس المجلد.")
     st.stop()
 
-# ================= 3. SYSTEM INTERFACE (بعد تسجيل الدخول) =================
-# الهيدر الجديد الفخم (تم حل مشكلة الخط الفاصل وتغيير الجملة)
-st.markdown("""
-<div class="elite-header">
-    <h1>Hawelha System</h1>
-    <p>Convert PDF invoices to Excel instantly</p>
+# ================= SESSION STATE INIT =================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# ================= LOGIN FUNCTION =================
+def login_page():
+    # Background Overlay
+    st.markdown('<div class="login-background"></div>', unsafe_allow_html=True)
+    
+    # Centered Container
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("""
+        <div class="login-card">
+            <img src="https://github.com/najatbakry.png" style="width:80px; height:80px; border-radius:50%; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.1);" alt="Logo">
+            <h1 style="color:#0B6B3A; margin-bottom: 10px;">نجات تيليكوم</h1>
+            <p style="color:#666; margin-bottom: 30px;">منصة تحليل الفواتير الذكية</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        username = st.text_input("", placeholder="اسم المستخدم 👤")
+        password = st.text_input("", placeholder="كلمة المرور 🔒", type="password")
+        
+        if st.button("تسجيل الدخول", use_container_width=True):
+            if username in users and users[username]["password"] == password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.session_state.role = users[username]["role"]
+                st.rerun()
+            else:
+                st.error("⚠️ بيانات الدخول غير صحيحة")
+
+# ================= MAIN APP LOGIC =================
+if not st.session_state.logged_in:
+    login_page()
+    st.stop()
+
+# ================= DASHBOARD HEADER =================
+# Get first letter of username for avatar
+user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
+
+st.markdown(f"""
+<div class="dashboard-header">
+    <div class="header-logo-section">
+        <img src="https://github.com/najatbakry.png" class="header-logo-img" alt="Company Logo">
+        <div class="header-text">
+            <h1>Nagat Telecom</h1>
+            <p>Convert PDF invoices to Excel instantly</p>
+        </div>
+    </div>
+    <div class="user-profile">
+        <div class="user-avatar">{user_initial}</div>
+        <span>{st.session_state.username}</span>
+        <button onclick="document.querySelector('[data-testid=\'stSidebarCollapsedControl\']').click()" style="background:none; border:none; cursor:pointer; font-size:18px;">⚙️</button>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# الشريط الجانبي (Sidebar) مصمم ليكون أنيقاً
+# Logout Button (Hidden in header, shown in sidebar or bottom)
 with st.sidebar:
-    st.markdown(f"""
-    <div style='text-align: center; padding: 20px; border-bottom: 1px solid #EEE;'>
-        <div style='font-size: 20px; font-weight: 600; color: #004d40;'>Welcome,</div>
-        <div style='font-size: 18px; color: #555;'>{st.session_state['username']}!</div>
-        <div style='background: #e0f2f1; color: #004d40; padding: 3px 10px; border-radius: 20px; font-size: 12px; display: inline-block; margin-top: 5px;'>{st.session_state['role']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # وضع التحليل
-    st.markdown("<div class='card-title'>Analysis Mode</div>", unsafe_allow_html=True)
-    mode = st.radio("", ["Auto 🤖", "عربي 🇪🇬", "English 🌍"], label_visibility="collapsed")
-    
-    st.markdown("<br><hr>", unsafe_allow_html=True)
-    # زر تسجيل الخروج
-    if st.button("Log out", key="logout_btn", help="Securely sign out"):
-        st.session_state['logged_in'] = False
+    st.markdown("### الإعدادات")
+    if st.button("🚪 تسجيل الخروج", use_container_width=True):
+        st.session_state.logged_in = False
         st.rerun()
 
-# ================= 4. LOGIC (UNCHANGED - طلبتِ عدم لمسه) =================
-# سأبقي الدوال normalize, extract_numbers, clean_numbers, fix_phone, parse_ar, parse_en, parse_ai كما هي تماماً.
-# [نضع الدوال الأصلية هنا]
-# =========================================================================
+# ================= ADMIN PANEL (Optional) =================
+if st.session_state.role == "admin":
+    with st.expander("⚙️ لوحة الإدارة (Admin Only)"):
+        c1, c2, c3 = st.columns(3)
+        c1.metric("إجمالي المستخدمين", len(df_users))
+        c2.metric("المشرفين", len(df_users[df_users["Role"]=="admin"]))
+        c3.metric("المستخدمين العاديين", len(df_users[df_users["Role"]=="user"]))
+        st.dataframe(df_users)
 
-# ================= 5. MAIN CONTENT (LAYOUT SIMILAR TO FINAL IMAGE) =================
-# تقسيم الصفحة لعمودين لمحاكاة تصميم الصورة الأخيرة
-col_main1, col_main2 = st.columns([1, 1.3], gap="large")
+# ================= MODE SELECTION =================
+mode = st.radio(
+    "🌐 وضع التحليل",
+    ["Auto 🤖", "عربي 🇪🇬", "English 🌍"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
 
-with col_main1:
-    # بطاقة رفع الملفات (Upload)
-    st.markdown('<div class="elite-card">', unsafe_allow_html=True)
-    st.markdown("<div class='card-title'>Upload PDF Files</div>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align:center; padding: 20px 0;'><img src='https://cdn-icons-png.flaticon.com/512/337/337946.png' width='100'></div>", unsafe_allow_html=True) # أيقونة PDF للجمال
-    files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+# =========================================================
+# 🚫 DO NOT MODIFY BELOW THIS LINE (Logic Preserved) 🚫
+# =========================================================
 
-with col_main2:
-    # بطاقة عرض البيانات (Data Overview)
-    # سيتم عرضها فقط بعد المعالجة
-    data_overview_placeholder = st.empty()
+def normalize(t):
+    return (t or "").replace("−","-").replace("–","-").replace("—","-")
 
-# ================= 6. PROCESSING & DASHBOARD =================
+def extract_numbers(text):
+    if not text:
+        return []
+    text = normalize(str(text))
+    text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
+    text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
+    text = re.sub(r'-\s+(\d)', r'-\1', text)
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+    return [float(n) for n in numbers]
+
+def clean_numbers(vals, phone):
+    phone_int = str(int(phone))
+    return [v for v in vals if str(int(v)) != phone_int]
+
+def fix_phone(phone):
+    phone = str(phone)
+    if len(phone) == 10 and phone.startswith("1"):
+        return "0" + phone
+    return phone
+
+# ================= AR Parser =================
+def parse_ar(file):
+    records = []
+    try:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages[2:]:
+                for table in page.extract_tables() or []:
+                    i = 0
+                    while i < len(table):
+                        row = table[i]
+                        if not row:
+                            i += 1
+                            continue
+
+                        text = normalize(" ".join([str(c) for c in row if c]))
+                        phone = re.search(r'(01[0125]\d{8})', text)
+
+                        if phone:
+                            phone = phone.group(1)
+                            vals = extract_numbers(text)
+
+                            if i+1 < len(table):
+                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                                if len(nxt) > len(vals):
+                                    vals = nxt
+                                    i += 1
+
+                            vals = clean_numbers(vals, phone)
+                            vals = vals[::-1]
+
+                            def g(i): return vals[i] if i < len(vals) else 0
+
+                            records.append({
+                                "محمول": phone,
+                                "رسوم شهرية": g(0),
+                                "رسوم الخدمات": g(1),
+                                "مكالمات محلية": g(2),
+                                "رسائل محلية": g(3),
+                                "إنترنت محلية": g(4),
+                                "مكالمات دولية": g(5),
+                                "رسائل دولية": g(6),
+                                "مكالمات تجوال": g(7),
+                                "رسائل تجوال": g(8),
+                                "إنترنت تجوال": g(9),
+                                "رسوم تسويات": g(10),
+                                "ضرائب": g(11),
+                                "إجمالي": g(12),
+                            })
+                        i += 1
+    except Exception as e:
+        st.warning(f"Error parsing AR file: {e}")
+    return records
+
+# ================= EN Parser =================
+def parse_en(file):
+    records = []
+    try:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages[2:]:
+                for table in page.extract_tables() or []:
+                    i = 0
+                    while i < len(table):
+                        row = table[i]
+                        if not row:
+                            i += 1
+                            continue
+
+                        text = " ".join([str(c) for c in row])
+                        phone = re.search(r'(01[0125]\d{8})', text)
+
+                        if phone:
+                            phone = phone.group(1)
+                            vals = extract_numbers(
+                                " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
+                            )
+
+                            vals = clean_numbers(vals, phone)
+
+                            records.append({
+                                "محمول": phone,
+                                "رسوم شهرية": vals[0] if len(vals)>0 else 0,
+                                "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
+                                "مكالمات محلية": vals[2] if len(vals)>2 else 0,
+                                "رسائل محلية": vals[3] if len(vals)>3 else 0,
+                                "إنترنت محلية": vals[4] if len(vals)>4 else 0,
+                                "مكالمات دولية": vals[5] if len(vals)>5 else 0,
+                                "رسائل دولية": vals[6] if len(vals)>6 else 0,
+                                "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
+                                "رسائل تجوال": vals[8] if len(vals)>8 else 0,
+                                "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
+                                "رسوم تسويات": vals[10] if len(vals)>10 else 0,
+                                "ضرائب": vals[11] if len(vals)>11 else 0,
+                                "إجمالي": vals[-1] if vals else 0
+                            })
+
+                            i += 2
+                            continue
+
+                        i += 1
+    except Exception as e:
+        st.warning(f"Error parsing EN file: {e}")
+    return records
+
+# ================= AI Parser =================
+def parse_ai(file):
+    records = []
+    try:
+        with pdfplumber.open(file) as pdf:
+            text = ""
+            for page in pdf.pages:
+                text += normalize(page.extract_text() or "")
+
+        phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', text)
+        if not phone_match:
+            return []
+
+        phone = fix_phone(phone_match.group(1))
+
+        def get(pattern):
+            match = re.search(pattern, text)
+            return float(match.group(1)) if match else 0
+
+        monthly = get(r'إجمالي الرسوم الشهرية.*?(\d+\.\d+)')
+        tax1 = get(r'ضريبة الجدول.*?(\d+\.\d+)')
+        tax2 = get(r'ضريبة القيمة المضافة.*?(\d+\.\d+)')
+        tax3 = get(r'ضريبة الدمغة.*?(\d+\.\d+)')
+        tax4 = get(r'تنمية موارد الدولة.*?(\d+\.\d+)')
+
+        taxes = tax1 + tax2 + tax3 + tax4
+        total = get(r'إجمالي القيمة المستحقة.*?(\d+\.\d+)')
+
+        records.append({
+            "محمول": phone,
+            "رسوم شهرية": monthly,
+            "رسوم الخدمات": 0,
+            "مكالمات محلية": 0,
+            "رسائل محلية": 0,
+            "إنترنت محلية": 0,
+            "مكالمات دولية": 0,
+            "رسائل دولية": 0,
+            "مكالمات تجوال": 0,
+            "رسائل تجوال": 0,
+            "إنترنت تجوال": 0,
+            "رسوم تسويات": 0,
+            "ضرائب": round(taxes, 2),
+            "إجمالي": total
+        })
+
+    except Exception as e:
+        st.warning(f"Error parsing AI file: {e}")
+        return []
+
+    return records
+
+# ================= EXCEL EXPORT =================
+def to_excel(df):
+    out = io.BytesIO()
+    with pd.ExcelWriter(out, engine="openpyxl") as w:
+        df.to_excel(w, index=False)
+    out.seek(0)
+    return out
+
+# ================= FILE UPLOAD & PROCESSING =================
+files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
+
 if files:
-    # وضع زر المعالجة داخل بطاقة الرفع
-    with col_main1:
-        start_btn = st.button("🚀 Convert to Excel")
-
-    if start_btn:
+    if st.button("🚀 بدء المعالجة والتحليل", use_container_width=True):
+        
         progress_bar = st.progress(0)
         status_text = st.empty()
         all_data = []
 
-        # محاكاة المعالجة باستخدام اللوجيك الأصلي الخاص بكِ
         for idx, file in enumerate(files):
-            # [تطبيق اللوجيك الخاص بكِ هنا...]
-            pass # placeholder
-        
-        # [افترض أننا حصلنا على df]
-        # مثال لبيانات للعرض (يجب استبدالها بالبيانات الحقيقية من اللوجيك)
-        data_example = {
-            "محمول": ["01001234567", "01123456789"],
-            "رسوم شهرية": [100.5, 200.0],
-            "ضرائب": [14.0, 28.0],
-            "إجمالي": [114.5, 228.0]
-        }
-        df = pd.DataFrame(data_example)
+            status_text.text(f"⏳ جاري معالجة: {file.name}")
+            progress_bar.progress((idx+1)/len(files))
+
+            # Logic Selection
+            if mode == "English 🌍":
+                data = parse_en(file)
+            elif mode == "Auto 🤖":
+                data = parse_ar(file)
+                if not 
+                    data = parse_en(file)
+                if not data:
+                    data = parse_ai(file)
+            else: # Arabic
+                data = parse_ar(file)
+                
+            # Fallback to AI if specific parsers fail
+            if not 
+                data = parse_ai(file)
+
+            all_data.extend(data)
+            gc.collect()
 
         progress_bar.progress(100)
-        st.success("🎉 Conversion Complete!")
+        status_text.empty()
 
-        # ملء داش بورد "Data Overview" (col_main2)
-        with col_main2:
-            st.markdown('<div class="elite-card">', unsafe_allow_html=True)
-            st.markdown("<div class='card-title'>Data Overview</div>", unsafe_allow_html=True)
+        if all_
+            df_result = pd.DataFrame(all_data)
             
-            # كروت الإحصائيات (Metrics)
-            stat1, stat2, stat3 = st.columns(3)
-            with stat1:
-                st.markdown(f"<div class='metric-card-elite'><div class='metric-label-elite'>Lines</div><div class='metric-value-elite'>{len(df)}</div></div>", unsafe_allow_html=True)
-            with stat2:
-                st.markdown(f"<div class='metric-card-elite'><div class='metric-label-elite'>Avg Monthly</div><div class='metric-value-elite'>{df['رسوم شهرية'].mean():,.2f}</div></div>", unsafe_allow_html=True)
-            with stat3:
-                st.markdown(f"<div class='metric-card-elite'><div class='metric-label-elite'>Total Amount</div><div class='metric-value-elite'>{df['إجمالي'].sum():,.2f}</div></div>", unsafe_allow_html=True)
-            
+            # Calculations
+            total_lines = len(df_result)
+            sum_monthly = df_result["رسوم شهرية"].sum()
+            sum_settlements = df_result["رسوم تسويات"].sum()
+            sum_taxes = df_result["ضرائب"].sum()
+            sum_total = df_result["إجمالي"].sum()
+
+            # Helper to format currency
+            def fmt_curr(val):
+                return f"{val:,.0f} ج.م"
+
             st.markdown("<br>", unsafe_allow_html=True)
-            # عرض جدول معاينة
-            st.dataframe(df.head(10), use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            
+            # ================= PROFESSIONAL DASHBOARD METRICS =================
+            st.markdown("### 📈 ملخص التحليل المالي")
+            
+            m1, m2, m3, m4, m5 = st.columns(5)
+            
+            with m1:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon">📱</div>
+                    <div class="metric-title">إجمالي الخطوط</div>
+                    <div class="metric-value">{total_lines}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            with m2:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon">💰</div>
+                    <div class="metric-title">الرسوم الشهرية</div>
+                    <div class="metric-value">{fmt_curr(sum_monthly)}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-        # بطاقة تحميل التقرير (Download)
-        st.markdown('<div class="elite-card">', unsafe_allow_html=True)
-        st.markdown("<div class='card-title'>Download Report</div>", unsafe_allow_html=True)
-        st.markdown("<div style='text-align:center; padding: 20px 0;'><img src='https://cdn-icons-png.flaticon.com/512/732/732220.png' width='100'></div>", unsafe_allow_html=True) # أيقونة إكسيل
-        
-        # [استخدام دالة to_excel الأصلية...]
-        st.download_button(
-            label="📥 Download Excel File",
-            data=b"placeholder", # out_excel.getvalue()
-            file_name="Hawelha_Report.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+            with m3:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon">🧾</div>
+                    <div class="metric-title">رسوم التسويات</div>
+                    <div class="metric-value">{fmt_curr(sum_settlements)}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-# ================= 7. FOOTER =================
+            with m4:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon">🏛️</div>
+                    <div class="metric-title">إجمالي الضرائب</div>
+                    <div class="metric-value">{fmt_curr(sum_taxes)}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with m5:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-icon">💎</div>
+                    <div class="metric-title">الإجمالي الكلي</div>
+                    <div class="metric-value total">{fmt_curr(sum_total)}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown('<div class="success-message">✅ تم الانتهاء من معالجة الملفات بنجاح!</div>', unsafe_allow_html=True)
+            
+            st.markdown("---")
+            st.markdown("### 📋 تفاصيل البيانات")
+            st.dataframe(df_result, use_container_width=True, hide_index=True)
+
+            st.download_button(
+                label="📥 تحميل تقرير Excel",
+                data=to_excel(df_result),
+                file_name="Nagat_Telecom_Report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+
+# ================= FOOTER =================
 st.markdown("""
-<br><hr>
-<div style='text-align:center;color:#777;font-size:14px;'>
-© 2026 Najat El Bakry — All Rights Reserved.
+<div class="footer">
+    © 2026 Najat El Bakry — All Rights Reserved | Powered by Streamlit
 </div>
 """, unsafe_allow_html=True)
