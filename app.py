@@ -48,19 +48,14 @@ def fix_phone(phone):
         return "0" + phone
     return phone
 
-# ================= AR / EN (KEEPING ORIGINAL LOGIC) =================
 def extract_numbers(text):
     if not text: return []
     text = normalize(str(text))
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+    # البحث عن الأرقام التي تحتوي على علامة عشرية فقط لتجنب أرقام الهواتف
+    numbers = re.findall(r'\d+\.\d+', text)
     return [float(n) for n in numbers]
 
-def clean_numbers(vals, phone):
-    try:
-        phone_int = str(int(phone))
-        return [v for v in vals if str(int(v)) != phone_int]
-    except: return vals
-
+# ================= AR / EN FUNCTIONS =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
@@ -74,12 +69,20 @@ def parse_ar(file):
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
                         phone_val = phone.group(1)
-                        vals = extract_numbers(text)
+                        # استخراج يدوي للأرقام لضمان الدقة في الفواتير المجمعة
+                        vals = re.findall(r'-?\d+(?:\.\d+)?', text)
+                        vals = [float(v) for v in vals if v.replace('.','').replace('-','').isdigit()]
+                        
                         if i+1 < len(table):
-                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                            nxt_text = " ".join([str(c) for c in table[i+1] if c])
+                            nxt = re.findall(r'-?\d+(?:\.\d+)?', nxt_text)
+                            nxt = [float(v) for v in nxt if v.replace('.','').replace('-','').isdigit()]
                             if len(nxt) > len(vals): vals = nxt; i += 1
-                        vals = clean_numbers(vals, phone_val)
+                        
+                        # تنظيف رقم الهاتف من القائمة
+                        vals = [v for v in vals if str(int(v)) != str(int(phone_val))]
                         vals = vals[::-1]
+                        
                         def g(idx): return vals[idx] if idx < len(vals) else 0
                         records.append({
                             "محمول": phone_val, "رسوم شهرية": g(0), "رسوم الخدمات": g(1),
@@ -104,8 +107,10 @@ def parse_en(file):
                     phone = re.search(r'(01[0125]\d{8})', text)
                     if phone:
                         phone_val = phone.group(1)
-                        vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-                        vals = clean_numbers(vals, phone_val)
+                        nxt_text = " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
+                        vals = re.findall(r'-?\d+(?:\.\d+)?', nxt_text)
+                        vals = [float(v) for v in vals if str(int(v)) != str(int(phone_val))]
+                        
                         records.append({
                             "محمول": phone_val, "رسوم شهرية": vals[0] if len(vals)>0 else 0,
                             "رسوم الخدمات": vals[1] if len(vals)>1 else 0, "مكالمات محلية": vals[2] if len(vals)>2 else 0,
@@ -119,44 +124,44 @@ def parse_en(file):
                     i += 1
     return records
 
-# ================= AI FIXED (THE FINAL SOLUTION) =================
+# ================= AI FIXED (FINAL REVOLUTION) =================
 def parse_ai(file):
     records = []
     try:
         with pdfplumber.open(file) as pdf:
             page = pdf.pages[0]
-            # الطريقة السحرية: استخراج الكلمات وترتيبها يدوياً لتجاوز التشفير
-            words = page.extract_words(horizontal_ltr=False)
-            if not words: return []
+            # استخراج النص مرتباً حسب الأسطر
+            text = page.extract_text()
+            if not text: return []
             
-            # إعادة بناء النص من الكلمات المبعثرة
-            full_text = " ".join([w['text'] for w in words])
-            full_text = normalize(full_text)
-
-            def find_val(keyword):
-                # البحث عن الكلمة ثم الرقم اللي بعدها مباشرة في قائمة الكلمات
-                for idx, w in enumerate(words):
-                    if keyword in w['text']:
-                        # فحص الكلمات الـ 10 التالية للكلمة المفتاحية
-                        for j in range(idx + 1, min(idx + 10, len(words))):
-                            txt = words[j]['text'].replace(',', '')
-                            if re.match(r'^-?\d+(?:\.\d+)?$', txt):
-                                return float(txt)
+            lines = text.split('\n')
+            
+            # وظيفة للبحث عن أول رقم عشري في سطر يحتوي على كلمة معينة
+            def find_in_lines(keyword_list):
+                for line in lines:
+                    line = normalize(line)
+                    if any(k in line for k in keyword_list):
+                        nums = re.findall(r'\d+\.\d+', line)
+                        if nums: return float(nums[0])
                 return 0.0
 
             # 1. الموبايل
-            phone_m = re.search(r'(01[0125]\d{8})', full_text)
+            full_content = normalize(text)
+            phone_m = re.search(r'(01[0125]\d{8})', full_content)
             phone = phone_m.group(1) if phone_m else "Unknown"
 
-            # 2. استخراج المبالغ
-            monthly = find_val("الرسوم الشهرية")
-            t_table = find_val("ضريبة الجدول")
-            t_vat = find_val("القيمة المضافة")
-            t_stamp = find_val("ضريبة الدمغة")
-            t_dev = find_val("تنمية موارد")
+            # 2. استخراج المبالغ بدقة من الأسطر
+            monthly = find_in_lines(["إجمالي الرسوم الشهرية", "الرسوم الشهرية"])
             
-            total_taxes = round(t_table + t_vat + t_stamp + t_dev, 2)
-            total_due = find_val("القيمة المستحقة")
+            t1 = find_in_lines(["ضريبة الجدول"])
+            t2 = find_in_lines(["ضريبة القيمة المضافة"])
+            t3 = find_in_lines(["ضريبة الدمغة"])
+            t4 = find_in_lines(["رسم تنمية موارد"])
+            
+            total_taxes = round(t1 + t2 + t3 + t4, 2)
+            
+            # الإجمالي النهائي
+            total_due = find_in_lines(["إجمالي القيمة المستحقة"])
 
             records.append({
                 "محمول": phone, "رسوم شهرية": monthly, "رسوم الخدمات": 0, "مكالمات محلية": 0,
@@ -186,25 +191,27 @@ if files:
         for idx, file in enumerate(files):
             status.text(f"📄 Processing: {file.name}")
             
-            # محاولة قراءة الفاتورة الفردية أولاً لأنها الأكثر تعقيداً
-            data = parse_ai(file)
-            
-            # إذا لم يجد بيانات (قد تكون فاتورة مجمعة)، جرب الطرق التقليدية
-            if not data or (len(data) > 0 and data[0]['إجمالي'] == 0):
-                try:
-                    with pdfplumber.open(file) as pdf:
-                        check_text = pdf.pages[0].extract_text() or ""
-                    lang = "ar" if re.search(r'[\u0600-\u06FF]', check_text) else "en"
+            # فحص نوع الفاتورة
+            try:
+                with pdfplumber.open(file) as pdf:
+                    first_page = pdf.pages[0].extract_text() or ""
+                
+                # إذا كانت فاتورة فردية (تحتوي على مسميات معينة) استخدم parse_ai
+                if "إجمالي القيمة المستحقة" in first_page or "ضريبة الجدول" in first_page:
+                    data = parse_ai(file)
+                else:
+                    lang = "ar" if re.search(r'[\u0600-\u06FF]', first_page) else "en"
                     data = parse_ar(file) if lang == "ar" else parse_en(file)
-                except: pass
+                
+                if data: all_data.extend(data)
+            except:
+                pass
 
-            if data: all_data.extend(data)
             progress.progress(int((idx + 1) / len(files) * 100))
             gc.collect()
 
         if all_data:
             df = pd.DataFrame(all_data)
-            # تحويل الأعمدة لرقمية لضمان عمل الداشبورد
             numeric_cols = ["رسوم شهرية", "ضرائب", "إجمالي"]
             for col in numeric_cols: df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
 
@@ -217,4 +224,4 @@ if files:
             st.dataframe(df, use_container_width=True)
             st.download_button("📥 تحميل Excel", to_excel(df), "Telecom_Report.xlsx")
         else:
-            st.error("❌ لم يتم استخراج بيانات. الفاتورة الفردية قد تكون محمية بطبقة إضافية.")
+            st.error("❌ لم يتم العثور على بيانات صحيحة في الملفات.")
