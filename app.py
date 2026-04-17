@@ -55,16 +55,10 @@ def extract_numbers(text):
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
-# 🔥 إزالة رقم الموبايل من القيم
 def clean_numbers(vals, phone):
     phone_int = str(int(phone))
-    cleaned = []
-    for v in vals:
-        if str(int(v)) != phone_int:
-            cleaned.append(v)
-    return cleaned
+    return [v for v in vals if str(int(v)) != phone_int]
 
-# 🔥 تصحيح رقم الموبايل
 def fix_phone(phone):
     phone = str(phone)
     if len(phone) == 10 and phone.startswith("1"):
@@ -140,7 +134,6 @@ def parse_en(file):
                     if phone:
                         phone = phone.group(1)
                         vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-
                         vals = clean_numbers(vals, phone)
 
                         records.append({
@@ -159,10 +152,8 @@ def parse_en(file):
                             "ضرائب": vals[11] if len(vals)>11 else 0,
                             "إجمالي": vals[-1] if vals else 0
                         })
-
                         i += 2
                         continue
-
                     i += 1
     return records
 
@@ -182,29 +173,50 @@ def parse_ai(file):
 
         phone = fix_phone(phone_match.group(1))
 
-        def get(label):
-            pattern = rf"{label}.*?(\d+\.?\d*)"
-            match = re.search(pattern, text)
-            return float(match.group(1)) if match else 0
+        def find_value(patterns):
+            for p in patterns:
+                match = re.search(p, text)
+                if match:
+                    try:
+                        return float(match.group(1))
+                    except:
+                        continue
+            return 0
 
-        record = {
+        monthly = find_value([
+            r'إجمالي الرسوم الشهرية.*?(\d+\.\d+)',
+            r'الرسوم الشهرية.*?(\d+\.\d+)'
+        ])
+
+        taxes = find_value([
+            r'ضريبة.*?(\d+\.\d+)',
+            r'القيمة المضافة.*?(\d+\.\d+)'
+        ])
+
+        total = find_value([
+            r'إجمالي القيمة المستحقة.*?(\d+\.\d+)',
+            r'الإجمالي.*?(\d+\.\d+)'
+        ])
+
+        if monthly == 0 and taxes == 0 and total == 0:
+            return []
+
+        records.append({
             "محمول": phone,
-            "رسوم شهرية": get("إجمالي الرسوم الشهرية"),
-            "رسوم الخدمات": get("رسوم الخدمات"),
-            "مكالمات محلية": get("مكالمات"),
-            "رسائل محلية": get("رسائل"),
-            "إنترنت محلية": get("الإنترنت"),
-            "مكالمات دولية": get("دولي"),
-            "رسائل دولية": get("رسائل دولية"),
-            "مكالمات تجوال": get("التجوال"),
-            "رسائل تجوال": get("رسائل التجوال"),
-            "إنترنت تجوال": get("إنترنت التجوال"),
-            "رسوم تسويات": get("تنمية موارد الدولة"),
-            "ضرائب": get("ضريبة"),
-            "إجمالي": get("إجمالي القيمة المستحقة")
-        }
-
-        records.append(record)
+            "رسوم شهرية": monthly,
+            "رسوم الخدمات": 0,
+            "مكالمات محلية": 0,
+            "رسائل محلية": 0,
+            "إنترنت محلية": 0,
+            "مكالمات دولية": 0,
+            "رسائل دولية": 0,
+            "مكالمات تجوال": 0,
+            "رسائل تجوال": 0,
+            "إنترنت تجوال": 0,
+            "رسوم تسويات": 0,
+            "ضرائب": taxes,
+            "إجمالي": total
+        })
 
     except:
         return []
