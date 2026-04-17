@@ -37,7 +37,7 @@ def extract_numbers(text):
         return [float(n) for n in numbers]
     except: return []
 
-# ================= AR (STABLE VERSION) =================
+# ================= AR =================
 def parse_ar(file):
     records = []
     try:
@@ -54,26 +54,39 @@ def parse_ar(file):
                             if phone:
                                 p_val = phone.group(1)
                                 vals = extract_numbers(text)
-                                # لو السطر الحالي مفيهوش أرقام كفاية، جرب السطر اللي تحته
+
                                 if len(vals) < 5 and i+1 < len(table):
                                     nxt_text = " ".join([str(c) for c in table[i+1] if c])
                                     vals = extract_numbers(nxt_text)
-                                
+
                                 vals = [v for v in vals if str(int(v)) != str(int(p_val))]
                                 vals = vals[::-1]
+
                                 def g(idx): return vals[idx] if idx < len(vals) else 0
+
                                 records.append({
-                                    "محمول": p_val, "رسوم شهرية": g(0), "رسوم الخدمات": g(1),
-                                    "مكالمات محلية": g(2), "رسائل محلية": g(3), "إنترنت محلية": g(4),
-                                    "مكالمات دولية": g(5), "رسائل دولية": g(6), "مكالمات تجوال": g(7),
-                                    "رسائل تجوال": g(8), "إنترنت تجوال": g(9), "رسوم تسويات": g(10),
-                                    "ضرائب": g(11), "إجمالي": g(12),
+                                    "محمول": p_val,
+                                    "رسوم شهرية": g(0),
+                                    "رسوم الخدمات": g(1),
+                                    "مكالمات محلية": g(2),
+                                    "رسائل محلية": g(3),
+                                    "إنترنت محلية": g(4),
+                                    "مكالمات دولية": g(5),
+                                    "رسائل دولية": g(6),
+                                    "مكالمات تجوال": g(7),
+                                    "رسائل تجوال": g(8),
+                                    "إنترنت تجوال": g(9),
+                                    "رسوم تسويات": g(10),
+                                    "ضرائب": g(11),
+                                    "إجمالي": g(12),
                                 })
-                        except: continue # لو سطر باظ كمل اللي بعده
-    except: pass
+                        except:
+                            continue
+    except:
+        pass
     return records
 
-# ================= AI SINGLE (STABLE VERSION) =================
+# ================= AI SINGLE (FIXED) =================
 def parse_ai_single(file):
     records = []
     try:
@@ -81,38 +94,65 @@ def parse_ai_single(file):
             page = pdf.pages[0]
             words = page.extract_words()
             full_text = normalize(" ".join([w['text'] for w in words]))
+
             phone_m = re.search(r'(01[0125]\d{8})', full_text)
             phone = phone_m.group(1) if phone_m else "Unknown"
 
-            def get_val(keyword):
+            def get_val(keywords):
                 try:
                     for i, w in enumerate(words):
-                        if keyword in w['text']:
-                            for j in range(i + 1, min(i + 15, len(words))):
-                                v = words[j]['text'].replace(',', '')
-                                if re.match(r'^\d+\.\d+$', v): return float(v)
+                        for keyword in keywords:
+                            if keyword in w['text']:
+                                for j in range(i + 1, min(i + 15, len(words))):
+                                    v = words[j]['text'].replace(',', '')
+                                    if re.match(r'^\d+\.\d+$', v):
+                                        return float(v)
                     return 0.0
-                except: return 0.0
+                except:
+                    return 0.0
+
+            monthly = get_val(["إجمالي", "الشهرية"])
+            total = get_val(["المستحقة", "الإجمالي"])
+
+            taxes = round(sum([
+                get_val(["الجدول"]),
+                get_val(["المضافة"]),
+                get_val(["الدمغة"]),
+                get_val(["تنمية"])
+            ]), 2)
 
             records.append({
                 "محمول": phone,
-                "رسوم شهرية": get_val("الشهرية"), "رسوم الخدمات": 0, "مكالمات محلية": 0, "رسائل محلية": 0, "إنترنت محلية": 0,
-                "مكالمات دولية": 0, "رسائل دولية": 0, "مكالمات تجوال": 0, "رسائل تجوال": 0, "إنترنت تجوال": 0, "رسوم تسويات": 0,
-                "ضرائب": round(sum([get_val(k) for k in ["الجدول", "المضافة", "الدمغة", "تنمية"]]), 2),
-                "إجمالي": get_val("المستحقة")
+                "رسوم شهرية": monthly,
+                "رسوم الخدمات": 0,
+                "مكالمات محلية": 0,
+                "رسائل محلية": 0,
+                "إنترنت محلية": 0,
+                "مكالمات دولية": 0,
+                "رسائل دولية": 0,
+                "مكالمات تجوال": 0,
+                "رسائل تجوال": 0,
+                "إنترنت تجوال": 0,
+                "رسوم تسويات": 0,
+                "ضرائب": taxes,
+                "إجمالي": total
             })
-    except: return []
+
+    except:
+        return []
+
     return records
 
-# ================= MAIN UI =================
+# ================= UI =================
 files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
 
 if files:
     if st.button("🚀 Start Processing"):
+
         all_data = []
         failed_files = []
         progress = st.progress(0)
-        
+
         for idx, file in enumerate(files):
             try:
                 with pdfplumber.open(file) as pdf:
@@ -120,23 +160,26 @@ if files:
                         data = parse_ai_single(file)
                     else:
                         first_text = pdf.pages[0].extract_text() or ""
-                        # افتراضي عربي لو فيه حروف عربي
                         is_ar = bool(re.search(r'[\u0600-\u06FF]', first_text))
-                        data = parse_ar(file) if is_ar else [] # تقدري تضيفي parse_en هنا لو حبيتي
-                
-                if data: all_data.extend(data)
-                else: failed_files.append(file.name)
-            except Exception as e:
+                        data = parse_ar(file) if is_ar else []
+
+                if data:
+                    all_data.extend(data)
+                else:
+                    failed_files.append(file.name)
+
+            except:
                 failed_files.append(file.name)
-            
+
             progress.progress((idx + 1) / len(files))
             gc.collect()
 
         if all_data:
             df = pd.DataFrame(all_data)
-            # تنظيف المبالغ
+
             num_cols = ["رسوم شهرية", "رسوم تسويات", "ضرائب", "إجمالي"]
-            for c in num_cols: df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
+            for c in num_cols:
+                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
 
             st.markdown("## 📊 Dashboard")
             c1, c2, c3, c4 = st.columns(4)
@@ -144,14 +187,15 @@ if files:
             c2.metric("إجمالي الرسوم", f"{df['رسوم شهرية'].sum():,.2f}")
             c3.metric("إجمالي التسويات", f"{df['رسوم تسويات'].sum():,.2f}")
             c4.metric("الإجمالي النهائي", f"{df['إجمالي'].sum():,.2f}")
-            
+
             st.dataframe(df, use_container_width=True)
-            
+
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
+
             st.download_button("📥 تحميل ملف Excel", excel_buffer.getvalue(), "Hawelha_Report.xlsx")
-            
+
             if failed_files:
                 st.warning(f"⚠️ ملفات لم تكتمل: {', '.join(failed_files)}")
         else:
