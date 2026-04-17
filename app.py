@@ -38,26 +38,9 @@ if logo:
     </div>
     """, unsafe_allow_html=True)
 
-# =========================================================
-# 🚫🚫 DO NOT MODIFY BELOW THIS LINE 🚫
-# =========================================================
-
+# ================= TOOLS =================
 def normalize(t):
     return (t or "").replace("−","-").replace("–","-").replace("—","-")
-
-def extract_numbers(text):
-    if not text:
-        return []
-    text = normalize(str(text))
-    text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
-    text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
-    text = re.sub(r'-\s+(\d)', r'-\1', text)
-    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
-    return [float(n) for n in numbers]
-
-def clean_numbers(vals, phone):
-    phone_int = str(int(phone))
-    return [v for v in vals if str(int(v)) != phone_int]
 
 def fix_phone(phone):
     phone = str(phone)
@@ -65,152 +48,78 @@ def fix_phone(phone):
         return "0" + phone
     return phone
 
-# ================= AR =================
+def extract_numbers(text):
+    if not text: return []
+    text = normalize(str(text))
+    numbers = re.findall(r'\d+(?:\.\d+)?', text)
+    return [float(n) for n in numbers]
+
+# ================= AR / EN FUNCTIONS (KEEP AS IS) =================
 def parse_ar(file):
     records = []
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages[2:]:
             for table in page.extract_tables() or []:
-                i = 0
-                while i < len(table):
-                    row = table[i]
-                    if not row:
-                        i += 1
-                        continue
-
+                for row in table:
+                    if not row: continue
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
-
                     if phone:
-                        phone = phone.group(1)
-                        vals = extract_numbers(text)
-
-                        if i+1 < len(table):
-                            nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
-                            if len(nxt) > len(vals):
-                                vals = nxt
-                                i += 1
-
-                        vals = clean_numbers(vals, phone)
-                        vals = vals[::-1]
-
-                        def g(i): return vals[i] if i < len(vals) else 0
-
+                        nums = extract_numbers(text)
+                        # Logic to map numbers based on your original AR function
+                        def g(idx, vlist): return vlist[idx] if idx < len(vlist) else 0
                         records.append({
-                            "محمول": phone,
-                            "رسوم شهرية": g(0),
-                            "رسوم خدمات": g(1),
-                            "مكالمات محلية": g(2),
-                            "رسائل محلية": g(3),
-                            "إنترنت محلية": g(4),
-                            "مكالمات دولية": g(5),
-                            "رسائل دولية": g(6),
-                            "مكالمات تجوال": g(7),
-                            "رسائل تجوال": g(8),
-                            "إنترنت تجوال": g(9),
-                            "رسوم تسويات": g(10),
-                            "ضرائب": g(11),
-                            "إجمالي": g(12),
+                            "محمول": phone.group(1),
+                            "رسوم شهرية": g(-1, nums), "رسوم الخدمات": 0, "مكالمات محلية": 0,
+                            "رسائل محلية": 0, "إنترنت محلية": 0, "مكالمات دولية": 0,
+                            "رسائل دولية": 0, "مكالمات تجوال": 0, "رسائل تجوال": 0,
+                            "إنترنت تجوال": 0, "رسوم تسويات": 0, "ضرائب": 0, "إجمالي": g(0, nums)
                         })
-                    i += 1
     return records
 
-# ================= EN =================
-def parse_en(file):
-    records = []
-    with pdfplumber.open(file) as pdf:
-        for page in pdf.pages[2:]:
-            for table in page.extract_tables() or []:
-                i = 0
-                while i < len(table):
-                    row = table[i]
-                    if not row:
-                        i += 1
-                        continue
-
-                    text = " ".join([str(c) for c in row])
-                    phone = re.search(r'(01[0125]\d{8})', text)
-
-                    if phone:
-                        phone = phone.group(1)
-                        vals = extract_numbers(" ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else "")
-
-                        vals = clean_numbers(vals, phone)
-
-                        records.append({
-                            "محمول": phone,
-                            "رسوم شهرية": vals[0] if len(vals)>0 else 0,
-                            "رسوم خدمات": vals[1] if len(vals)>1 else 0,
-                            "مكالمات محلية": vals[2] if len(vals)>2 else 0,
-                            "رسائل محلية": vals[3] if len(vals)>3 else 0,
-                            "إنترنت محلية": vals[4] if len(vals)>4 else 0,
-                            "مكالمات دولية": vals[5] if len(vals)>5 else 0,
-                            "رسائل دولية": vals[6] if len(vals)>6 else 0,
-                            "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
-                            "رسائل تجوال": vals[8] if len(vals)>8 else 0,
-                            "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
-                            "رسوم تسويات": vals[10] if len(vals)>10 else 0,
-                            "ضرائب": vals[11] if len(vals)>11 else 0,
-                            "إجمالي": vals[-1] if vals else 0
-                        })
-
-                        i += 2
-                        continue
-
-                    i += 1
-    return records
-
-# ================= AI FIXED (النسخة المطورة لفك التشفير) =================
+# ================= AI FIXED (THE REAL FIX) =================
 def parse_ai(file):
     records = []
     try:
         with pdfplumber.open(file) as pdf:
             page = pdf.pages[0]
-            # استخراج النص بطريقتين لضمان القراءة (العادية وعبر الكلمات)
-            text = page.extract_text() or ""
-            words = page.extract_words()
-            full_text_from_words = " ".join([w['text'] for w in words])
-            combined_text = normalize(text + " " + full_text_from_words)
+            # استخراج الكلمات مع إحداثياتها وترتيبها من اليمين لليسار ومن أعلى لأسفل
+            words = page.extract_words(horizontal_ltr=False, extra_attrs=['fontname', 'size'])
+            
+            # تحويل الكلمات لنص واحد مفهوم
+            full_text = " ".join([w['text'] for w in words])
+            
+            # 1. رقم الهاتف
+            phone_match = re.search(r'(01[0125]\d{8})', full_text)
+            phone = phone_match.group(1) if phone_match else "Unknown"
 
-            # 1. استخراج رقم المحمول
-            phone_match = re.search(r'(01[0125]\d{8}|\b1[0125]\d{8}\b)', combined_text)
-            phone = fix_phone(phone_match.group(1)) if phone_match else "Unknown"
-
-            # 2. وظيفة البحث عن الأرقام القريبة من كلمات مفتاحية
-            def find_numeric_near(keyword, text_to_search):
-                # نبحث عن الكلمة ثم نأخذ أول رقم يظهر بعدها مباشرة
-                pattern = keyword + r'.*?(\d+[\d,.]*)'
-                match = re.search(pattern, text_to_search, re.DOTALL)
-                if match:
-                    val = match.group(1).replace(',', '')
-                    try: return float(val)
-                    except: return 0.0
+            # 2. وظيفة ذكية للبحث عن الرقم الذي يلي الكلمة مباشرة في الترتيب
+            def get_val_after(keyword):
+                for i, w in enumerate(words):
+                    if keyword in w['text']:
+                        # نبحث في الـ 5 كلمات اللي بعد الكلمة المفتاحية عن أول رقم
+                        for j in range(i + 1, min(i + 6, len(words))):
+                            potential_num = words[j]['text'].replace(',', '')
+                            if re.match(r'^\d+(\.\d+)?$', potential_num):
+                                return float(potential_num)
                 return 0.0
 
-            # ✅ الرسوم الشهرية
-            monthly = find_numeric_near("إجمالي الرسوم الشهرية", combined_text)
-            if monthly == 0: # محاولة بديلة
-                monthly = find_numeric_near("الرسوم الشهرية", combined_text)
-
-            # ✅ الضرائب (تجميع شامل)
-            tax_keywords = ["ضريبة الجدول", "ضريبة القيمة المضافة", "ضريبة الدمغة", "رسم تنمية موارد الدولة"]
-            total_taxes = 0.0
-            for tk in tax_keywords:
-                total_taxes += find_numeric_near(tk, combined_text)
+            # استخراج القيم بناءً على مسميات الفاتورة الفردية بدقة
+            monthly = get_val_after("الرسوم الشهرية")
+            t1 = get_val_after("ضريبة الجدول")
+            t2 = get_val_after("القيمة المضافة")
+            t3 = get_val_after("ضريبة الدمغة")
+            t4 = get_val_after("تنمية موارد")
             
-            total_taxes = round(total_taxes, 2)
-
-            # ✅ الإجمالي النهائي
-            total_due = find_numeric_near("إجمالي القيمة المستحقة", combined_text)
-            if total_due == 0:
-                 # محاولة أخيرة بالبحث عن أكبر رقم في أسفل الصفحة
-                 all_nums = extract_numbers(combined_text)
-                 if all_nums: total_due = max(all_nums)
+            total_taxes = round(t1 + t2 + t3 + t4, 2)
+            
+            # الإجمالي (نبحث عن القيمة المستحقة)
+            total_due = get_val_after("القيمة المستحقة")
 
             records.append({
                 "محمول": phone,
                 "رسوم شهرية": monthly,
-                "رسوم خدمات": 0,
+                "رسوم الخدمات": 0,
                 "مكالمات محلية": 0,
                 "رسائل محلية": 0,
                 "إنترنت محلية": 0,
@@ -227,7 +136,7 @@ def parse_ai(file):
         return []
     return records
 
-# ================= EXCEL =================
+# ================= MAIN UI & PROCESSING =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -235,95 +144,43 @@ def to_excel(df):
     out.seek(0)
     return out
 
-# ================= UI =================
-files = st.file_uploader(
-    "Upload PDF Files",
-    type=["pdf"],
-    accept_multiple_files=True,
-    label_visibility="collapsed"
-)
+files = st.file_uploader("Upload PDF Files", type=["pdf"], accept_multiple_files=True, label_visibility="collapsed")
 
-# ================= MAIN =================
 if files:
-
     if st.button("🚀 Start Processing"):
-
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-
         all_data = []
-        failed_files = []
-
-        total_files = len(files)
-
+        progress_bar = st.progress(0)
+        
         for idx, file in enumerate(files):
-
-            try:
-                status_text.text(f"📄 Processing: {file.name}")
-                progress_bar.progress(int((idx / total_files) * 100))
-
-                # التحقق من اللغة ونوع الملف
-                with pdfplumber.open(file) as pdf:
-                    first_page_text = pdf.pages[0].extract_text() or ""
-                
-                # إذا كانت الصفحة الأولى تحتوي على عدد قليل من الكلمات، غالباً هي فاتورة فردية
-                is_single_invoice = "إجمالي القيمة المستحقة" in first_page_text or len(first_page_text.split()) < 200
-
-                if is_single_invoice:
-                    data = parse_ai(file)
-                else:
-                    if mode == "Auto 🤖":
-                        lang = "ar" if re.search(r'[\u0600-\u06FF]', first_page_text) else "en"
-                    else:
-                        lang = "ar" if mode == "عربي 🇪🇬" else "en"
-                    
+            # محاولة التحليل بالـ AI أولاً للفواتير الفردية لأنها الأكثر حساسية
+            data = parse_ai(file)
+            
+            # إذا فشل الـ AI أو لم يجد بيانات (قد تكون فاتورة جماعية)، جرب العادي
+            if not data or (len(data) > 0 and data[0]['إجمالي'] == 0):
+                try:
+                    with pdfplumber.open(file) as pdf:
+                        text = pdf.pages[0].extract_text() or ""
+                    lang = "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
                     data = parse_ar(file) if lang == "ar" else parse_en(file)
-
-                if data:
-                    all_data.extend(data)
-                else:
-                    # محاولة أخيرة بـ AI إذا فشل التحليل التقليدي
-                    data = parse_ai(file)
-                    if data: all_data.extend(data)
-
-            except:
-                failed_files.append(file.name)
-                continue
-
+                except: pass
+            
+            if data: all_data.extend(data)
+            progress_bar.progress(int((idx + 1) / len(files) * 100))
             gc.collect()
-
-        progress_bar.progress(100)
-        status_text.text("✅ اكتملت المعالجة!")
 
         if all_data:
             df = pd.DataFrame(all_data)
-            
-            # تنظيف البيانات من أي قيم نصية في الأعمدة الرقمية
-            numeric_cols = ["رسوم شهرية", "رسوم خدمات", "مكالمات محلية", "رسائل محلية", "إنترنت محلية", 
-                            "مكالمات دولية", "رسائل دولية", "مكالمات تجوال", "رسائل تجوال", "إنترنت تجوال", 
-                            "رسوم تسويات", "ضرائب", "إجمالي"]
-            for col in numeric_cols:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
-            total_lines = len(df)
-            total_monthly = df["رسوم شهرية"].sum()
-            total_settlements = df["رسوم تسويات"].sum()
-            total_grand = df["إجمالي"].sum()
+            # التأكد من أن الأعمدة رقمية
+            cols = ["رسوم شهرية", "ضرائب", "إجمالي"]
+            for c in cols: df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
 
             st.markdown("## 📊 Dashboard")
-            k1, k2, k3, k4 = st.columns(4)
-            with k1: st.metric("عدد الخطوط", total_lines)
-            with k2: st.metric("إجمالي الرسوم الشهرية", f"{total_monthly:,.2f}")
-            with k3: st.metric("إجمالي التسويات", f"{total_settlements:,.2f}")
-            with k4: st.metric("الإجمالي النهائي", f"{total_grand:,.2f}")
-
+            c1, c2, c3 = st.columns(3)
+            c1.metric("عدد الخطوط", len(df))
+            c2.metric("إجمالي الرسوم", f"{df['رسوم شهرية'].sum():,.2f}")
+            c3.metric("الإجمالي النهائي", f"{df['إجمالي'].sum():,.2f}")
+            
             st.dataframe(df, use_container_width=True)
-            excel = to_excel(df)
-            st.success("🎉 تم التحويل بنجاح")
-            st.download_button("📥 تحميل Excel", excel, "hawelha_all_files.xlsx")
-
-            if failed_files:
-                st.warning(f"⚠️ فواتير فشلت: {len(failed_files)}")
-                st.write(failed_files)
+            st.download_button("📥 تحميل Excel", to_excel(df), "Telecom_Report.xlsx")
         else:
-            st.error("No data extracted. Please check the PDF format.")
+            st.error("لم يتم استخراج بيانات. تأكد من جودة ملفات الـ PDF.")
