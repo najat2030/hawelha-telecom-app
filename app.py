@@ -14,7 +14,8 @@ st.set_page_config(page_title="Hawelha Telecom", page_icon="📊", layout="wide"
 def load_logo():
     path = "static/logo.png"
     if os.path.exists(path):
-        with open(path, "rb") as f: return base64.b64encode(f.read()).decode()
+        with open(path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
     return None
 
 logo = load_logo()
@@ -27,10 +28,11 @@ def normalize(t):
 
 def fix_phone(phone):
     phone = str(phone)
-    if len(phone) == 10 and phone.startswith("1"): return "0" + phone
+    if len(phone) == 10 and phone.startswith("1"):
+        return "0" + phone
     return phone
 
-# ================= AI (FOR SINGLE ONLY) =================
+# ================= AI =================
 def parse_ai(file):
     records = []
     try:
@@ -132,14 +134,12 @@ if files and st.button("🚀 Start Processing"):
     for idx, file in enumerate(files):
 
         try:
-            with pdfplumber.open(file) as pdf:
-                page_count = len(pdf.pages)
+            # 👇 الأساسي الأول
+            data = parse_legacy(file)
 
-            # 🔥 القرار الذكي هنا
-            if page_count <= 2:
+            # 👇 fallback للـ AI
+            if not data:
                 data = parse_ai(file)
-            else:
-                data = parse_legacy(file)
 
             if data:
                 all_data.extend(data)
