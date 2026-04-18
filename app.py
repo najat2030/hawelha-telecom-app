@@ -8,110 +8,115 @@ import os
 import gc
 
 # ================= CONFIG =================
-st.set_page_config(page_title="Nagat Telecom", layout="wide", page_icon="📊")
+st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
 
 # ================= STYLE & THEME =================
-PRIMARY_COLOR = "#0B6B3A"
+PRIMARY_COLOR = "#0B6B3A"  # Royal Green
 BG_COLOR = "#F4F6F8"
 CARD_BG = "#FFFFFF"
 
 st.markdown(f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
     .stApp {{
         background-color: {BG_COLOR};
         font-family: 'Tajawal', sans-serif;
     }}
 
+    /* Hide Default Streamlit Elements */
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
     header {{visibility: hidden;}}
 
-    /* === LOGIN PAGE BACKGROUND WITH LOGO === */
+    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
     .login-background {{
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-image: url('static/logo.png');
-        background-size: cover;
+        /* Using the logo from static folder as full background */
+        background-image: url('/static/logo.png'); 
+        background-size: contain; /* Keeps logo aspect ratio visible */
         background-position: center;
         background-repeat: no-repeat;
         z-index: -1;
-        opacity: 0.15;
+        opacity: 1; /* Full visibility as requested */
     }}
 
-    /* Glassmorphism Card for Login */
+    /* Glassmorphism Card for Login Form */
     .login-card {{
         background: rgba(255, 255, 255, 0.95);
         padding: 40px;
         border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        max-width: 450px;
-        margin: 100px auto;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        max-width: 400px;
+        margin: 80px auto;
         text-align: center;
     }}
 
     .login-title {{
         color: {PRIMARY_COLOR};
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
-        margin-bottom: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
+        margin-bottom: 25px;
     }}
 
-    /* Dashboard Header */
+    /* === DASHBOARD HEADER DESIGN === */
     .dashboard-header {{
         display: flex;
         justify-content: space-between;
         align-items: center;
         background: white;
-        padding: 20px 30px;
+        padding: 15px 30px;
         border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-        margin-bottom: 40px;
-        border-bottom: 3px solid {PRIMARY_COLOR};
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        margin-bottom: 30px;
+        border-bottom: 4px solid {PRIMARY_COLOR};
     }}
 
-    .header-logo-section {{
+    .header-main-text h1 {{
+        margin: 0;
+        font-size: 26px;
+        color: {PRIMARY_COLOR};
+        font-weight: 800;
+        letter-spacing: 0.5px;
+    }}
+
+    .header-user-info {{
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 15px;
+        background: #f0fdf4;
+        padding: 8px 20px;
+        border-radius: 50px;
+        border: 1px solid #dcfce7;
     }}
 
-    .header-logo-img {{
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        object-fit: contain;
-        background: white;
-        padding: 5px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }}
-
-    .header-text h1 {{
-        margin: 0;
-        font-size: 28px;
-        color: {PRIMARY_COLOR};
-        font-weight: 700;
-    }}
-
-    .header-text p {{
-        margin: 5px 0 0 0;
+    .user-avatar {{
+        width: 35px;
+        height: 35px;
+        background: {PRIMARY_COLOR};
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
         font-size: 16px;
-        color: #7F8C8D;
-        font-weight: 500;
     }}
 
-    /* Metric Cards */
+    .user-name {{
+        font-weight: 600;
+        color: #333;
+        font-size: 16px;
+    }}
+
+    /* Metric Cards Styling */
     .metric-card {{
         background: white;
         padding: 25px;
@@ -119,6 +124,7 @@ st.markdown(f"""
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         border-right: 5px solid {PRIMARY_COLOR};
         transition: transform 0.2s;
+        height: 100%;
     }}
     .metric-card:hover {{
         transform: translateY(-5px);
@@ -126,13 +132,13 @@ st.markdown(f"""
     }}
     .metric-title {{
         color: #666;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 500;
         margin-bottom: 10px;
     }}
     .metric-value {{
         color: {PRIMARY_COLOR};
-        font-size: 28px;
+        font-size: 26px;
         font-weight: 700;
     }}
 
@@ -145,6 +151,7 @@ st.markdown(f"""
         font-weight: bold;
         border: none;
         transition: all 0.3s ease;
+        width: 100%;
     }}
     div.stButton > button:hover {{
         background-color: #085a30;
@@ -223,24 +230,39 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ================= DASHBOARD HEADER =================
+# Get first letter of username for avatar
+user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
+
 col1, col2 = st.columns([6, 2])
 
 with col1:
     st.markdown(f"""
     <div class="dashboard-header">
-        <div class="header-logo-section">
-            <img src="static/logo.png" class="header-logo-img" alt="Company Logo">
-            <div class="header-text">
-                <h1>Nagat Telecom</h1>
-                <p>Convert PDF invoices to Excel instantly</p>
-            </div>
+        <div class="header-main-text">
+            <h1>Convert PDF invoices to Excel instantly</h1>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.write("") # Spacer
-    if st.button("🚪 تسجيل الخروج"):
+    st.markdown(f"""
+    <div style="display:flex; justify-content:flex-end; align-items:center; height:100%; padding-top:10px;">
+        <div class="header-user-info">
+            <div class="user-avatar">{user_initial}</div>
+            <span class="user-name">مرحباً، {st.session_state.username}</span>
+        </div>
+        <div style="margin-left: 10px;">
+             <button onclick="document.querySelector('[data-testid=\'stSidebarCollapsedControl\']').click()" style="background:none; border:none; cursor:pointer; font-size:20px;">⚙️</button>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Hidden logout logic handled via sidebar or a small button if needed, 
+    # but keeping UI clean as per request. Adding explicit logout in sidebar below.
+
+with st.sidebar:
+    st.markdown("### الإعدادات")
+    if st.button("🚪 تسجيل الخروج", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -464,7 +486,7 @@ if files:
             status_text.text(f"⏳ جاري معالجة: {file.name}")
             progress_bar.progress((idx+1)/len(files))
 
-            # Logic Selection - CORRECTED LINES BELOW
+            # Logic Selection
             if mode == "English 🌍":
                 data = parse_en(file)
             elif mode == "Auto 🤖":
@@ -476,7 +498,7 @@ if files:
             else: # Arabic
                 data = parse_ar(file)
                 
-            # Fallback to AI if specific parsers fail - CORRECTED LINE BELOW
+            # Fallback to AI if specific parsers fail
             if not data:
                 data = parse_ai(file)
 
@@ -486,7 +508,6 @@ if files:
         progress_bar.progress(100)
         status_text.empty()
 
-        # CORRECTED LINE BELOW
         if all_data:
             df_result = pd.DataFrame(all_data)
             
@@ -557,7 +578,7 @@ if files:
             st.download_button(
                 label="📥 تحميل تقرير Excel",
                 data=to_excel(df_result),
-                file_name="Nagat_Telecom_Report.xlsx",
+                file_name="Hawelha_Telecom_Report.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
