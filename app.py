@@ -30,19 +30,15 @@ st.markdown(f"""
     header {{visibility: hidden;}}
 
     /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
-    .login-background {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url('static/logo.png'); 
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-        z-index: -1;
-        opacity: 1;
-    }}
+    .login-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #F4F6F8;
+    z-index: -1;
+}
 
     /* Glassmorphism Card for Login Form */
     .login-card {{
