@@ -24,7 +24,7 @@ st.markdown("""
     footer { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* ===== 1. القواعد المشتركة للألوان والحدود ===== */
+    /* ===== Royal Green Header Boxes ===== */
     .royal-green-box, div.stButton > button {
         background-color: #1a7e43 !important;
         color: white !important;
@@ -35,44 +35,34 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
-        text-align: center;
         transition: all 0.3s ease;
         margin: 0 !important;
-        box-sizing: border-box;
     }
 
-    /* ===== 2. مقاسات زر تسجيل الخروج (مستقل) ===== */
+    /* Greeting Box (Independent Size) */
+    .royal-green-box {
+        min-height: 45px !important;
+        max-height: 45px !important;
+        width: fit-content !important;
+        margin-left: auto !important;
+        margin-right: 0 !important;
+        padding: 5px 20px !important;
+        font-size: 14px !important;
+        gap: 10px !important;
+        white-space: nowrap !important;
+        direction: rtl !important;
+    }
+
+    /* Logout Button (Independent Size) */
     div.stButton > button {
-    min-height: 45px !important;
-    max-height: 45px !important;
-    width: fit-content !important;    /* ينكمش على قد الكلام */
-    padding: 5px 25px !important;     /* مسافة جانبية أنيقة */
-    margin-left: auto !important;     /* يضبط مكانه جهة اليسار */
-    font-size: 14px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-    /* جعل أيقونة الباب (إيموجي) تظهر بلون أبيض ناصع كالنص */
-    div.stButton > button:first-child {
-        color: white !important;
+        min-height: 45px !important;
+        max-height: 45px !important;
+        width: fit-content !important;
+        padding: 5px 25px !important;
+        margin-left: auto !important;
+        font-size: 14px !important;
     }
 
-    /* ===== 3. مقاسات مربع مرحباً (مستقل الآن) ===== */
-   .royal-green-box {
-    min-height: 45px !important;
-    max-height: 45px !important;
-    width: fit-content !important;    /* عشان يفضل صغير على قد الكلام */
-    margin-left: auto !important;     /* يدفع المربع لأقصى اليمين */
-    margin-right: 0 !important;       /* يلزقه في طرف الصفحة اليمين */
-    padding: 5px 20px !important;
-    gap: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    white-space: nowrap !important;
-    direction: rtl !important;        /* لضمان ترتيب العناصر من اليمين لليسار داخلياً */
-}
-    /* دائرة الأفتار البيضاء داخل مربع مرحباً */
     .avatar-circle-white {
         background-color: white !important;
         color: #1a7e43 !important;
@@ -84,17 +74,10 @@ st.markdown("""
         justify-content: center;
         font-weight: bold;
         flex-shrink: 0;
-        margin-left: 8px;
+        margin-left: 10px;
     }
 
-    /* تأثير الوقوف على الأزرار */
-    div.stButton > button:hover {
-        background-color: #146435 !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
-        transform: translateY(-1px) !important;
-    }
-
-    /* منطقة الشعار الهيدر */
+    /* Header Logo */
     .header-container {
         background: white;
         padding: 10px;
@@ -105,12 +88,14 @@ st.markdown("""
     }
 
     .header-logo {
-        width: 400px;
-        max-width: 80%;
+        width: 100% !important;
+        max-width: 650px !important;
         height: auto;
+        display: block;
+        margin: 0 auto;
     }
 
-    /* كروت الداشبورد */
+    /* Dashboard Metrics */
     .metric-card {
         background: white;
         padding: 15px;
@@ -119,17 +104,42 @@ st.markdown("""
         border-right: 5px solid #1a7e43;
         margin-bottom: 10px;
     }
-    .metric-title { font-size: 14px; color: #666; font-weight: 500; }
-    .metric-value { font-size: 22px; color: #1a7e43; font-weight: 700; }
 
-    /* شريط التقدم الذهبي */
+    .metric-title { 
+        font-size: 18px !important; 
+        color: #555; 
+        font-weight: 600 !important; 
+    }
+
+    .metric-value { 
+        font-size: 32px !important; 
+        color: #1a7e43; 
+        font-weight: 800 !important; 
+    }
+
+    /* Process Button (Light Gray Theme) */
+    .process-btn-area + div.stButton > button {
+        background-color: #f0f2f6 !important;
+        color: #555 !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 50px !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        min-height: 50px !important;
+    }
+
+    .process-btn-area + div.stButton > button:hover {
+        background-color: #e2e8f0 !important;
+        border-color: #9ca3af !important;
+    }
+
     .stProgress > div > div > div > div {
         background-color: #daa520 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= LOGIN LOGIC (PRESERVED) =================
+# ================= LOGIN STATE =================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -138,14 +148,14 @@ if not st.session_state.logged_in:
     st.session_state.username = "noga"
     st.rerun()
 
-# ================= TOP HEADER (SYMMETRICAL) =================
+# ================= TOP HEADER =================
 user_initial = st.session_state.username[0].upper()
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 
 t_left, t_center, t_right = st.columns([1, 2, 1], vertical_alignment="center")
 
 with t_left:
-    if st.button(" تسجيل الخروج"):
+    if st.button("🚪 تسجيل الخروج"):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -160,7 +170,7 @@ with t_right:
     </div>
     ''', unsafe_allow_html=True)
 
-# ================= LOGIC FUNCTIONS (STRICTLY UNTOUCHED) =================
+# ================= LOGIC FUNCTIONS =================
 def normalize(t): return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
 
 def extract_numbers(text):
@@ -195,9 +205,10 @@ def parse_ar(file):
     except: pass
     return records
 
-# ================= UPLOAD & PROCESS =================
+# ================= MAIN UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
+st.markdown('<div class="process-btn-area"></div>', unsafe_allow_html=True)
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
         progress_bar = st.progress(0)
@@ -209,7 +220,6 @@ if st.button("🚀 بدء المعالجة والتحليل"):
         
         if all_data:
             df = pd.DataFrame(all_data)
-            
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
             
@@ -226,7 +236,3 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
             st.download_button("📥 تحميل تقرير Excel", data=excel_buffer.getvalue(), file_name="Report.xlsx")
-        else:
-            st.warning("لم يتم استخراج بيانات من الملفات.")
-    else:
-        st.info("يرجى رفع الملفات أولاً.")
