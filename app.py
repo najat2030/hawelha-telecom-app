@@ -24,6 +24,7 @@ st.markdown("""
         font-family: 'Tajawal', sans-serif;
     }
 
+    /* Hide Default Streamlit Elements */
     #MainMenu {
         visibility: hidden;
     }
@@ -36,47 +37,26 @@ st.markdown("""
         visibility: hidden;
     }
 
+    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
     .login-background {
         position: fixed;
-        inset: 0;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         background-color: #F4F6F8;
-        z-index: -2;
-        overflow: hidden;
-    }
-
-    .login-background::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image:
-            linear-gradient(135deg, rgba(11, 107, 58, 0.05) 0%, rgba(244, 246, 248, 0.92) 35%, rgba(244, 246, 248, 0.96) 100%),
-            radial-gradient(circle at 20% 20%, rgba(11, 107, 58, 0.08) 0%, transparent 35%),
-            radial-gradient(circle at 80% 80%, rgba(11, 107, 58, 0.05) 0%, transparent 30%);
-        z-index: -2;
-    }
-
-    .login-background::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url("https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png");
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 600px auto;
-        opacity: 0.07;
-        filter: blur(7px) grayscale(25%) contrast(95%);
-        transform: scale(1.15);
         z-index: -1;
     }
 
+    /* Glassmorphism Card for Login Form */
     .login-card {
-        background: rgba(255, 255, 255, 0.92);
+        background: rgba(255, 255, 255, 0.95);
         padding: 40px;
         border-radius: 20px;
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border: 1px solid rgba(255, 255, 255, 0.35);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         max-width: 400px;
         margin: 80px auto;
         text-align: center;
@@ -89,6 +69,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
+    /* === DASHBOARD HEADER DESIGN === */
     .dashboard-header {
         display: flex;
         justify-content: space-between;
@@ -138,6 +119,7 @@ st.markdown("""
         font-size: 16px;
     }
 
+    /* Metric Cards Styling */
     .metric-card {
         background: white;
         padding: 25px;
@@ -166,6 +148,7 @@ st.markdown("""
         font-weight: 700;
     }
 
+    /* Footer */
     .footer {
         text-align: center;
         color: #888;
@@ -216,7 +199,7 @@ def login_page():
         username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="hidden")
         password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")  
         
-        if st.button("تسجيل الدخول", width="stretch"):
+        if st.button("تسجيل الدخول", use_container_width=True):
             if username in users and users[username]["password"] == password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
@@ -240,11 +223,6 @@ with col1:
     <div class="dashboard-header">
         <div class="header-main-text">
             <h1>Convert PDF invoices to Excel instantly</h1>
-            <div style="margin-top:12px; width:100%;">
-                <img src="https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
-                     alt="Logo"
-                     style="width:100%; max-width:100%; height:auto; display:block;">
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -261,12 +239,12 @@ with col2:
 
     st.write("") 
 
-    if st.button("🚪 تسجيل الخروج", key="logout_btn", width="stretch"):
+    if st.button("🚪 تسجيل الخروج", key="logout_btn", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
     if st.session_state.role == "admin":
-        if st.button("⚙️ Manage app", key="manage_app_btn", width="stretch"):
+        if st.button("⚙️ Manage app", key="manage_app_btn", use_container_width=True):
             st.session_state.show_admin_panel = True
             st.rerun()
 
@@ -276,7 +254,7 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
     st.markdown("### ⚙️ لوحة إدارة المستخدمين")
 
     st.markdown("#### قائمة المستخدمين الحاليين:")
-    st.dataframe(df_users, width="stretch")
+    st.dataframe(df_users, use_container_width=True)
 
     st.markdown("#### ➕ إضافة مستخدم جديد:")
     with st.form("add_user_form"):
@@ -516,7 +494,7 @@ def to_excel(df):
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
 if files:
-    if st.button("🚀 بدء المعالجة والتحليل", width="stretch"):
+    if st.button("🚀 بدء المعالجة والتحليل", use_container_width=True):
         
         progress_bar = st.progress(0)
         status_text = st.empty()
@@ -532,12 +510,12 @@ if files:
                 data = parse_ar(file)
                 if not data:
                     data = parse_en(file)
-                if not data:
+                if not data: 
                     data = parse_ai(file)
             else:
                 data = parse_ar(file)
-
-            if not data:
+                
+            if not data: 
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -608,7 +586,7 @@ if files:
             
             st.markdown("---")
             st.markdown("### 📋 تفاصيل البيانات")
-            st.dataframe(df_result, width="stretch", hide_index=True)
+            st.dataframe(df_result, use_container_width=True, hide_index=True)
 
             st.download_button(
                 label="📥 تحميل تقرير Excel",
