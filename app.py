@@ -20,7 +20,7 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
     .stApp {
-        background-color: #F4F6F8;
+        background-color: #f8f9fa;
         font-family: 'Tajawal', sans-serif;
     }
 
@@ -60,75 +60,68 @@ st.markdown("""
 
     /* ===== Header ===== */
     .dashboard-header {
-        display: flex;
-        justify-content: center;
-        align-items: center;
         background: white;
-        padding: 18px 24px 18px 24px;
-        border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        margin-bottom: 22px;
+        padding: 20px 24px;
+        border-radius: 0 0 22px 22px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+        margin-bottom: 26px;
         border-bottom: 4px solid #0B6B3A;
-        min-height: 220px;
+        min-height: 230px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    .header-main-text {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        width: 100%;
+    .header-logo-wrap {
         text-align: center;
+        width: 100%;
     }
 
     .header-logo {
-        width: 560px;
-        max-width: 88%;
+        width: 520px;
+        max-width: 90%;
         height: auto;
         display: block;
         object-fit: contain;
         margin: 0 auto;
     }
 
-    /* ===== User / Logout ===== */
+    /* ===== Greeting / Logout same look ===== */
     .header-user-info {
+        background-color: #e6f3e6;
+        color: #333;
+        padding: 10px 25px;
+        border-radius: 50px;
+        border: 1px solid #ccebcc;
+        min-height: 58px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 14px;
-        background: #f0fdf4;
-        padding: 8px 20px;
-        border-radius: 50px;
-        border: 1px solid #dcfce7;
-        min-height: 56px;
-        width: 100%;
+        gap: 12px;
         box-sizing: border-box;
+        width: 100%;
+        direction: rtl;
     }
 
     .user-avatar {
-        width: 35px;
-        height: 35px;
-        background: #0B6B3A;
+        background-color: #1a7e43;
         color: white;
         border-radius: 50%;
-        display: flex;
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-        font-size: 16px;
+        font-weight: 800;
+        font-size: 18px;
         flex-shrink: 0;
     }
 
     .user-name {
-        font-weight: 600;
-        color: #333;
         font-size: 16px;
+        font-weight: 700;
+        color: #333;
         white-space: nowrap;
-    }
-
-    .user-actions-row {
-        padding-top: 10px;
     }
 
     .logout-marker, .process-marker {
@@ -137,54 +130,78 @@ st.markdown("""
         padding: 0;
     }
 
-    /* ستايل عام للأزرار */
+    /* ===== Buttons ===== */
     div.stButton > button {
         border-radius: 50px !important;
         font-weight: 700 !important;
-        min-height: 56px !important;
-        transition: 0.2s ease !important;
+        min-height: 58px !important;
+        transition: all 0.3s ease !important;
     }
 
-    /* زر تسجيل الخروج - نفس مربع مرحباً */
+    /* Logout button = same as greeting */
     .logout-marker + div.stButton > button {
-        background: #f0fdf4 !important;
+        background-color: #e6f3e6 !important;
         color: #333 !important;
-        border: 1px solid #dcfce7 !important;
+        border: 1px solid #ccebcc !important;
         box-shadow: none !important;
         width: 100% !important;
+        font-size: 16px !important;
     }
 
     .logout-marker + div.stButton > button:hover {
-        background: #dcfce7 !important;
-        color: #0B6B3A !important;
-        border: 1px solid #bbf7d0 !important;
+        background-color: #d8eed8 !important;
+        border-color: #b3dfb3 !important;
+        color: #1a7e43 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
     }
 
-    /* زر بدء المعالجة والتحليل - أخضر ملكي */
+    /* Manage app keeps default-ish green style */
+    div.stButton > button[kind="secondary"] {
+        border-radius: 14px !important;
+    }
+
+    /* Process button royal green */
     .process-marker + div.stButton > button {
-        background: #0B6B3A !important;
+        background-color: #1a7e43 !important;
         color: white !important;
-        border: 1px solid #095c32 !important;
-        box-shadow: 0 6px 18px rgba(11,107,58,0.22) !important;
+        width: 100% !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        font-weight: 800 !important;
+        border: none !important;
+        font-size: 18px !important;
+        box-shadow: 0 8px 20px rgba(26,126,67,0.18) !important;
     }
 
     .process-marker + div.stButton > button:hover {
-        background: #095c32 !important;
+        background-color: #146435 !important;
         color: white !important;
-        border: 1px solid #084c2b !important;
+    }
+
+    /* File uploader dashed area */
+    .stFileUploader section {
+        border: 2px dashed #cccccc !important;
+        border-radius: 12px !important;
+        background-color: #ffffff !important;
+    }
+
+    /* Gold progress bar */
+    .stProgress > div > div > div > div {
+        background-color: #daa520 !important;
     }
 
     .processing-box {
-        background: #0B6B3A;
-        color: white;
-        padding: 14px 18px;
+        background: #ffffff;
+        color: #666;
+        padding: 12px 18px;
         border-radius: 14px;
         font-weight: 700;
-        text-align: center;
-        box-shadow: 0 6px 18px rgba(11,107,58,0.18);
-        border: 1px solid #095c32;
+        text-align: right;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+        border: 1px solid #ececec;
         margin-top: 10px;
         margin-bottom: 10px;
+        direction: rtl;
     }
 
     .metric-card {
@@ -311,44 +328,38 @@ if st.session_state.get("role") != "admin":
 user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 
-col1, col2 = st.columns([6, 2])
+top_left, top_center, top_right = st.columns([1, 2, 1], vertical_alignment="center")
 
-with col1:
+with top_left:
+    st.markdown('<div class="logout-marker"></div>', unsafe_allow_html=True)
+    if st.button("🚪 تسجيل الخروج", key="logout_btn", width="stretch"):
+        log_action(st.session_state.username, "Logout", "User logged out")
+        st.session_state.logged_in = False
+        st.session_state.show_admin_panel = False
+        st.rerun()
+
+with top_center:
     st.markdown(f"""
     <div class="dashboard-header">
-        <div class="header-main-text">
+        <div class="header-logo-wrap">
             <img src="{logo_url}" class="header-logo" alt="Hawelha Telecom Logo">
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-with col2:
-    st.markdown('<div class="user-actions-row">', unsafe_allow_html=True)
-    left_col, right_col = st.columns(2)
+with top_right:
+    st.markdown(f"""
+    <div class="header-user-info">
+        <div class="user-avatar">{user_initial}</div>
+        <span class="user-name">مرحباً، {st.session_state.username}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with left_col:
-        st.markdown('<div class="logout-marker"></div>', unsafe_allow_html=True)
-        if st.button("🚪 تسجيل الخروج", key="logout_btn", width="stretch"):
-            log_action(st.session_state.username, "Logout", "User logged out")
-            st.session_state.logged_in = False
-            st.session_state.show_admin_panel = False
-            st.rerun()
-
-    with right_col:
-        st.markdown(f"""
-        <div class="header-user-info">
-            <div class="user-avatar">{user_initial}</div>
-            <span class="user-name">مرحباً، {st.session_state.username}</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if st.session_state.get("role") == "admin":
-        if st.button("⚙️ Manage app", key="manage_app_btn", width="stretch"):
-            log_action(st.session_state.username, "Open Admin Panel", "Admin panel opened")
-            st.session_state.show_admin_panel = True
-            st.rerun()
+if st.session_state.get("role") == "admin":
+    if st.button("⚙️ Manage app", key="manage_app_btn", width="stretch"):
+        log_action(st.session_state.username, "Open Admin Panel", "Admin panel opened")
+        st.session_state.show_admin_panel = True
+        st.rerun()
 
 # ================= ADMIN PANEL (Real Management) =================
 if st.session_state.get("show_admin_panel", False) and st.session_state.get("role") == "admin":
@@ -621,18 +632,18 @@ def to_excel(df):
 # ================= FILE UPLOAD & PROCESSING =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
-if files:
-    st.markdown('<div class="process-marker"></div>', unsafe_allow_html=True)
-    if st.button("🚀 بدء المعالجة والتحليل", key="process_btn", width="stretch"):
-        log_action(st.session_state.username, "Processing Started", f"Files count: {len(files)} | Mode: {mode}")
+st.markdown('<div class="process-marker"></div>', unsafe_allow_html=True)
+if st.button("🚀 بدء المعالجة والتحليل", key="process_btn", width="stretch"):
+    log_action(st.session_state.username, "Processing Started", f"Files count: {len(files) if files else 0} | Mode: {mode}")
 
+    if files:
         progress_bar = st.progress(0)
         status_text = st.empty()
         all_data = []
 
         for idx, file in enumerate(files):
             status_text.markdown(
-                f'<div class="processing-box">⏳ جاري معالجة: {file.name}</div>',
+                f'<div class="processing-box">... جاري المعالجة {file.name}</div>',
                 unsafe_allow_html=True
             )
             progress_bar.progress((idx + 1) / len(files))
@@ -731,6 +742,8 @@ if files:
         else:
             log_action(st.session_state.username, "Processing Completed", "No data extracted from uploaded files")
             st.warning("لم يتم استخراج بيانات من الملفات المرفوعة.")
+    else:
+        st.warning("⚠️ يرجى رفع ملف PDF واحد على الأقل قبل بدء المعالجة.")
 
 # ================= FOOTER =================
 st.markdown("""
