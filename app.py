@@ -16,8 +16,11 @@ BG_COLOR = "#F4F6F8"
 CARD_BG = "#FFFFFF"
 
 def get_base64_image(path):
-    with open(path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
+    try:
+        with open(path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except:
+        return ""
 
 logo_base64 = get_base64_image("static/logo.png")
 
