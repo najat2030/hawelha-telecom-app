@@ -246,6 +246,11 @@ with col1:
     <div class="dashboard-header">
         <div class="header-main-text">
             <h1>Convert PDF invoices to Excel instantly</h1>
+            <div style="margin-top:12px;">
+                <img src="https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
+                     alt="Logo"
+                     style="max-width:180px; height:auto; display:block;">
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
