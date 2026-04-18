@@ -37,9 +37,10 @@ st.markdown("""
         justify-content: center;
         transition: all 0.3s ease;
         margin: 0 !important;
+        cursor: pointer !important; /* لضمان ظهور علامة اليد عند الوقوف عليه */
     }
 
-    /* ===== 2. تنسيق مربع مرحبا (أقصى اليمين وحجم مخصص) ===== */
+    /* ===== 2. تنسيق مربع مرحبا (أقصى اليمين) ===== */
     .royal-green-box {
         min-height: 45px !important;
         max-height: 45px !important;
@@ -53,15 +54,17 @@ st.markdown("""
         direction: rtl !important;
     }
 
-    /* ===== 3. تنسيق زر الخروج (أقصى اليسار وحجم متناسق) ===== */
+    /* ===== 3. تنسيق زر الخروج (إصلاح مشكلة عدم الاستجابة) ===== */
     div.stButton > button {
         min-height: 45px !important;
         max-height: 45px !important;
         width: fit-content !important;
         padding: 5px 25px !important;
         margin-left: 0 !important;
-        margin-right: auto !important;
+        margin-right: auto !important; /* يدفعه لليسار */
         font-size: 14px !important;
+        position: relative !important;
+        z-index: 999999 !important; /* يخليه فوق أي طبقة تانية عشان يشتغل */
     }
 
     .avatar-circle-white {
@@ -104,7 +107,7 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         border-right: 5px solid #1a7e43;
         margin-bottom: 10px;
-        text-align: center; /* توسيط المحتوى داخل الكارت */
+        text-align: center;
     }
     .metric-title { 
         font-size: 18px !important; 
@@ -122,7 +125,7 @@ st.markdown("""
         margin-top: 5px;
     }
 
-    /* ===== 6. زر المعالجة الرمادي (لون الخلفية) ===== */
+    /* ===== 6. زر المعالجة الرمادي ===== */
     .process-btn-area + div.stButton > button {
         background-color: #f0f2f6 !important;
         color: #555 !important;
@@ -160,7 +163,8 @@ logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main
 t_left, t_center, t_right = st.columns([1, 2, 1], vertical_alignment="center")
 
 with t_left:
-    if st.button("🚪 تسجيل الخروج"):
+    # تم وضع الـ key لضمان استجابة الزرار فوراً
+    if st.button("🚪 تسجيل الخروج", key="logout_btn"):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -213,7 +217,6 @@ def parse_ar(file):
 # ================= MAIN UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
-# الـ Marker لضبط لون الزرار للرمادي
 st.markdown('<div class="process-btn-area"></div>', unsafe_allow_html=True)
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
