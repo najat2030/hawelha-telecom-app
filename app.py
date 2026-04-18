@@ -155,6 +155,15 @@ st.markdown("""
     .stProgress > div > div > div > div {
         background-color: #daa520 !important;
     }
+
+    .footer {
+        text-align: center;
+        color: #888;
+        font-size: 12px;
+        margin-top: 50px;
+        padding: 20px;
+        border-top: 1px solid #e0e0e0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -366,3 +375,10 @@ if st.button("🚀 بدء المعالجة والتحليل", key="process_btn")
             st.warning("لم يتم استخراج بيانات من الملفات.")
     else:
         st.info("يرجى رفع الملفات أولاً.")
+
+# ================= FOOTER =================
+st.markdown("""
+<div class="footer">
+    © 2026 Najat El Bakry — All Rights Reserved | Powered by Streamlit
+</div>
+""", unsafe_allow_html=True)
