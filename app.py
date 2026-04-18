@@ -48,13 +48,14 @@ st.markdown("""
         font-size: 14px !important;
         gap: 10px !important;
         white-space: nowrap !important;
+        margin-left: auto !important;
     }
 
     /* زر تسجيل الخروج */
     div.stButton > button {
         min-height: 45px !important;
         max-height: 45px !important;
-        width: 100% !important; /* هياخد مساحة العمود الصغير بتاعه */
+        width: 100% !important;
         font-size: 14px !important;
     }
 
@@ -98,8 +99,18 @@ st.markdown("""
         margin-bottom: 10px;
         text-align: center;
     }
-    .metric-title { font-size: 18px !important; color: #555; font-weight: 600 !important; }
-    .metric-value { font-size: 32px !important; color: #1a7e43; font-weight: 800 !important; }
+
+    .metric-title {
+        font-size: 18px !important;
+        color: #555;
+        font-weight: 600 !important;
+    }
+
+    .metric-value {
+        font-size: 32px !important;
+        color: #1a7e43;
+        font-weight: 800 !important;
+    }
 
     /* زر المعالجة الرمادي */
     .process-btn-area + div.stButton > button {
@@ -113,12 +124,13 @@ st.markdown("""
 
 # ================= LOGIN =================
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
-if not st.session_state.logged_in:
-    st.session_state.logged_in = True 
+    st.session_state.logged_in = True
     st.session_state.username = "noga"
-    st.rerun()
+
+# هنا الحل الحقيقي: ما نعملش login تلقائي بعد logout
+if not st.session_state.logged_in:
+    st.warning("تم تسجيل الخروج بنجاح.")
+    st.stop()
 
 # ================= HEADER =================
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
@@ -127,27 +139,32 @@ logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main
 col_out, col_logo, col_me = st.columns([1, 4, 1], vertical_alignment="center")
 
 with col_out:
-    # الزرار هنا لوحده في عموده.. هيشتغل غصب عنه
-    if st.button("🚪 تسجيل الخروج"):
+    if st.button("🚪 تسجيل الخروج", key="logout_btn"):
         st.session_state.logged_in = False
         st.rerun()
 
 with col_logo:
-    st.markdown(f'<div class="header-container"><img src="{logo_url}" class="header-logo"></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="header-container"><img src="{logo_url}" class="header-logo"></div>',
+        unsafe_allow_html=True
+    )
 
 with col_me:
     user_initial = st.session_state.username[0].upper()
     st.markdown(f'''
-    <div class="royal-green-box" style="margin-left: auto;">
+    <div class="royal-green-box">
         <div class="avatar-circle-white">{user_initial}</div>
         <span>مرحباً، {st.session_state.username}</span>
     </div>
     ''', unsafe_allow_html=True)
 
 # ================= LOGIC =================
-def normalize(t): return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
+def normalize(t):
+    return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
+
 def extract_numbers(text):
-    if not text: return []
+    if not text:
+        return []
     text = normalize(str(text))
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
@@ -162,7 +179,9 @@ def parse_ar(file):
                     i = 0
                     while i < len(table):
                         row = table[i]
-                        if not row: i += 1; continue
+                        if not row:
+                            i += 1
+                            continue
                         text = normalize(" ".join([str(c) for c in row if c]))
                         phone = re.search(r'(01[0125]\d{8})', text)
                         if phone:
@@ -170,37 +189,78 @@ def parse_ar(file):
                             vals = extract_numbers(text)
                             if i + 1 < len(table):
                                 nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
-                                if len(nxt) > len(vals): vals = nxt; i += 1
+                                if len(nxt) > len(vals):
+                                    vals = nxt
+                                    i += 1
                             vals = [v for v in vals if str(int(v)) != str(int(p))][::-1]
-                            def g(idx): return vals[idx] if idx < len(vals) else 0
-                            records.append({"محمول": p, "رسوم شهرية": g(0), "رسوم الخدمات": g(1), "مكالمات محلية": g(2), "رسائل محلية": g(3), "إنترنت محلية": g(4), "مكالمات دولية": g(5), "رسائل دولية": g(6), "مكالمات تجوال": g(7), "رسائل تجوال": g(8), "إنترنت تجوال": g(9), "رسوم تسويات": g(10), "ضرائب": g(11), "إجمالي": g(12)})
+
+                            def g(idx):
+                                return vals[idx] if idx < len(vals) else 0
+
+                            records.append({
+                                "محمول": p,
+                                "رسوم شهرية": g(0),
+                                "رسوم الخدمات": g(1),
+                                "مكالمات محلية": g(2),
+                                "رسائل محلية": g(3),
+                                "إنترنت محلية": g(4),
+                                "مكالمات دولية": g(5),
+                                "رسائل دولية": g(6),
+                                "مكالمات تجوال": g(7),
+                                "رسائل تجوال": g(8),
+                                "إنترنت تجوال": g(9),
+                                "رسوم تسويات": g(10),
+                                "ضرائب": g(11),
+                                "إجمالي": g(12)
+                            })
                         i += 1
-    except: pass
+    except:
+        pass
     return records
 
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
+
 st.markdown('<div class="process-btn-area"></div>', unsafe_allow_html=True)
-if st.button("🚀 بدء المعالجة والتحليل"):
+if st.button("🚀 بدء المعالجة والتحليل", key="process_btn"):
     if files:
         progress_bar = st.progress(0)
         all_data = []
+
         for idx, file in enumerate(files):
             data = parse_ar(file)
             all_data.extend(data)
             progress_bar.progress((idx + 1) / len(files))
+
         if all_data:
             df = pd.DataFrame(all_data)
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
-            with m1: st.markdown(f'<div class="metric-card"><div class="metric-title">📱 إجمالي الخطوط</div><div class="metric-value">{len(df)}</div></div>', unsafe_allow_html=True)
-            with m2: st.markdown(f'<div class="metric-card"><div class="metric-title">💰 الرسوم الشهرية</div><div class="metric-value">{df["رسوم شهرية"].sum():,.0f}</div></div>', unsafe_allow_html=True)
-            with m3: st.markdown(f'<div class="metric-card"><div class="metric-title">🧾 رسوم التسويات</div><div class="metric-value">{df["رسوم تسويات"].sum():,.0f}</div></div>', unsafe_allow_html=True)
-            with m4: st.markdown(f'<div class="metric-card"><div class="metric-title">🏛️ إجمالي الضرائب</div><div class="metric-value">{df["ضرائب"].sum():,.0f}</div></div>', unsafe_allow_html=True)
-            with m5: st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي الكلي</div><div class="metric-value">{df["إجمالي"].sum():,.0f}</div></div>', unsafe_allow_html=True)
+
+            with m1:
+                st.markdown(f'<div class="metric-card"><div class="metric-title">📱 إجمالي الخطوط</div><div class="metric-value">{len(df)}</div></div>', unsafe_allow_html=True)
+            with m2:
+                st.markdown(f'<div class="metric-card"><div class="metric-title">💰 الرسوم الشهرية</div><div class="metric-value">{df["رسوم شهرية"].sum():,.0f}</div></div>', unsafe_allow_html=True)
+            with m3:
+                st.markdown(f'<div class="metric-card"><div class="metric-title">🧾 رسوم التسويات</div><div class="metric-value">{df["رسوم تسويات"].sum():,.0f}</div></div>', unsafe_allow_html=True)
+            with m4:
+                st.markdown(f'<div class="metric-card"><div class="metric-title">🏛️ إجمالي الضرائب</div><div class="metric-value">{df["ضرائب"].sum():,.0f}</div></div>', unsafe_allow_html=True)
+            with m5:
+                st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي الكلي</div><div class="metric-value">{df["إجمالي"].sum():,.0f}</div></div>', unsafe_allow_html=True)
+
             st.markdown("---")
             st.dataframe(df, use_container_width=True)
+
             excel_buffer = io.BytesIO()
             with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
-            st.download_button("📥 تحميل تقرير Excel", data=excel_buffer.getvalue(), file_name="Report.xlsx")
+
+            st.download_button(
+                "📥 تحميل تقرير Excel",
+                data=excel_buffer.getvalue(),
+                file_name="Report.xlsx"
+            )
+        else:
+            st.warning("لم يتم استخراج بيانات من الملفات.")
+    else:
+        st.info("يرجى رفع الملفات أولاً.")
