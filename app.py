@@ -37,7 +37,7 @@ st.markdown("""
         visibility: hidden;
     }
 
-    /* Login Background */
+    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
     .login-background {
         position: fixed;
         top: 0;
@@ -48,13 +48,14 @@ st.markdown("""
         z-index: -1;
     }
 
-    /* Login Card */
+    /* Glassmorphism Card for Login Form */
     .login-card {
         background: rgba(255, 255, 255, 0.95);
         padding: 40px;
         border-radius: 20px;
-        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
         backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         border: 1px solid rgba(255, 255, 255, 0.3);
         max-width: 400px;
         margin: 80px auto;
@@ -68,7 +69,7 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* Dashboard Header */
+    /* === DASHBOARD HEADER DESIGN === */
     .dashboard-header {
         display: flex;
         justify-content: space-between;
@@ -86,6 +87,7 @@ st.markdown("""
         font-size: 26px;
         color: #0B6B3A;
         font-weight: 800;
+        letter-spacing: 0.5px;
     }
 
     .header-user-info {
@@ -108,6 +110,7 @@ st.markdown("""
         align-items: center;
         justify-content: center;
         font-weight: bold;
+        font-size: 16px;
     }
 
     .user-name {
@@ -116,14 +119,14 @@ st.markdown("""
         font-size: 16px;
     }
 
-    /* Metrics */
+    /* Metric Cards Styling */
     .metric-card {
         background: white;
         padding: 25px;
         border-radius: 15px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         border-right: 5px solid #0B6B3A;
-        transition: 0.2s;
+        transition: transform 0.2s;
         height: 100%;
     }
 
@@ -135,6 +138,7 @@ st.markdown("""
     .metric-title {
         color: #666;
         font-size: 15px;
+        font-weight: 500;
         margin-bottom: 10px;
     }
 
@@ -192,7 +196,6 @@ def login_page():
         </div>
         """, unsafe_allow_html=True)
         
-        # ✅ التصحيح هنا: استخدام "hidden" بدلاً من "collapsed"
         username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="hidden")
         password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")  
         
@@ -216,7 +219,7 @@ user_initial = st.session_state.username[0].upper() if st.session_state.username
 col1, col2 = st.columns([6, 2])
 
 with col1:
-    st.markdown(f"""
+    st.markdown("""
     <div class="dashboard-header">
         <div class="header-main-text">
             <h1>Convert PDF invoices to Excel instantly</h1>
@@ -225,7 +228,6 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
-    # عرض معلومات المستخدم (Avatar + Name)
     st.markdown(f"""
     <div style="display:flex; justify-content:flex-end; align-items:center; gap:15px; padding-top:10px;">
         <div class="header-user-info">
@@ -235,15 +237,12 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-    # إضافة مسافة بسيطة قبل الأزرار
     st.write("") 
 
-    # زر تسجيل الخروج - بسيط ومضمون ويعمل فوراً
     if st.button("🚪 تسجيل الخروج", key="logout_btn", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
-    # زر Manage App - يظهر فقط للأدمن
     if st.session_state.role == "admin":
         if st.button("⚙️ Manage app", key="manage_app_btn", use_container_width=True):
             st.session_state.show_admin_panel = True
@@ -254,11 +253,9 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
     st.markdown("---")
     st.markdown("### ⚙️ لوحة إدارة المستخدمين")
 
-    # عرض جدول المستخدمين
     st.markdown("#### قائمة المستخدمين الحاليين:")
     st.dataframe(df_users, use_container_width=True)
 
-    # نموذج إضافة مستخدم جديد
     st.markdown("#### ➕ إضافة مستخدم جديد:")
     with st.form("add_user_form"):
         new_username = st.text_input("اسم المستخدم الجديد")
@@ -271,7 +268,6 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
                 if new_username in users:
                     st.error("❌ اسم المستخدم موجود بالفعل!")
                 else:
-                    # إضافة إلى DataFrame
                     new_row = pd.DataFrame([{
                         "Username": new_username,
                         "Password": new_password,
@@ -279,10 +275,8 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
                     }])
                     df_users = pd.concat([df_users, new_row], ignore_index=True)
                     
-                    # حفظ الملف
                     df_users.to_excel("users.xlsx", index=False)
                     
-                    # تحديث قاموس المستخدمين
                     users[new_username] = {
                         "password": new_password,
                         "role": new_role
@@ -293,7 +287,6 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
             else:
                 st.error("❌ يرجى ملء جميع الحقول!")
 
-    # زر إغلاق اللوحة
     if st.button("🔙 العودة للداشبورد", key="close_admin"):
         st.session_state.show_admin_panel = False
         st.rerun()
@@ -511,7 +504,6 @@ if files:
             status_text.text(f"⏳ جاري معالجة: {file.name}")
             progress_bar.progress((idx+1)/len(files))
 
-            # Logic Selection - CORRECTED AND COMPLETE LINES
             if mode == "English 🌍":
                 data = parse_en(file)
             elif mode == "Auto 🤖":
@@ -520,10 +512,9 @@ if files:
                     data = parse_en(file)
                 if not data: 
                     data = parse_ai(file)
-            else: # Arabic
+            else:
                 data = parse_ar(file)
                 
-            # Fallback to AI if specific parsers fail - CORRECTED LINE
             if not data: 
                 data = parse_ai(file)
 
@@ -533,24 +524,20 @@ if files:
         progress_bar.progress(100)
         status_text.empty()
 
-        # CORRECTED LINE
         if all_data:
             df_result = pd.DataFrame(all_data)
             
-            # Calculations
             total_lines = len(df_result)
             sum_monthly = df_result["رسوم شهرية"].sum()
             sum_settlements = df_result["رسوم تسويات"].sum()
             sum_taxes = df_result["ضرائب"].sum()
             sum_total = df_result["إجمالي"].sum()
 
-            # Helper to format currency
             def fmt_curr(val):
                 return f"{val:,.0f} ج.م"
 
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # ================= PROFESSIONAL DASHBOARD METRICS =================
             st.markdown("### 📈 ملخص التحليل المالي")
             
             m1, m2, m3, m4, m5 = st.columns(5)
