@@ -43,31 +43,49 @@ st.markdown(f"""
         visibility: hidden;
     }}
 
-    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
+    /* === LOGIN PAGE BACKGROUND - SaaS Watermark === */
     .login-background {{
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         background-color: #F4F6F8;
+        z-index: -2;
+        overflow: hidden;
+    }}
+
+    .login-background::before {{
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(135deg, rgba(11, 107, 58, 0.05) 0%, rgba(244, 246, 248, 0.92) 35%, rgba(244, 246, 248, 0.96) 100%),
+            radial-gradient(circle at 20% 20%, rgba(11, 107, 58, 0.08) 0%, transparent 35%),
+            radial-gradient(circle at 80% 80%, rgba(11, 107, 58, 0.05) 0%, transparent 30%);
+        z-index: -2;
+    }}
+
+    .login-background::after {{
+        content: "";
+        position: absolute;
+        inset: 0;
         background-image: url("data:image/png;base64,{logo_base64}");
         background-repeat: no-repeat;
-        background-position: center center;
-        background-size: 420px auto;
-        opacity: 0.08;
+        background-position: center;
+        background-size: 600px auto;
+        opacity: 0.07;
+        filter: blur(7px) grayscale(25%) contrast(95%);
+        transform: scale(1.15);
         z-index: -1;
     }}
 
     /* Glassmorphism Card for Login Form */
     .login-card {{
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.92);
         padding: 40px;
         border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.35);
         max-width: 400px;
         margin: 80px auto;
         text-align: center;
