@@ -510,15 +510,15 @@ if files:
                 data = parse_en(file)
             elif mode == "Auto 🤖":
                 data = parse_ar(file)
-                if not 
+                if not data:
                     data = parse_en(file)
-                if not 
+                if not data: 
                     data = parse_ai(file)
             else: # Arabic
                 data = parse_ar(file)
                 
             # Fallback to AI if specific parsers fail - CORRECTED LINE
-            if not 
+            if not data: 
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -528,7 +528,7 @@ if files:
         status_text.empty()
 
         # CORRECTED LINE
-        if all_
+        if all_data:
             df_result = pd.DataFrame(all_data)
             
             # Calculations
