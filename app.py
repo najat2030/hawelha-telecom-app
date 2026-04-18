@@ -82,12 +82,27 @@ st.markdown("""
         border-bottom: 4px solid #0B6B3A;
     }
 
+    .header-main-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
     .header-main-text h1 {
         margin: 0;
         font-size: 26px;
         color: #0B6B3A;
         font-weight: 800;
         letter-spacing: 0.5px;
+    }
+
+    .header-logo {
+        width: 220px;
+        max-width: 100%;
+        height: auto;
+        display: block;
+        object-fit: contain;
     }
 
     .header-user-info {
@@ -215,14 +230,16 @@ if not st.session_state.logged_in:
 
 # ================= DASHBOARD HEADER =================
 user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
+logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 
 col1, col2 = st.columns([6, 2])
 
 with col1:
-    st.markdown("""
+    st.markdown(f"""
     <div class="dashboard-header">
         <div class="header-main-text">
             <h1>Convert PDF invoices to Excel instantly</h1>
+            <img src="{logo_url}" class="header-logo" alt="Hawelha Telecom Logo">
         </div>
     </div>
     """, unsafe_allow_html=True)
