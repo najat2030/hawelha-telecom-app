@@ -31,14 +31,14 @@ st.markdown(f"""
 
     /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
     .login-background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #F4F6F8;
-    z-index: -1;
-}
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #F4F6F8;
+        z-index: -1;
+    }
 
     /* Glassmorphism Card for Login Form */
     .login-card {{
@@ -185,11 +185,10 @@ def login_page():
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-        st.image("./static/logo.png")
         
-        username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
-        password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")  
+        # ✅ التصحيح هنا: استخدام "hidden" بدلاً من "collapsed"
+        username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="hidden")
+        password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")  
         
         if st.button("تسجيل الدخول", use_container_width=True):
             if username in users and users[username]["password"] == password:
@@ -511,15 +510,15 @@ if files:
                 data = parse_en(file)
             elif mode == "Auto 🤖":
                 data = parse_ar(file)
-                if not data: 
+                if not 
                     data = parse_en(file)
-                if not data:
+                if not 
                     data = parse_ai(file)
             else: # Arabic
                 data = parse_ar(file)
                 
             # Fallback to AI if specific parsers fail - CORRECTED LINE
-            if not data: 
+            if not 
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -529,7 +528,7 @@ if files:
         status_text.empty()
 
         # CORRECTED LINE
-        if all_data:
+        if all_
             df_result = pd.DataFrame(all_data)
             
             # Calculations
