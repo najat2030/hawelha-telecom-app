@@ -24,7 +24,6 @@ st.markdown("""
         font-family: 'Tajawal', sans-serif;
     }
 
-    /* Hide Default Streamlit Elements */
     #MainMenu {
         visibility: hidden;
     }
@@ -37,7 +36,6 @@ st.markdown("""
         visibility: hidden;
     }
 
-    /* === LOGIN PAGE BACKGROUND - SaaS Watermark === */
     .login-background {
         position: fixed;
         inset: 0;
@@ -71,7 +69,6 @@ st.markdown("""
         z-index: -1;
     }
 
-    /* Glassmorphism Card for Login Form */
     .login-card {
         background: rgba(255, 255, 255, 0.92);
         padding: 40px;
@@ -92,7 +89,6 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* === DASHBOARD HEADER DESIGN === */
     .dashboard-header {
         display: flex;
         justify-content: space-between;
@@ -142,7 +138,6 @@ st.markdown("""
         font-size: 16px;
     }
 
-    /* Metric Cards Styling */
     .metric-card {
         background: white;
         padding: 25px;
@@ -171,7 +166,6 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Footer */
     .footer {
         text-align: center;
         color: #888;
@@ -246,10 +240,10 @@ with col1:
     <div class="dashboard-header">
         <div class="header-main-text">
             <h1>Convert PDF invoices to Excel instantly</h1>
-            <div style="margin-top:12px;">
+            <div style="margin-top:12px; width:100%;">
                 <img src="https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
                      alt="Logo"
-                     style="max-width:180px; height:auto; display:block;">
+                     style="width:100%; max-width:100%; height:auto; display:block;">
             </div>
         </div>
     </div>
@@ -538,12 +532,12 @@ if files:
                 data = parse_ar(file)
                 if not data:
                     data = parse_en(file)
-                if not data: 
+                if not data:
                     data = parse_ai(file)
             else:
                 data = parse_ar(file)
-                
-            if not data: 
+
+            if not data:
                 data = parse_ai(file)
 
             all_data.extend(data)
