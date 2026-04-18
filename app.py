@@ -47,39 +47,21 @@ st.markdown(f"""
     }}
 
     /* === LOGIN PAGE BACKGROUND - SaaS Watermark === */
-    .login-background {{
-        position: fixed;
-        inset: 0;
-        background-color: #F4F6F8;
-        z-index: -2;
-        overflow: hidden;
-    }}
+    .login-background {
+    position: fixed;
+    inset: 0;
 
-    .login-background::before {{
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image:
-            linear-gradient(135deg, rgba(11, 107, 58, 0.05) 0%, rgba(244, 246, 248, 0.92) 35%, rgba(244, 246, 248, 0.96) 100%),
-            radial-gradient(circle at 20% 20%, rgba(11, 107, 58, 0.08) 0%, transparent 35%),
-            radial-gradient(circle at 80% 80%, rgba(11, 107, 58, 0.05) 0%, transparent 30%);
-        z-index: -2;
-    }}
+    background-image: url("https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 600px auto;
 
-    .login-background::after {{
-        content: "";
-        position: absolute;
-        inset: 0;
-        background-image: url("data:image/png;base64,{logo_base64}");
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 600px auto;
-        opacity: 0.07;
-        filter: blur(7px) grayscale(25%) contrast(95%);
-        transform: scale(1.15);
-        z-index: -1;
-    }}
+    opacity: 0.07;
+    filter: blur(7px) grayscale(25%) contrast(95%);
+    transform: scale(1.15);
 
+    z-index: -1;
+}
     /* Glassmorphism Card for Login Form */
     .login-card {{
         background: rgba(255, 255, 255, 0.92);
