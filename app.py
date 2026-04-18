@@ -60,7 +60,7 @@ st.markdown("""
         min-height: 45px !important;
         max-height: 45px !important;
         width: 100% !important;
-        padding: 5px 12px !important;
+        padding: 5px 10px !important;
         font-size: 14px !important;
         gap: 8px !important;
         overflow: hidden;
@@ -140,7 +140,7 @@ logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main
 t_left, t_center, t_right = st.columns([1, 2, 1], vertical_alignment="center")
 
 with t_left:
-    if st.button("🚪 تسجيل الخروج"):
+    if st.button(" تسجيل الخروج"):
         st.session_state.logged_in = False
         st.rerun()
 
