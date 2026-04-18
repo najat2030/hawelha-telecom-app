@@ -35,12 +35,12 @@ st.markdown(f"""
         left: 0;
         width: 100%;
         height: 100%;
-        background-image: url('app/static/logo.png'); /* <-- هنا نستخدم الشعار المحلي */
+        background-image: url('static/logo.png');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
         z-index: -1;
-        opacity: 0.15; /* خفيف عشان ما يغطييش على الفورم */
+        opacity: 0.15;
     }}
 
     /* Glassmorphism Card for Login */
@@ -229,7 +229,7 @@ with col1:
     st.markdown(f"""
     <div class="dashboard-header">
         <div class="header-logo-section">
-            <img src="app/static/logo.png" class="header-logo-img" alt="Company Logo">
+            <img src="static/logo.png" class="header-logo-img" alt="Company Logo">
             <div class="header-text">
                 <h1>Nagat Telecom</h1>
                 <p>Convert PDF invoices to Excel instantly</p>
@@ -262,7 +262,7 @@ mode = st.radio(
 )
 
 # =========================================================
-# 🚫🚫 DO NOT MODIFY BELOW THIS LINE (Logic Preserved) 🚫
+# 🚫 DO NOT MODIFY BELOW THIS LINE (Logic Preserved) 🚫
 # =========================================================
 
 def normalize(t):
