@@ -15,82 +15,80 @@ PRIMARY_COLOR = "#0B6B3A"  # Royal Green
 BG_COLOR = "#F4F6F8"
 CARD_BG = "#FFFFFF"
 
-st.markdown(f"""
+st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
-    .stApp {{
-        background-color: {BG_COLOR};
+    .stApp {
+        background-color: #F4F6F8;
         font-family: 'Tajawal', sans-serif;
-    }}
+    }
 
     /* Hide Default Streamlit Elements */
-    #MainMenu {{
+    #MainMenu {
         visibility: hidden;
-    }}
+    }
 
-    footer {{
+    footer {
         visibility: hidden;
-    }}
+    }
 
-    header {{
+    header {
         visibility: hidden;
-    }}
+    }
 
-    /* Login Page Background */
-    .login-background {{
+    /* Login Background */
+    .login-background {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: {BG_COLOR};
+        background-color: #F4F6F8;
         z-index: -1;
-    }}
+    }
 
-    /* Glassmorphism Card for Login Form */
-    .login-card {{
+    /* Login Card */
+    .login-card {
         background: rgba(255, 255, 255, 0.95);
         padding: 40px;
         border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
         backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
         border: 1px solid rgba(255, 255, 255, 0.3);
         max-width: 400px;
         margin: 80px auto;
         text-align: center;
-    }}
+    }
 
-    .login-title {{
-        color: {PRIMARY_COLOR};
+    .login-title {
+        color: #0B6B3A;
         font-size: 24px;
         font-weight: 700;
         margin-bottom: 25px;
-    }}
+    }
 
     /* Dashboard Header */
-    .dashboard-header {{
+    .dashboard-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         background: white;
         padding: 15px 30px;
         border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         margin-bottom: 30px;
-        border-bottom: 4px solid {PRIMARY_COLOR};
-    }}
+        border-bottom: 4px solid #0B6B3A;
+    }
 
-    .header-main-text h1 {{
+    .header-main-text h1 {
         margin: 0;
         font-size: 26px;
-        color: {PRIMARY_COLOR};
+        color: #0B6B3A;
         font-weight: 800;
-        letter-spacing: 0.5px;
-    }}
+    }
 
-    .header-user-info {{
+    .header-user-info {
         display: flex;
         align-items: center;
         gap: 15px;
@@ -98,65 +96,63 @@ st.markdown(f"""
         padding: 8px 20px;
         border-radius: 50px;
         border: 1px solid #dcfce7;
-    }}
+    }
 
-    .user-avatar {{
+    .user-avatar {
         width: 35px;
         height: 35px;
-        background: {PRIMARY_COLOR};
+        background: #0B6B3A;
         color: white;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        font-size: 16px;
-    }}
+    }
 
-    .user-name {{
+    .user-name {
         font-weight: 600;
         color: #333;
         font-size: 16px;
-    }}
+    }
 
-    /* Metric Cards */
-    .metric-card {{
+    /* Metrics */
+    .metric-card {
         background: white;
         padding: 25px;
         border-radius: 15px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-        border-right: 5px solid {PRIMARY_COLOR};
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        border-right: 5px solid #0B6B3A;
+        transition: 0.2s;
         height: 100%;
-    }}
+    }
 
-    .metric-card:hover {{
+    .metric-card:hover {
         transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    }}
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
 
-    .metric-title {{
+    .metric-title {
         color: #666;
         font-size: 15px;
-        font-weight: 500;
         margin-bottom: 10px;
-    }}
+    }
 
-    .metric-value {{
-        color: {PRIMARY_COLOR};
+    .metric-value {
+        color: #0B6B3A;
         font-size: 26px;
         font-weight: 700;
-    }}
+    }
 
     /* Footer */
-    .footer {{
+    .footer {
         text-align: center;
         color: #888;
         font-size: 12px;
         margin-top: 50px;
         padding: 20px;
         border-top: 1px solid #e0e0e0;
-    }}
+    }
 </style>
 """, unsafe_allow_html=True)
 
