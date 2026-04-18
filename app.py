@@ -190,7 +190,7 @@ def login_page():
         </div>
         """, unsafe_allow_html=True)
         
-                username = st.text_input("Username", placeholder="اسم المستخدم 👤", label_visibility="hidden")
+        username = st.text_input("Username", placeholder="اسم المستخدم 👤", label_visibility="hidden")
         password = st.text_input("Password", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")  
         
         if st.button("تسجيل الدخول", use_container_width=True):
