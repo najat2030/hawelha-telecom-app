@@ -86,41 +86,45 @@ st.markdown("""
         margin: 0 auto;
     }
 
-    /* ===== Greeting / Logout same look ===== */
-    .header-user-info {
-        background-color: #e6f3e6;
-        color: #333;
-        padding: 10px 25px;
-        border-radius: 50px;
-        border: 1px solid #ccebcc;
-        min-height: 58px;
+    /* ===== Royal Green Header Boxes ===== */
+    .royal-green-box {
+        background-color: #1a7e43 !important;
+        color: white !important;
+        padding: 10px 20px !important;
+        border-radius: 50px !important;
+        border: 2px solid #146435 !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 600 !important;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        box-sizing: border-box;
+        text-align: center;
+        transition: all 0.3s ease;
+        margin: 0 !important;
+        min-height: 55px !important;
         width: 100%;
+        box-sizing: border-box;
         direction: rtl;
+        gap: 12px;
     }
 
-    .user-avatar {
-        background-color: #1a7e43;
-        color: white;
+    .avatar-circle-white {
+        background-color: white !important;
+        color: #1a7e43 !important;
         border-radius: 50%;
-        width: 42px;
-        height: 42px;
+        width: 32px;
+        height: 32px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
-        font-size: 18px;
+        font-weight: bold;
         flex-shrink: 0;
     }
 
-    .user-name {
+    .user-name-royal {
+        color: white;
         font-size: 16px;
         font-weight: 700;
-        color: #333;
         white-space: nowrap;
     }
 
@@ -134,28 +138,30 @@ st.markdown("""
     div.stButton > button {
         border-radius: 50px !important;
         font-weight: 700 !important;
-        min-height: 58px !important;
+        min-height: 55px !important;
         transition: all 0.3s ease !important;
     }
 
-    /* Logout button = same as greeting */
+    /* Logout button => Royal Green */
     .logout-marker + div.stButton > button {
-        background-color: #e6f3e6 !important;
-        color: #333 !important;
-        border: 1px solid #ccebcc !important;
+        background-color: #1a7e43 !important;
+        color: white !important;
+        border: 2px solid #146435 !important;
         box-shadow: none !important;
         width: 100% !important;
         font-size: 16px !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+        font-weight: 600 !important;
     }
 
     .logout-marker + div.stButton > button:hover {
-        background-color: #d8eed8 !important;
-        border-color: #b3dfb3 !important;
-        color: #1a7e43 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08) !important;
+        background-color: #146435 !important;
+        color: white !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+        transform: translateY(-2px) !important;
     }
 
-    /* Manage app keeps default-ish green style */
+    /* Manage app keeps default-ish style */
     div.stButton > button[kind="secondary"] {
         border-radius: 14px !important;
     }
@@ -349,9 +355,9 @@ with top_center:
 
 with top_right:
     st.markdown(f"""
-    <div class="header-user-info">
-        <div class="user-avatar">{user_initial}</div>
-        <span class="user-name">مرحباً، {st.session_state.username}</span>
+    <div class="royal-green-box">
+        <div class="avatar-circle-white">{user_initial}</div>
+        <span class="user-name-royal">مرحباً، {st.session_state.username}</span>
     </div>
     """, unsafe_allow_html=True)
 
