@@ -15,55 +15,64 @@ PRIMARY_COLOR = "#0B6B3A"  # Royal Green
 BG_COLOR = "#F4F6F8"
 CARD_BG = "#FFFFFF"
 
-def get_base64_image(path):
-    try:
-        with open(path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode()
-    except:
-        return ""
-
-logo_base64 = get_base64_image("static/logo.png")
-
-st.markdown(f"""
+st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
-    .stApp {{
+    .stApp {
         background-color: #F4F6F8;
         font-family: 'Tajawal', sans-serif;
-    }}
+    }
 
     /* Hide Default Streamlit Elements */
-    #MainMenu {{
+    #MainMenu {
         visibility: hidden;
-    }}
+    }
 
-    footer {{
+    footer {
         visibility: hidden;
-    }}
+    }
 
-    header {{
+    header {
         visibility: hidden;
-    }}
+    }
 
     /* === LOGIN PAGE BACKGROUND - SaaS Watermark === */
     .login-background {
-    position: fixed;
-    inset: 0;
+        position: fixed;
+        inset: 0;
+        background-color: #F4F6F8;
+        z-index: -2;
+        overflow: hidden;
+    }
 
-    background-image: url("https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 600px auto;
+    .login-background::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+            linear-gradient(135deg, rgba(11, 107, 58, 0.05) 0%, rgba(244, 246, 248, 0.92) 35%, rgba(244, 246, 248, 0.96) 100%),
+            radial-gradient(circle at 20% 20%, rgba(11, 107, 58, 0.08) 0%, transparent 35%),
+            radial-gradient(circle at 80% 80%, rgba(11, 107, 58, 0.05) 0%, transparent 30%);
+        z-index: -2;
+    }
 
-    opacity: 0.07;
-    filter: blur(7px) grayscale(25%) contrast(95%);
-    transform: scale(1.15);
+    .login-background::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 600px auto;
+        opacity: 0.07;
+        filter: blur(7px) grayscale(25%) contrast(95%);
+        transform: scale(1.15);
+        z-index: -1;
+    }
 
-    z-index: -1;
-}
     /* Glassmorphism Card for Login Form */
-    .login-card {{
+    .login-card {
         background: rgba(255, 255, 255, 0.92);
         padding: 40px;
         border-radius: 20px;
@@ -74,17 +83,17 @@ st.markdown(f"""
         max-width: 400px;
         margin: 80px auto;
         text-align: center;
-    }}
+    }
 
-    .login-title {{
+    .login-title {
         color: #0B6B3A;
         font-size: 24px;
         font-weight: 700;
         margin-bottom: 25px;
-    }}
+    }
 
     /* === DASHBOARD HEADER DESIGN === */
-    .dashboard-header {{
+    .dashboard-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -94,17 +103,17 @@ st.markdown(f"""
         box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         margin-bottom: 30px;
         border-bottom: 4px solid #0B6B3A;
-    }}
+    }
 
-    .header-main-text h1 {{
+    .header-main-text h1 {
         margin: 0;
         font-size: 26px;
         color: #0B6B3A;
         font-weight: 800;
         letter-spacing: 0.5px;
-    }}
+    }
 
-    .header-user-info {{
+    .header-user-info {
         display: flex;
         align-items: center;
         gap: 15px;
@@ -112,9 +121,9 @@ st.markdown(f"""
         padding: 8px 20px;
         border-radius: 50px;
         border: 1px solid #dcfce7;
-    }}
+    }
 
-    .user-avatar {{
+    .user-avatar {
         width: 35px;
         height: 35px;
         background: #0B6B3A;
@@ -125,16 +134,16 @@ st.markdown(f"""
         justify-content: center;
         font-weight: bold;
         font-size: 16px;
-    }}
+    }
 
-    .user-name {{
+    .user-name {
         font-weight: 600;
         color: #333;
         font-size: 16px;
-    }}
+    }
 
     /* Metric Cards Styling */
-    .metric-card {{
+    .metric-card {
         background: white;
         padding: 25px;
         border-radius: 15px;
@@ -142,35 +151,35 @@ st.markdown(f"""
         border-right: 5px solid #0B6B3A;
         transition: transform 0.2s;
         height: 100%;
-    }}
+    }
 
-    .metric-card:hover {{
+    .metric-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }}
+    }
 
-    .metric-title {{
+    .metric-title {
         color: #666;
         font-size: 15px;
         font-weight: 500;
         margin-bottom: 10px;
-    }}
+    }
 
-    .metric-value {{
+    .metric-value {
         color: #0B6B3A;
         font-size: 26px;
         font-weight: 700;
-    }}
+    }
 
     /* Footer */
-    .footer {{
+    .footer {
         text-align: center;
         color: #888;
         font-size: 12px;
         margin-top: 50px;
         padding: 20px;
         border-top: 1px solid #e0e0e0;
-    }}
+    }
 </style>
 """, unsafe_allow_html=True)
 
