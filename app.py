@@ -264,6 +264,14 @@ with col_me:
     </div>
     ''', unsafe_allow_html=True)
 
+# ================= MODE SELECTION =================
+mode = st.radio(
+    "🌐 وضع التحليل",
+    ["Auto 🤖", "عربي 🇪", "English 🌍"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
 # ================= LOGIC =================
 def normalize(t):
     return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
@@ -274,6 +282,7 @@ def extract_numbers(text):
     text = normalize(str(text))
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
+    text = re.sub(r'-\s+(\d)', r'-\1', text)
     return [float(n) for n in re.findall(r'-?\d+(?:\.\d+)?', text)]
 
 def parse_ar(file):
@@ -328,6 +337,57 @@ def parse_ar(file):
         pass
     return records
 
+def parse_en(file):
+    records = []
+    try:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages[2:]:
+                for table in page.extract_tables() or []:
+                    i = 0
+                    while i < len(table):
+                        row = table[i]
+                        if not row:
+                            i += 1
+                            continue
+
+                        text = " ".join([str(c) for c in row if c])
+                        phone = re.search(r'(01[0125]\d{8})', text)
+
+                        if phone:
+                            p = phone.group(1)
+
+                            next_text = ""
+                            if i + 1 < len(table):
+                                next_text = " ".join([str(c) for c in table[i + 1] if c])
+
+                            vals = extract_numbers(next_text)
+                            vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                            records.append({
+                                "محمول": p,
+                                "رسوم شهرية": vals[0] if len(vals) > 0 else 0,
+                                "رسوم الخدمات": vals[1] if len(vals) > 1 else 0,
+                                "مكالمات محلية": vals[2] if len(vals) > 2 else 0,
+                                "رسائل محلية": vals[3] if len(vals) > 3 else 0,
+                                "إنترنت محلية": vals[4] if len(vals) > 4 else 0,
+                                "مكالمات دولية": vals[5] if len(vals) > 5 else 0,
+                                "رسائل دولية": vals[6] if len(vals) > 6 else 0,
+                                "مكالمات تجوال": vals[7] if len(vals) > 7 else 0,
+                                "رسائل تجوال": vals[8] if len(vals) > 8 else 0,
+                                "إنترنت تجوال": vals[9] if len(vals) > 9 else 0,
+                                "رسوم تسويات": vals[10] if len(vals) > 10 else 0,
+                                "ضرائب": vals[11] if len(vals) > 11 else 0,
+                                "إجمالي": vals[-1] if vals else 0
+                            })
+
+                            i += 2
+                            continue
+
+                        i += 1
+    except Exception:
+        pass
+    return records
+
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
@@ -338,9 +398,19 @@ if st.button("🚀 بدء المعالجة والتحليل", key="process_btn")
         all_data = []
 
         for idx, file in enumerate(files):
-            data = parse_ar(file)
+            if mode == "English 🌍":
+                data = parse_en(file)
+            elif mode == "عربي 🇪":
+                data = parse_ar(file)
+            else:
+                data = parse_ar(file)
+                if not data:
+                    file.seek(0)
+                    data = parse_en(file)
+
             all_data.extend(data)
             progress_bar.progress((idx + 1) / len(files))
+            gc.collect()
 
         if all_data:
             df = pd.DataFrame(all_data)
