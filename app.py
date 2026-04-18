@@ -15,41 +15,52 @@ PRIMARY_COLOR = "#0B6B3A"  # Royal Green
 BG_COLOR = "#F4F6F8"
 CARD_BG = "#FFFFFF"
 
-st.markdown("""
+def get_base64_image(path):
+    with open(path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+logo_base64 = get_base64_image("static/logo.png")
+
+st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 
-    .stApp {
+    .stApp {{
         background-color: #F4F6F8;
         font-family: 'Tajawal', sans-serif;
-    }
+    }}
 
     /* Hide Default Streamlit Elements */
-    #MainMenu {
+    #MainMenu {{
         visibility: hidden;
-    }
+    }}
 
-    footer {
+    footer {{
         visibility: hidden;
-    }
+    }}
 
-    header {
+    header {{
         visibility: hidden;
-    }
+    }}
 
     /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
-    .login-background {
+    .login-background {{
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         background-color: #F4F6F8;
+        background-image: url("data:image/png;base64,{logo_base64}");
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: 420px auto;
+        opacity: 0.08;
         z-index: -1;
-    }
+    }}
 
     /* Glassmorphism Card for Login Form */
-    .login-card {
+    .login-card {{
         background: rgba(255, 255, 255, 0.95);
         padding: 40px;
         border-radius: 20px;
@@ -60,17 +71,17 @@ st.markdown("""
         max-width: 400px;
         margin: 80px auto;
         text-align: center;
-    }
+    }}
 
-    .login-title {
+    .login-title {{
         color: #0B6B3A;
         font-size: 24px;
         font-weight: 700;
         margin-bottom: 25px;
-    }
+    }}
 
     /* === DASHBOARD HEADER DESIGN === */
-    .dashboard-header {
+    .dashboard-header {{
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -80,17 +91,17 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         margin-bottom: 30px;
         border-bottom: 4px solid #0B6B3A;
-    }
+    }}
 
-    .header-main-text h1 {
+    .header-main-text h1 {{
         margin: 0;
         font-size: 26px;
         color: #0B6B3A;
         font-weight: 800;
         letter-spacing: 0.5px;
-    }
+    }}
 
-    .header-user-info {
+    .header-user-info {{
         display: flex;
         align-items: center;
         gap: 15px;
@@ -98,9 +109,9 @@ st.markdown("""
         padding: 8px 20px;
         border-radius: 50px;
         border: 1px solid #dcfce7;
-    }
+    }}
 
-    .user-avatar {
+    .user-avatar {{
         width: 35px;
         height: 35px;
         background: #0B6B3A;
@@ -111,16 +122,16 @@ st.markdown("""
         justify-content: center;
         font-weight: bold;
         font-size: 16px;
-    }
+    }}
 
-    .user-name {
+    .user-name {{
         font-weight: 600;
         color: #333;
         font-size: 16px;
-    }
+    }}
 
     /* Metric Cards Styling */
-    .metric-card {
+    .metric-card {{
         background: white;
         padding: 25px;
         border-radius: 15px;
@@ -128,35 +139,35 @@ st.markdown("""
         border-right: 5px solid #0B6B3A;
         transition: transform 0.2s;
         height: 100%;
-    }
+    }}
 
-    .metric-card:hover {
+    .metric-card:hover {{
         transform: translateY(-5px);
         box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    }
+    }}
 
-    .metric-title {
+    .metric-title {{
         color: #666;
         font-size: 15px;
         font-weight: 500;
         margin-bottom: 10px;
-    }
+    }}
 
-    .metric-value {
+    .metric-value {{
         color: #0B6B3A;
         font-size: 26px;
         font-weight: 700;
-    }
+    }}
 
     /* Footer */
-    .footer {
+    .footer {{
         text-align: center;
         color: #888;
         font-size: 12px;
         margin-top: 50px;
         padding: 20px;
         border-top: 1px solid #e0e0e0;
-    }
+    }}
 </style>
 """, unsafe_allow_html=True)
 
