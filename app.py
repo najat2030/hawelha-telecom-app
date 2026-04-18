@@ -6,6 +6,7 @@ import io
 import base64
 import os
 import gc
+from datetime import datetime
 
 # ================= CONFIG =================
 st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
@@ -24,7 +25,6 @@ st.markdown("""
         font-family: 'Tajawal', sans-serif;
     }
 
-    /* Hide Default Streamlit Elements */
     #MainMenu {
         visibility: hidden;
     }
@@ -37,7 +37,6 @@ st.markdown("""
         visibility: hidden;
     }
 
-    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
     .login-background {
         position: fixed;
         top: 0;
@@ -48,7 +47,6 @@ st.markdown("""
         z-index: -1;
     }
 
-    /* Glassmorphism Card for Login Form */
     .login-card {
         background: rgba(255, 255, 255, 0.95);
         padding: 40px;
@@ -69,7 +67,6 @@ st.markdown("""
         margin-bottom: 25px;
     }
 
-    /* === DASHBOARD HEADER DESIGN === */
     .dashboard-header {
         display: flex;
         justify-content: center;
@@ -119,6 +116,8 @@ st.markdown("""
         padding: 8px 20px;
         border-radius: 50px;
         border: 1px solid #dcfce7;
+        width: fit-content;
+        margin-left: auto;
     }
 
     .user-avatar {
@@ -140,7 +139,25 @@ st.markdown("""
         font-size: 16px;
     }
 
-    /* Metric Cards Styling */
+    .logout-wrap {
+        margin-top: 12px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .processing-box {
+        background: #0B6B3A;
+        color: white;
+        padding: 14px 18px;
+        border-radius: 14px;
+        font-weight: 700;
+        text-align: center;
+        box-shadow: 0 6px 18px rgba(11,107,58,0.18);
+        border: 1px solid #095c32;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
     .metric-card {
         background: white;
         padding: 25px;
@@ -169,7 +186,6 @@ st.markdown("""
         font-weight: 700;
     }
 
-    /* Footer */
     .footer {
         text-align: center;
         color: #888;
@@ -178,8 +194,53 @@ st.markdown("""
         padding: 20px;
         border-top: 1px solid #e0e0e0;
     }
+
+    /* Logout button styling */
+    div.stButton > button[kind="secondary"],
+    div.stButton > button {
+        border-radius: 50px !important;
+        font-weight: 700 !important;
+    }
+
+    /* تخصيص زر تسجيل الخروج فقط */
+    div[data-testid="stVerticalBlock"] div.stButton > button[id*="logout_btn"] {
+        background: #f0fdf4 !important;
+        color: #0B6B3A !important;
+        border: 1px solid #dcfce7 !important;
+        padding: 10px 20px !important;
+        border-radius: 50px !important;
+        font-weight: 700 !important;
+        box-shadow: none !important;
+    }
+
+    div[data-testid="stVerticalBlock"] div.stButton > button[id*="logout_btn"]:hover {
+        background: #dcfce7 !important;
+        color: #084c2b !important;
+        border: 1px solid #bbf7d0 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# ================= LOGGING =================
+LOG_FILE = "activity_log.csv"
+
+def log_action(user, action, details=""):
+    try:
+        log_row = pd.DataFrame([{
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "user": user if user else "Unknown",
+            "action": action,
+            "details": details
+        }])
+
+        if os.path.exists(LOG_FILE):
+            old_logs = pd.read_csv(LOG_FILE)
+            all_logs = pd.concat([old_logs, log_row], ignore_index=True)
+            all_logs.to_csv(LOG_FILE, index=False, encoding="utf-8-sig")
+        else:
+            log_row.to_csv(LOG_FILE, index=False, encoding="utf-8-sig")
+    except Exception:
+        pass
 
 # ================= USERS DATA LOADING =================
 try:
@@ -205,9 +266,9 @@ if "show_admin_panel" not in st.session_state:
 # ================= LOGIN FUNCTION =================
 def login_page():
     st.markdown('<div class="login-background"></div>', unsafe_allow_html=True)
-    
+
     col1, col2, col3 = st.columns([1, 2, 1])
-    
+
     with col2:
         st.markdown("""
         <div class="login-card">
@@ -216,20 +277,22 @@ def login_page():
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
         username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="hidden")
-        password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")  
-        
-        if st.button("تسجيل الدخول", use_container_width=True):
+        password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")
+
+        if st.button("تسجيل الدخول", width="stretch"):
             if username in users and users[username]["password"] == password:
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.role = users[username]["role"]
                 st.session_state.show_admin_panel = False
+                log_action(username, "Login Success", "Logged in successfully")
                 st.rerun()
             else:
+                log_action(username, "Login Failed", "Wrong username or password")
                 st.error("⚠️ بيانات الدخول غير صحيحة")
-                
+
 # ================= MAIN APP LOGIC =================
 if not st.session_state.logged_in:
     login_page()
@@ -265,15 +328,17 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-    st.write("") 
-
-    if st.button("🚪 تسجيل الخروج", key="logout_btn", use_container_width=True):
+    st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
+    if st.button("🚪 تسجيل الخروج", key="logout_btn", width="stretch"):
+        log_action(st.session_state.username, "Logout", "User logged out")
         st.session_state.logged_in = False
         st.session_state.show_admin_panel = False
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.get("role") == "admin":
-        if st.button("⚙️ Manage app", key="manage_app_btn", use_container_width=True):
+        if st.button("⚙️ Manage app", key="manage_app_btn", width="stretch"):
+            log_action(st.session_state.username, "Open Admin Panel", "Admin panel opened")
             st.session_state.show_admin_panel = True
             st.rerun()
 
@@ -283,7 +348,7 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.get("rol
     st.markdown("### ⚙️ لوحة إدارة المستخدمين")
 
     st.markdown("#### قائمة المستخدمين الحاليين:")
-    st.dataframe(df_users, use_container_width=True)
+    st.dataframe(df_users, width="stretch")
 
     st.markdown("#### ➕ إضافة مستخدم جديد:")
     with st.form("add_user_form"):
@@ -295,6 +360,7 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.get("rol
         if submitted:
             if new_username and new_password:
                 if new_username in users:
+                    log_action(st.session_state.username, "Add User Failed", f"Username already exists: {new_username}")
                     st.error("❌ اسم المستخدم موجود بالفعل!")
                 else:
                     new_row = pd.DataFrame([{
@@ -303,24 +369,45 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.get("rol
                         "Role": new_role
                     }])
                     df_users = pd.concat([df_users, new_row], ignore_index=True)
-                    
                     df_users.to_excel("users.xlsx", index=False)
-                    
+
                     users[new_username] = {
                         "password": new_password,
                         "role": new_role
                     }
-                    
+
+                    log_action(st.session_state.username, "User Added", f"Added user: {new_username} | Role: {new_role}")
                     st.success(f"✅ تم إضافة المستخدم '{new_username}' بنجاح!")
                     st.rerun()
             else:
+                log_action(st.session_state.username, "Add User Failed", "Missing required fields")
                 st.error("❌ يرجى ملء جميع الحقول!")
 
     if st.button("🔙 العودة للداشبورد", key="close_admin"):
+        log_action(st.session_state.username, "Close Admin Panel", "Returned to dashboard")
         st.session_state.show_admin_panel = False
         st.rerun()
 
     st.markdown("---")
+
+    # ===== Logs Viewer for Admin =====
+    st.markdown("### 📋 سجل الاستخدام")
+    if os.path.exists(LOG_FILE):
+        try:
+            logs_df = pd.read_csv(LOG_FILE)
+            st.dataframe(logs_df, width="stretch", hide_index=True)
+
+            log_csv = logs_df.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                "📥 تحميل سجل الاستخدام",
+                data=log_csv,
+                file_name="activity_log.csv",
+                mime="text/csv"
+            )
+        except Exception:
+            st.warning("تعذر قراءة ملف السجل.")
+    else:
+        st.info("لا يوجد سجل استخدام حتى الآن.")
 
 # ================= MODE SELECTION =================
 mode = st.radio(
@@ -335,7 +422,7 @@ mode = st.radio(
 # =========================================================
 
 def normalize(t):
-    return (t or "").replace("−","-").replace("–","-").replace("—","-")
+    return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
 
 def extract_numbers(text):
     if not text:
@@ -378,8 +465,8 @@ def parse_ar(file):
                             phone = phone.group(1)
                             vals = extract_numbers(text)
 
-                            if i+1 < len(table):
-                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                            if i + 1 < len(table):
+                                nxt = extract_numbers(" ".join([str(c) for c in table[i + 1] if c]))
                                 if len(nxt) > len(vals):
                                     vals = nxt
                                     i += 1
@@ -387,7 +474,8 @@ def parse_ar(file):
                             vals = clean_numbers(vals, phone)
                             vals = vals[::-1]
 
-                            def g(i): return vals[i] if i < len(vals) else 0
+                            def g(idx):
+                                return vals[idx] if idx < len(vals) else 0
 
                             records.append({
                                 "محمول": phone,
@@ -408,6 +496,7 @@ def parse_ar(file):
                         i += 1
     except Exception as e:
         st.warning(f"Error parsing AR file: {e}")
+        log_action(st.session_state.get("username", "Unknown"), "Parse AR Error", str(e))
     return records
 
 # ================= EN Parser =================
@@ -430,25 +519,25 @@ def parse_en(file):
                         if phone:
                             phone = phone.group(1)
                             vals = extract_numbers(
-                                " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
+                                " ".join([str(c) for c in table[i + 1] if c]) if i + 1 < len(table) else ""
                             )
 
                             vals = clean_numbers(vals, phone)
 
                             records.append({
                                 "محمول": phone,
-                                "رسوم شهرية": vals[0] if len(vals)>0 else 0,
-                                "رسوم الخدمات": vals[1] if len(vals)>1 else 0,
-                                "مكالمات محلية": vals[2] if len(vals)>2 else 0,
-                                "رسائل محلية": vals[3] if len(vals)>3 else 0,
-                                "إنترنت محلية": vals[4] if len(vals)>4 else 0,
-                                "مكالمات دولية": vals[5] if len(vals)>5 else 0,
-                                "رسائل دولية": vals[6] if len(vals)>6 else 0,
-                                "مكالمات تجوال": vals[7] if len(vals)>7 else 0,
-                                "رسائل تجوال": vals[8] if len(vals)>8 else 0,
-                                "إنترنت تجوال": vals[9] if len(vals)>9 else 0,
-                                "رسوم تسويات": vals[10] if len(vals)>10 else 0,
-                                "ضرائب": vals[11] if len(vals)>11 else 0,
+                                "رسوم شهرية": vals[0] if len(vals) > 0 else 0,
+                                "رسوم الخدمات": vals[1] if len(vals) > 1 else 0,
+                                "مكالمات محلية": vals[2] if len(vals) > 2 else 0,
+                                "رسائل محلية": vals[3] if len(vals) > 3 else 0,
+                                "إنترنت محلية": vals[4] if len(vals) > 4 else 0,
+                                "مكالمات دولية": vals[5] if len(vals) > 5 else 0,
+                                "رسائل دولية": vals[6] if len(vals) > 6 else 0,
+                                "مكالمات تجوال": vals[7] if len(vals) > 7 else 0,
+                                "رسائل تجوال": vals[8] if len(vals) > 8 else 0,
+                                "إنترنت تجوال": vals[9] if len(vals) > 9 else 0,
+                                "رسوم تسويات": vals[10] if len(vals) > 10 else 0,
+                                "ضرائب": vals[11] if len(vals) > 11 else 0,
                                 "إجمالي": vals[-1] if vals else 0
                             })
 
@@ -458,6 +547,7 @@ def parse_en(file):
                         i += 1
     except Exception as e:
         st.warning(f"Error parsing EN file: {e}")
+        log_action(st.session_state.get("username", "Unknown"), "Parse EN Error", str(e))
     return records
 
 # ================= AI Parser =================
@@ -507,6 +597,7 @@ def parse_ai(file):
 
     except Exception as e:
         st.warning(f"Error parsing AI file: {e}")
+        log_action(st.session_state.get("username", "Unknown"), "Parse AI Error", str(e))
         return []
 
     return records
@@ -523,15 +614,20 @@ def to_excel(df):
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
 if files:
-    if st.button("🚀 بدء المعالجة والتحليل", use_container_width=True):
-        
+    if st.button("🚀 بدء المعالجة والتحليل", width="stretch"):
+        log_action(st.session_state.username, "Processing Started", f"Files count: {len(files)} | Mode: {mode}")
+
         progress_bar = st.progress(0)
         status_text = st.empty()
         all_data = []
 
         for idx, file in enumerate(files):
-            status_text.text(f"⏳ جاري معالجة: {file.name}")
-            progress_bar.progress((idx+1)/len(files))
+            status_text.markdown(
+                f'<div class="processing-box">⏳ جاري معالجة: {file.name}</div>',
+                unsafe_allow_html=True
+            )
+            progress_bar.progress((idx + 1) / len(files))
+            log_action(st.session_state.username, "Processing File", file.name)
 
             if mode == "English 🌍":
                 data = parse_en(file)
@@ -539,12 +635,12 @@ if files:
                 data = parse_ar(file)
                 if not data:
                     data = parse_en(file)
-                if not data: 
+                if not data:
                     data = parse_ai(file)
             else:
                 data = parse_ar(file)
-                
-            if not data: 
+
+            if not data:
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -555,7 +651,7 @@ if files:
 
         if all_data:
             df_result = pd.DataFrame(all_data)
-            
+
             total_lines = len(df_result)
             sum_monthly = df_result["رسوم شهرية"].sum()
             sum_settlements = df_result["رسوم تسويات"].sum()
@@ -566,11 +662,10 @@ if files:
                 return f"{val:,.0f} ج.م"
 
             st.markdown("<br>", unsafe_allow_html=True)
-            
             st.markdown("### 📈 ملخص التحليل المالي")
-            
+
             m1, m2, m3, m4, m5 = st.columns(5)
-            
+
             with m1:
                 st.markdown(f"""
                 <div class="metric-card">
@@ -578,7 +673,7 @@ if files:
                     <div class="metric-value">{total_lines}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                
+
             with m2:
                 st.markdown(f"""
                 <div class="metric-card">
@@ -612,10 +707,11 @@ if files:
                 """, unsafe_allow_html=True)
 
             st.success("✅ تم الانتهاء من معالجة الملفات بنجاح!")
-            
+            log_action(st.session_state.username, "Processing Completed", f"Total lines extracted: {total_lines}")
+
             st.markdown("---")
             st.markdown("### 📋 تفاصيل البيانات")
-            st.dataframe(df_result, use_container_width=True, hide_index=True)
+            st.dataframe(df_result, width="stretch", hide_index=True)
 
             st.download_button(
                 label="📥 تحميل تقرير Excel",
@@ -623,6 +719,9 @@ if files:
                 file_name="Hawelha_Telecom_Report.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+        else:
+            log_action(st.session_state.username, "Processing Completed", "No data extracted from uploaded files")
+            st.warning("لم يتم استخراج بيانات من الملفات المرفوعة.")
 
 # ================= FOOTER =================
 st.markdown("""
