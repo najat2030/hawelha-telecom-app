@@ -3,6 +3,7 @@ import pdfplumber
 import pandas as pd
 import re
 import io
+import base64
 import os
 import gc
 
@@ -12,6 +13,7 @@ st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊"
 # ================= STYLE & THEME =================
 PRIMARY_COLOR = "#0B6B3A"  # Royal Green
 BG_COLOR = "#F4F6F8"
+CARD_BG = "#FFFFFF"
 
 st.markdown(f"""
 <style>
@@ -23,18 +25,26 @@ st.markdown(f"""
     }}
 
     /* Hide Default Streamlit Elements */
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    header {{visibility: hidden;}}
+    #MainMenu {{
+        visibility: hidden;
+    }}
 
-    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
+    footer {{
+        visibility: hidden;
+    }}
+
+    header {{
+        visibility: hidden;
+    }}
+
+    /* Login Page Background */
     .login-background {{
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #F4F6F8;
+        background-color: {BG_COLOR};
         z-index: -1;
     }}
 
@@ -59,7 +69,7 @@ st.markdown(f"""
         margin-bottom: 25px;
     }}
 
-    /* === DASHBOARD HEADER DESIGN === */
+    /* Dashboard Header */
     .dashboard-header {{
         display: flex;
         justify-content: space-between;
@@ -67,7 +77,7 @@ st.markdown(f"""
         background: white;
         padding: 15px 30px;
         border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         margin-bottom: 30px;
         border-bottom: 4px solid {PRIMARY_COLOR};
     }}
@@ -109,26 +119,29 @@ st.markdown(f"""
         font-size: 16px;
     }}
 
-    /* Metric Cards Styling */
+    /* Metric Cards */
     .metric-card {{
         background: white;
         padding: 25px;
         border-radius: 15px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         border-right: 5px solid {PRIMARY_COLOR};
-        transition: transform 0.2s;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
         height: 100%;
     }}
+
     .metric-card:hover {{
         transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     }}
+
     .metric-title {{
         color: #666;
         font-size: 15px;
         font-weight: 500;
         margin-bottom: 10px;
     }}
+
     .metric-value {{
         color: {PRIMARY_COLOR};
         font-size: 26px;
@@ -144,7 +157,6 @@ st.markdown(f"""
         padding: 20px;
         border-top: 1px solid #e0e0e0;
     }}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -184,7 +196,7 @@ def login_page():
         </div>
         """, unsafe_allow_html=True)
         
-        # ✅ CORRECTED: Using "hidden" instead of "collapsed"
+        # ✅ التصحيح هنا: استخدام "hidden" بدلاً من "collapsed"
         username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="hidden")
         password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="hidden")  
         
@@ -196,7 +208,7 @@ def login_page():
                 st.rerun()
             else:
                 st.error("⚠️ بيانات الدخول غير صحيحة")
-
+                
 # ================= MAIN APP LOGIC =================
 if not st.session_state.logged_in:
     login_page()
@@ -217,6 +229,7 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
+    # عرض معلومات المستخدم (Avatar + Name)
     st.markdown(f"""
     <div style="display:flex; justify-content:flex-end; align-items:center; gap:15px; padding-top:10px;">
         <div class="header-user-info">
@@ -226,12 +239,15 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
+    # إضافة مسافة بسيطة قبل الأزرار
     st.write("") 
 
+    # زر تسجيل الخروج - بسيط ومضمون ويعمل فوراً
     if st.button("🚪 تسجيل الخروج", key="logout_btn", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
+    # زر Manage App - يظهر فقط للأدمن
     if st.session_state.role == "admin":
         if st.button("⚙️ Manage app", key="manage_app_btn", use_container_width=True):
             st.session_state.show_admin_panel = True
@@ -242,9 +258,11 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
     st.markdown("---")
     st.markdown("### ⚙️ لوحة إدارة المستخدمين")
 
+    # عرض جدول المستخدمين
     st.markdown("#### قائمة المستخدمين الحاليين:")
     st.dataframe(df_users, use_container_width=True)
 
+    # نموذج إضافة مستخدم جديد
     st.markdown("#### ➕ إضافة مستخدم جديد:")
     with st.form("add_user_form"):
         new_username = st.text_input("اسم المستخدم الجديد")
@@ -257,22 +275,29 @@ if st.session_state.get("show_admin_panel", False) and st.session_state.role == 
                 if new_username in users:
                     st.error("❌ اسم المستخدم موجود بالفعل!")
                 else:
+                    # إضافة إلى DataFrame
                     new_row = pd.DataFrame([{
                         "Username": new_username,
                         "Password": new_password,
                         "Role": new_role
                     }])
                     df_users = pd.concat([df_users, new_row], ignore_index=True)
+                    
+                    # حفظ الملف
                     df_users.to_excel("users.xlsx", index=False)
+                    
+                    # تحديث قاموس المستخدمين
                     users[new_username] = {
                         "password": new_password,
                         "role": new_role
                     }
+                    
                     st.success(f"✅ تم إضافة المستخدم '{new_username}' بنجاح!")
                     st.rerun()
             else:
                 st.error("❌ يرجى ملء جميع الحقول!")
 
+    # زر إغلاق اللوحة
     if st.button("🔙 العودة للداشبورد", key="close_admin"):
         st.session_state.show_admin_panel = False
         st.rerun()
@@ -314,6 +339,7 @@ def fix_phone(phone):
         return "0" + phone
     return phone
 
+# ================= AR Parser =================
 def parse_ar(file):
     records = []
     try:
@@ -366,6 +392,7 @@ def parse_ar(file):
         st.warning(f"Error parsing AR file: {e}")
     return records
 
+# ================= EN Parser =================
 def parse_en(file):
     records = []
     try:
@@ -384,8 +411,10 @@ def parse_en(file):
 
                         if phone:
                             phone = phone.group(1)
-                            next_row_text = " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
-                            vals = extract_numbers(next_row_text)
+                            vals = extract_numbers(
+                                " ".join([str(c) for c in table[i+1] if c]) if i+1 < len(table) else ""
+                            )
+
                             vals = clean_numbers(vals, phone)
 
                             records.append({
@@ -413,6 +442,7 @@ def parse_en(file):
         st.warning(f"Error parsing EN file: {e}")
     return records
 
+# ================= AI Parser =================
 def parse_ai(file):
     records = []
     try:
@@ -463,6 +493,7 @@ def parse_ai(file):
 
     return records
 
+# ================= EXCEL EXPORT =================
 def to_excel(df):
     out = io.BytesIO()
     with pd.ExcelWriter(out, engine="openpyxl") as w:
@@ -484,21 +515,20 @@ if files:
             status_text.text(f"⏳ جاري معالجة: {file.name}")
             progress_bar.progress((idx+1)/len(files))
 
-            # ✅ SAFE LOGIC SELECTION - Avoids Syntax Errors from Chat Truncation
-            data = []
+            # Logic Selection - CORRECTED AND COMPLETE LINES
             if mode == "English 🌍":
                 data = parse_en(file)
             elif mode == "Auto 🤖":
                 data = parse_ar(file)
-                if not 
+                if not data:
                     data = parse_en(file)
-                if not 
+                if not data: 
                     data = parse_ai(file)
             else: # Arabic
                 data = parse_ar(file)
-            
-            # Final Fallback
-            if not 
+                
+            # Fallback to AI if specific parsers fail - CORRECTED LINE
+            if not data: 
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -507,8 +537,8 @@ if files:
         progress_bar.progress(100)
         status_text.empty()
 
-        # ✅ CORRECTED LINE
-        if all_
+        # CORRECTED LINE
+        if all_data:
             df_result = pd.DataFrame(all_data)
             
             # Calculations
