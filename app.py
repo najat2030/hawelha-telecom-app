@@ -43,13 +43,16 @@ st.markdown("""
 
     /* ===== 2. مقاسات زر تسجيل الخروج (مستقل) ===== */
     div.stButton > button {
-        min-height: 45px !important;
-        max-height: 45px !important;
-        width: 100% !important;
-        font-size: 14px !important;
-        padding: 5px 10px !important;
-    }
-
+    min-height: 45px !important;
+    max-height: 45px !important;
+    width: fit-content !important;    /* ينكمش على قد الكلام */
+    padding: 5px 25px !important;     /* مسافة جانبية أنيقة */
+    margin-left: auto !important;     /* يضبط مكانه جهة اليسار */
+    font-size: 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
     /* جعل أيقونة الباب (إيموجي) تظهر بلون أبيض ناصع كالنص */
     div.stButton > button:first-child {
         color: white !important;
