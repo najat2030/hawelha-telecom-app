@@ -24,6 +24,37 @@ st.markdown("""
     footer { visibility: hidden; }
     header { visibility: hidden; }
 
+    .login-background {
+        position: fixed;
+        inset: 0;
+        background-color: #F4F6F8;
+        z-index: -1;
+    }
+
+    .login-card {
+        background: rgba(255, 255, 255, 0.97);
+        padding: 35px 30px;
+        border-radius: 20px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        max-width: 430px;
+        margin: 70px auto;
+        text-align: center;
+    }
+
+    .login-title {
+        color: #1a7e43;
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 20px;
+    }
+
+    .login-subtitle {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
     /* ===== الأزرار الملكية الأساسية ===== */
     .royal-green-box, div.stButton > button {
         background-color: #1a7e43 !important;
@@ -44,9 +75,9 @@ st.markdown("""
         min-height: 45px !important;
         max-height: 45px !important;
         width: fit-content !important;
-        padding: 5px 20px !important;
+        padding: 5px 16px !important;
         font-size: 14px !important;
-        gap: 10px !important;
+        gap: 8px !important;
         white-space: nowrap !important;
         margin-left: auto !important;
     }
@@ -70,7 +101,7 @@ st.markdown("""
         justify-content: center;
         font-weight: bold;
         flex-shrink: 0;
-        margin-left: 10px;
+        margin-left: 8px;
     }
 
     /* الشعار */
@@ -119,28 +150,85 @@ st.markdown("""
         border: 1px solid #d1d5db !important;
         min-height: 50px !important;
     }
+
+    /* Progress Bar Gold */
+    .stProgress > div > div > div > div {
+        background-color: #daa520 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= LOGIN =================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = True
-    st.session_state.username = "noga"
+# ================= USERS DATA =================
+def load_users():
+    try:
+        df_users = pd.read_excel("users.xlsx")
+        required_cols = {"Username", "Password"}
+        if not required_cols.issubset(df_users.columns):
+            st.error("ملف users.xlsx لازم يحتوي على الأعمدة: Username و Password")
+            st.stop()
 
-# هنا الحل الحقيقي: ما نعملش login تلقائي بعد logout
+        return {
+            str(row["Username"]).strip(): str(row["Password"]).strip()
+            for _, row in df_users.iterrows()
+        }
+    except FileNotFoundError:
+        st.error("ملف users.xlsx غير موجود. ارفعيه في نفس مجلد التطبيق.")
+        st.stop()
+    except Exception as e:
+        st.error(f"حدث خطأ أثناء قراءة users.xlsx: {e}")
+        st.stop()
+
+users = load_users()
+
+# ================= SESSION STATE =================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+# ================= LOGIN PAGE =================
+def login_page():
+    st.markdown('<div class="login-background"></div>', unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 1.2, 1])
+
+    with col2:
+        st.markdown("""
+        <div class="login-card">
+            <div class="login-title">🔐 تسجيل الدخول</div>
+            <div class="login-subtitle">ادخلي اسم المستخدم وكلمة المرور للمتابعة</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
+        password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")
+
+        if st.button("تسجيل الدخول", key="login_btn", width="stretch"):
+            username = username.strip()
+            password = password.strip()
+
+            if username in users and users[username] == password:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.rerun()
+            else:
+                st.error("⚠️ اسم المستخدم أو كلمة المرور غير صحيحة")
+
+# ================= LOGIN CHECK =================
 if not st.session_state.logged_in:
-    st.warning("تم تسجيل الخروج بنجاح.")
+    login_page()
     st.stop()
 
 # ================= HEADER =================
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 
-# تقسيم ذكي: [خروج، شعار، مرحبا]
 col_out, col_logo, col_me = st.columns([1, 4, 1], vertical_alignment="center")
 
 with col_out:
     if st.button("🚪 تسجيل الخروج", key="logout_btn"):
         st.session_state.logged_in = False
+        st.session_state.username = ""
         st.rerun()
 
 with col_logo:
@@ -150,9 +238,9 @@ with col_logo:
     )
 
 with col_me:
-    user_initial = st.session_state.username[0].upper()
+    user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
     st.markdown(f'''
-    <div class="royal-green-box">
+    <div class="royal-green-box" style="margin-left: auto;">
         <div class="avatar-circle-white">{user_initial}</div>
         <span>مرحباً، {st.session_state.username}</span>
     </div>
@@ -182,16 +270,20 @@ def parse_ar(file):
                         if not row:
                             i += 1
                             continue
+
                         text = normalize(" ".join([str(c) for c in row if c]))
                         phone = re.search(r'(01[0125]\d{8})', text)
+
                         if phone:
                             p = phone.group(1)
                             vals = extract_numbers(text)
+
                             if i + 1 < len(table):
                                 nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                                 if len(nxt) > len(vals):
                                     vals = nxt
                                     i += 1
+
                             vals = [v for v in vals if str(int(v)) != str(int(p))][::-1]
 
                             def g(idx):
@@ -234,6 +326,7 @@ if st.button("🚀 بدء المعالجة والتحليل", key="process_btn")
 
         if all_data:
             df = pd.DataFrame(all_data)
+
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
 
