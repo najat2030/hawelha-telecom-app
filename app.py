@@ -24,11 +24,10 @@ st.markdown("""
     footer { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* ===== Royal Green Header Boxes (Unified & Symmetrical) ===== */
+    /* ===== 1. القواعد المشتركة للألوان والحدود ===== */
     .royal-green-box, div.stButton > button {
         background-color: #1a7e43 !important;
         color: white !important;
-        padding: 5px 10px !important;
         border-radius: 50px !important;
         border: 2px solid #146435 !important;
         font-family: 'Segoe UI', sans-serif;
@@ -39,25 +38,36 @@ st.markdown("""
         text-align: center;
         transition: all 0.3s ease;
         margin: 0 !important;
+        box-sizing: border-box;
+    }
+
+    /* ===== 2. مقاسات زر تسجيل الخروج (مستقل) ===== */
+    div.stButton > button {
         min-height: 45px !important;
         max-height: 45px !important;
         width: 100% !important;
-        box-sizing: border-box;
         font-size: 14px !important;
+        padding: 5px 10px !important;
     }
 
-    /* ===== تعديل مربع مرحباً فقط ليبقى نفس حجم الزر ===== */
+    /* جعل أيقونة الباب (إيموجي) تظهر بلون أبيض ناصع كالنص */
+    div.stButton > button:first-child {
+        color: white !important;
+    }
+
+    /* ===== 3. مقاسات مربع مرحباً (مستقل الآن) ===== */
     .royal-green-box {
+        min-height: 45px !important;
+        max-height: 45px !important;
         width: 100% !important;
-        max-width: 100% !important;
-        min-width: 100% !important;
         padding: 5px 12px !important;
+        font-size: 14px !important;
         gap: 8px !important;
         overflow: hidden;
         white-space: nowrap;
     }
 
-    /* Avatar Circle inside the box */
+    /* دائرة الأفتار البيضاء داخل مربع مرحباً */
     .avatar-circle-white {
         background-color: white !important;
         color: #1a7e43 !important;
@@ -72,14 +82,14 @@ st.markdown("""
         margin-left: 8px;
     }
 
-    /* Hover effect */
+    /* تأثير الوقوف على الأزرار */
     div.stButton > button:hover {
         background-color: #146435 !important;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
         transform: translateY(-1px) !important;
     }
 
-    /* Dashboard Header Logo Area */
+    /* منطقة الشعار الهيدر */
     .header-container {
         background: white;
         padding: 10px;
@@ -95,7 +105,7 @@ st.markdown("""
         height: auto;
     }
 
-    /* Metric Cards (Dashboard) */
+    /* كروت الداشبورد */
     .metric-card {
         background: white;
         padding: 15px;
@@ -107,7 +117,7 @@ st.markdown("""
     .metric-title { font-size: 14px; color: #666; font-weight: 500; }
     .metric-value { font-size: 22px; color: #1a7e43; font-weight: 700; }
 
-    /* Progress Bar Gold */
+    /* شريط التقدم الذهبي */
     .stProgress > div > div > div > div {
         background-color: #daa520 !important;
     }
@@ -119,7 +129,6 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    # (كود تسجيل الدخول الخاص بك يوضع هنا - تم اختصاره للعرض)
     st.session_state.logged_in = True 
     st.session_state.username = "noga"
     st.rerun()
@@ -131,8 +140,7 @@ logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main
 t_left, t_center, t_right = st.columns([1, 2, 1], vertical_alignment="center")
 
 with t_left:
-    # زر الخروج مع أيقونة بيضاء (باستخدام اللون الأبيض في النص)
-    if st.button(" تسجيل الخروج"):
+    if st.button("🚪 تسجيل الخروج"):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -197,7 +205,6 @@ if st.button("🚀 بدء المعالجة والتحليل"):
         if all_data:
             df = pd.DataFrame(all_data)
             
-            # --- DASHBOARD (RETURNED TO POSITION) ---
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
             
