@@ -219,6 +219,7 @@ def login_page():
                 st.session_state.logged_in = True
                 st.session_state.username = username
                 st.session_state.role = users[username]["role"]
+                st.session_state.show_admin_panel = False
                 st.rerun()
             else:
                 st.error("⚠️ بيانات الدخول غير صحيحة")
@@ -227,6 +228,10 @@ def login_page():
 if not st.session_state.logged_in:
     login_page()
     st.stop()
+
+# ================= SECURITY FOR ADMIN PANEL =================
+if st.session_state.get("role") != "admin":
+    st.session_state.show_admin_panel = False
 
 # ================= DASHBOARD HEADER =================
 user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
@@ -258,15 +263,16 @@ with col2:
 
     if st.button("🚪 تسجيل الخروج", key="logout_btn", use_container_width=True):
         st.session_state.logged_in = False
+        st.session_state.show_admin_panel = False
         st.rerun()
 
-    if st.session_state.role == "admin":
+    if st.session_state.get("role") == "admin":
         if st.button("⚙️ Manage app", key="manage_app_btn", use_container_width=True):
             st.session_state.show_admin_panel = True
             st.rerun()
 
 # ================= ADMIN PANEL (Real Management) =================
-if st.session_state.get("show_admin_panel", False) and st.session_state.role == "admin":
+if st.session_state.get("show_admin_panel", False) and st.session_state.get("role") == "admin":
     st.markdown("---")
     st.markdown("### ⚙️ لوحة إدارة المستخدمين")
 
