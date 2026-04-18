@@ -10,7 +10,7 @@ from datetime import datetime
 # ================= CONFIG =================
 st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
 
-# ================= STYLE & THEME =================
+# ================= STYLE & THEME (نفس ستايلك الملكي) =================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
@@ -38,10 +38,7 @@ div.stButton > button { min-height: 45px !important; width: 100% !important; fon
 def load_users():
     try:
         df_users = pd.read_excel("users.xlsx")
-        return {
-            str(row["Username"]).strip(): str(row["Password"]).strip()
-            for _, row in df_users.iterrows()
-        }
+        return {str(row["Username"]).strip(): str(row["Password"]).strip() for _, row in df_users.iterrows()}
     except:
         return {"admin": "123"}
 
@@ -54,10 +51,7 @@ if "logged_in" not in st.session_state:
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        st.markdown(
-            '<div class="login-card"><div class="login-title">🔐 تسجيل الدخول</div></div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="login-card"><div class="login-title">🔐 تسجيل الدخول</div></div>', unsafe_allow_html=True)
         u = st.text_input("Username", placeholder="اسم المستخدم", label_visibility="collapsed")
         p = st.text_input("Password", placeholder="كلمة المرور", type="password", label_visibility="collapsed")
         if st.button("دخول"):
@@ -72,147 +66,77 @@ if not st.session_state.logged_in:
 # ================= HEADER =================
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 col_out, col_logo, col_me = st.columns([1, 4, 1], vertical_alignment="center")
-
 with col_out:
     if st.button("🚪 خروج"):
         st.session_state.logged_in = False
         st.rerun()
-
 with col_logo:
-    st.markdown(
-        f'<div class="header-container"><img src="{logo_url}" class="header-logo"></div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown(f'<div class="header-container"><img src="{logo_url}" class="header-logo"></div>', unsafe_allow_html=True)
 with col_me:
     initial = st.session_state.username[0].upper()
-    st.markdown(
-        f'<div class="royal-green-box"><span class="avatar-circle-white">{initial}</span>مرحباً، {st.session_state.username}</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown(f'<div class="royal-green-box"><span class="avatar-circle-white">{initial}</span>مرحباً، {st.session_state.username}</div>', unsafe_allow_html=True)
 
-# ================= HELPERS =================
+# ================= LOGIC =================
 def normalize(t):
     return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
 
 def extract_numbers(text):
-    """
-    نسخة مدموجة من معالجة السالب في النصّة الأولى
-    مع الحفاظ على استخلاص أرقام نظيف.
-    """
     if not text:
         return []
-
     text = normalize(str(text))
-
-    # لو الرقم مكتوب بين أقواس اعتبره سالب
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
-
-    # بعض الـ PDFs بتلخبط الشرطة بعد الرقم أو قبله
     text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
     text = re.sub(r'-\s+(\d)', r'-\1', text)
-
     numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
     return [float(n) for n in numbers]
 
-def detect_language(file):
-    """
-    الكشف التلقائي للغة من أول صفحة
-    """
-    try:
-        file.seek(0)
-        with pdfplumber.open(file) as pdf:
-            text = pdf.pages[0].extract_text() or ""
-        return "ar" if re.search(r'[\u0600-\u06FF]', text) else "en"
-    except:
-        return "ar"
-
-def parse_file(file, lang):
+def parse_file(file, is_arabic):
     records = []
-
     try:
-        file.seek(0)
         with pdfplumber.open(file) as pdf:
             for page in pdf.pages[2:]:
-                tables = page.extract_tables() or []
-
-                for table in tables:
-                    i = 0
-                    while i < len(table):
-                        row = table[i]
-
+                tables = page.extract_tables()
+                for table in tables or []:
+                    for i, row in enumerate(table):
                         if not row:
-                            i += 1
                             continue
-
                         text = normalize(" ".join([str(c) for c in row if c]))
-                        phone_match = re.search(r'(01[0125]\d{8})', text)
+                        phone = re.search(r'(01[0125]\d{8})', text)
+                        if phone:
+                            p = phone.group(1)
+                            vals = extract_numbers(text)
+                            if i + 1 < len(table):
+                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                                if len(nxt) > len(vals):
+                                    vals = nxt
 
-                        if not phone_match:
-                            i += 1
-                            continue
+                            vals = [v for v in vals if str(int(v)) != str(int(p))]
+                            if is_arabic:
+                                vals = vals[::-1]
 
-                        phone = phone_match.group(1)
+                            def g(idx):
+                                return vals[idx] if idx < len(vals) else 0
 
-                        # نقرأ أرقام الصف الحالي
-                        vals = extract_numbers(text)
+                            taswiya = g(10)
 
-                        # لو الصف اللي بعده فيه تفاصيل أكثر، ناخده
-                        if i + 1 < len(table):
-                            next_text = " ".join([str(c) for c in table[i + 1] if c])
-                            nxt = extract_numbers(next_text)
-                            if len(nxt) > len(vals):
-                                vals = nxt
-                                if lang == "ar":
-                                    i += 1
-
-                        # نشيل رقم الموبايل لو دخل بالغلط ضمن القيم
-                        cleaned_vals = []
-                        for v in vals:
-                            try:
-                                if str(int(v)) == phone:
-                                    continue
-                            except:
-                                pass
-                            cleaned_vals.append(v)
-                        vals = cleaned_vals
-
-                        # العربي غالبًا بيكون معكوس
-                        if lang == "ar":
-                            vals = vals[::-1]
-
-                        def g(idx):
-                            return vals[idx] if idx < len(vals) else 0
-
-                        taswiya = g(10)
-                        if taswiya > 0:
-                            taswiya = taswiya * -1
-
-                        records.append({
-                            "محمول": phone,
-                            "رسوم شهرية": g(0),
-                            "رسوم الخدمات": g(1),
-                            "مكالمات محلية": g(2),
-                            "رسائل محلية": g(3),
-                            "إنترنت محلية": g(4),
-                            "مكالمات دولية": g(5),
-                            "رسائل دولية": g(6),
-                            "مكالمات تجوال": g(7),
-                            "رسائل تجوال": g(8),
-                            "إنترنت تجوال": g(9),
-                            "رسوم تسويات": taswiya,
-                            "ضرائب": g(11),
-                            "إجمالي": g(12)
-                        })
-
-                        if lang == "en":
-                            i += 2
-                        else:
-                            i += 1
-
+                            records.append({
+                                "محمول": p,
+                                "رسوم شهرية": g(0),
+                                "رسوم الخدمات": g(1),
+                                "مكالمات محلية": g(2),
+                                "رسائل محلية": g(3),
+                                "إنترنت محلية": g(4),
+                                "مكالمات دولية": g(5),
+                                "رسائل دولية": g(6),
+                                "مكالمات تجوال": g(7),
+                                "رسائل تجوال": g(8),
+                                "إنترنت تجوال": g(9),
+                                "رسوم تسويات": taswiya,
+                                "ضرائب": g(11),
+                                "إجمالي": g(12)
+                            })
     except:
         pass
-
     return records
 
 # ================= UI =================
@@ -222,92 +146,42 @@ mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪🇬", 
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
         progress_bar = st.progress(0)
-        status_text = st.empty()
-
         all_data = []
-        failed_files = []
-
-        total_files = len(files)
-
         for idx, file in enumerate(files):
-            try:
-                status_text.text(f"📄 جاري معالجة: {file.name}")
+            file.seek(0)
+            if mode == "Auto 🤖":
+                try:
+                    with pdfplumber.open(file) as pdf:
+                        txt = pdf.pages[0].extract_text() or ""
+                    is_ar = True if re.search(r'[\u0600-\u06FF]', txt) else False
+                except:
+                    is_ar = True
+            else:
+                is_ar = True if mode == "عربي 🇪🇬" else False
 
-                if mode == "Auto 🤖":
-                    lang = detect_language(file)
-                else:
-                    lang = "ar" if mode == "عربي 🇪🇬" else "en"
-
-                file.seek(0)
-                data = parse_file(file, lang)
-
-                if data:
-                    all_data.extend(data)
-                else:
-                    failed_files.append(file.name)
-
-            except:
-                failed_files.append(file.name)
-
-            progress_bar.progress((idx + 1) / total_files)
+            file.seek(0)
+            data = parse_file(file, is_ar)
+            all_data.extend(data)
+            progress_bar.progress((idx + 1) / len(files))
             gc.collect()
-
-        status_text.text("✅ اكتملت المعالجة")
 
         if all_data:
             df = pd.DataFrame(all_data)
-
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
-
             with m1:
-                st.markdown(
-                    f'<div class="metric-card"><div class="metric-title">📱 الخطوط</div><div class="metric-value">{len(df)}</div></div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<div class="metric-card"><div class="metric-title">📱 الخطوط</div><div class="metric-value">{len(df)}</div></div>', unsafe_allow_html=True)
             with m2:
-                st.markdown(
-                    f'<div class="metric-card"><div class="metric-title">💰 الرسوم</div><div class="metric-value">{df["رسوم شهرية"].sum():,.1f}</div></div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<div class="metric-card"><div class="metric-title">💰 الرسوم</div><div class="metric-value">{df["رسوم شهرية"].sum():,.1f}</div></div>', unsafe_allow_html=True)
             with m3:
-                st.markdown(
-                    f'<div class="metric-card"><div class="metric-title">🧾 تسويات</div><div class="metric-value" style="color: red;">{df["رسوم تسويات"].sum():,.1f}</div></div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<div class="metric-card"><div class="metric-title">🧾 تسويات</div><div class="metric-value" style="color: red;">{df["رسوم تسويات"].sum():,.1f}</div></div>', unsafe_allow_html=True)
             with m4:
-                st.markdown(
-                    f'<div class="metric-card"><div class="metric-title">🏛️ ضرائب</div><div class="metric-value">{df["ضرائب"].sum():,.1f}</div></div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<div class="metric-card"><div class="metric-title">🏛️ ضرائب</div><div class="metric-value">{df["ضرائب"].sum():,.1f}</div></div>', unsafe_allow_html=True)
             with m5:
-                st.markdown(
-                    f'<div class="metric-card"><div class="metric-title">💎 الإجمالي</div><div class="metric-value">{df["إجمالي"].sum():,.1f}</div></div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي</div><div class="metric-value">{df["إجمالي"].sum():,.1f}</div></div>', unsafe_allow_html=True)
 
             st.dataframe(df, use_container_width=True)
-
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
-
-            st.download_button(
-                "📥 تحميل تقرير Excel",
-                data=buf.getvalue(),
-                file_name="Telecom_Report.xlsx"
-            )
-
-            if failed_files:
-                st.warning(f"⚠️ ملفات فشل استخراجها: {len(failed_files)}")
-                st.write(failed_files)
-
-        else:
-            st.error("لم يتم استخراج أي بيانات من الملفات")
-
-# ================= SIGNATURE =================
-st.markdown("""
-<div style="text-align:center; margin-top:40px; font-weight:bold;">
-Developed by Najat El Bakry © 2026
-</div>
-""", unsafe_allow_html=True)
+            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
