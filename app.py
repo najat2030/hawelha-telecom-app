@@ -24,7 +24,7 @@ st.markdown("""
     footer { visibility: hidden; }
     header { visibility: hidden; }
 
-    /* ===== Royal Green Header Boxes ===== */
+    /* ===== 1. القواعد العامة للأزرار الملكية ===== */
     .royal-green-box, div.stButton > button {
         background-color: #1a7e43 !important;
         color: white !important;
@@ -39,7 +39,7 @@ st.markdown("""
         margin: 0 !important;
     }
 
-    /* Greeting Box (Independent Size) */
+    /* ===== 2. تنسيق مربع مرحبا (أقصى اليمين وحجم مخصص) ===== */
     .royal-green-box {
         min-height: 45px !important;
         max-height: 45px !important;
@@ -53,13 +53,14 @@ st.markdown("""
         direction: rtl !important;
     }
 
-    /* Logout Button (Independent Size) */
+    /* ===== 3. تنسيق زر الخروج (أقصى اليسار وحجم متناسق) ===== */
     div.stButton > button {
         min-height: 45px !important;
         max-height: 45px !important;
         width: fit-content !important;
         padding: 5px 25px !important;
-        margin-left: auto !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
         font-size: 14px !important;
     }
 
@@ -77,7 +78,7 @@ st.markdown("""
         margin-left: 10px;
     }
 
-    /* Header Logo */
+    /* ===== 4. الشعار الكبير المالي لمركزه ===== */
     .header-container {
         background: white;
         padding: 10px;
@@ -95,7 +96,7 @@ st.markdown("""
         margin: 0 auto;
     }
 
-    /* Dashboard Metrics */
+    /* ===== 5. تكبير خطوط التحليل المالي (ملكي) ===== */
     .metric-card {
         background: white;
         padding: 15px;
@@ -104,20 +105,18 @@ st.markdown("""
         border-right: 5px solid #1a7e43;
         margin-bottom: 10px;
     }
-
     .metric-title { 
         font-size: 18px !important; 
         color: #555; 
         font-weight: 600 !important; 
     }
-
     .metric-value { 
         font-size: 32px !important; 
         color: #1a7e43; 
         font-weight: 800 !important; 
     }
 
-    /* Process Button (Light Gray Theme) */
+    /* ===== 6. زر المعالجة الرمادي (لون الخلفية) ===== */
     .process-btn-area + div.stButton > button {
         background-color: #f0f2f6 !important;
         color: #555 !important;
@@ -170,7 +169,7 @@ with t_right:
     </div>
     ''', unsafe_allow_html=True)
 
-# ================= LOGIC FUNCTIONS =================
+# ================= LOGIC FUNCTIONS (STRICTLY UNTOUCHED) =================
 def normalize(t): return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
 
 def extract_numbers(text):
@@ -208,6 +207,7 @@ def parse_ar(file):
 # ================= MAIN UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
+# الـ Marker لضبط لون الزرار للرمادي
 st.markdown('<div class="process-btn-area"></div>', unsafe_allow_html=True)
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
