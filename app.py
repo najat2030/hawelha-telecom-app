@@ -96,7 +96,7 @@ st.markdown("""
         margin: 0 auto;
     }
 
-    /* ===== 5. تكبير خطوط التحليل المالي (ملكي) ===== */
+    /* ===== 5. كروت التحليل المالي (توسيط كامل) ===== */
     .metric-card {
         background: white;
         padding: 15px;
@@ -104,16 +104,22 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         border-right: 5px solid #1a7e43;
         margin-bottom: 10px;
+        text-align: center; /* توسيط المحتوى داخل الكارت */
     }
     .metric-title { 
         font-size: 18px !important; 
         color: #555; 
-        font-weight: 600 !important; 
+        font-weight: 600 !important;
+        display: block;
+        width: 100%;
     }
     .metric-value { 
         font-size: 32px !important; 
         color: #1a7e43; 
         font-weight: 800 !important; 
+        display: block;
+        width: 100%;
+        margin-top: 5px;
     }
 
     /* ===== 6. زر المعالجة الرمادي (لون الخلفية) ===== */
