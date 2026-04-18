@@ -185,6 +185,8 @@ def login_page():
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        st.image("./static/logo.png")
         
         username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
         password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")  
