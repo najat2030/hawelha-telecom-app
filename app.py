@@ -28,7 +28,7 @@ st.markdown("""
     .royal-green-box, div.stButton > button {
         background-color: #1a7e43 !important;
         color: white !important;
-        padding: 5px 15px !important;
+        padding: 5px 10px !important;
         border-radius: 50px !important;
         border: 2px solid #146435 !important;
         font-family: 'Segoe UI', sans-serif;
@@ -132,7 +132,7 @@ t_left, t_center, t_right = st.columns([1, 2, 1], vertical_alignment="center")
 
 with t_left:
     # زر الخروج مع أيقونة بيضاء (باستخدام اللون الأبيض في النص)
-    if st.button("🚪 تسجيل الخروج"):
+    if st.button(" تسجيل الخروج"):
         st.session_state.logged_in = False
         st.rerun()
 
