@@ -562,7 +562,7 @@ if files:
             status_text.text(f"⏳ جاري معالجة: {file.name}")
             progress_bar.progress((idx+1)/len(files))
 
-            # Logic Selection - CORRECTED LINES BELOW
+            # Logic Selection - CORRECTED AND COMPLETE LINES
             if mode == "English 🌍":
                 data = parse_en(file)
             elif mode == "Auto 🤖":
@@ -574,7 +574,7 @@ if files:
             else: # Arabic
                 data = parse_ar(file)
                 
-            # Fallback to AI if specific parsers fail - CORRECTED LINE BELOW
+            # Fallback to AI if specific parsers fail - CORRECTED LINE
             if not 
                 data = parse_ai(file)
 
@@ -584,7 +584,7 @@ if files:
         progress_bar.progress(100)
         status_text.empty()
 
-        # CORRECTED LINE BELOW
+        # CORRECTED LINE
         if all_
             df_result = pd.DataFrame(all_data)
             
