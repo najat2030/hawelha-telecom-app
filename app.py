@@ -36,13 +36,12 @@ st.markdown(f"""
         left: 0;
         width: 100%;
         height: 100%;
-        /* Using the logo from static folder as full background */
         background-image: url('/static/logo.png'); 
-        background-size: contain; /* Keeps logo aspect ratio visible */
+        background-size: contain;
         background-position: center;
         background-repeat: no-repeat;
         z-index: -1;
-        opacity: 1; /* Full visibility as requested */
+        opacity: 1;
     }}
 
     /* Glassmorphism Card for Login Form */
@@ -116,6 +115,29 @@ st.markdown(f"""
         font-size: 16px;
     }}
 
+    /* === Logout Button with Animation === */
+    .logout-btn {{
+        background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 50px;
+        font-weight: bold;
+        box-shadow: 0 4px 10px rgba(238, 90, 90, 0.3);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }}
+
+    .logout-btn:hover {{
+        transform: scale(1.08) translateY(-2px);
+        box-shadow: 0 8px 20px rgba(238, 90, 90, 0.5);
+        background: linear-gradient(135deg, #ee5a5a, #ff6b6b);
+    }}
+
+    .logout-btn:active {{
+        transform: scale(0.98);
+    }}
+
     /* Metric Cards Styling */
     .metric-card {{
         background: white;
@@ -142,27 +164,32 @@ st.markdown(f"""
         font-weight: 700;
     }}
 
-    /* Buttons */
-    div.stButton > button {{
-        background-color: {PRIMARY_COLOR};
-        color: white;
-        border-radius: 10px;
-        padding: 10px 20px;
-        font-weight: bold;
-        border: none;
-        transition: all 0.3s ease;
+    /* Admin Panel Table */
+    .admin-table {{
         width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
     }}
-    div.stButton > button:hover {{
-        background-color: #085a30;
-        box-shadow: 0 4px 10px rgba(11, 107, 58, 0.3);
-    }}
-
-    /* Inputs */
-    .stTextInput > div > div > input {{
-        border-radius: 10px;
-        border: 1px solid #ddd;
+    .admin-table th, .admin-table td {{
         padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }}
+    .admin-table th {{
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }}
+    .delete-btn {{
+        background: #fee2e2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+    }}
+    .delete-btn:hover {{
+        background: #fecaca;
     }}
 
     /* Footer */
@@ -196,9 +223,11 @@ except FileNotFoundError:
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
+if "show_admin_panel" not in st.session_state:
+    st.session_state.show_admin_panel = False
+
 # ================= LOGIN FUNCTION =================
 def login_page():
-    # Background Overlay with Logo
     st.markdown('<div class="login-background"></div>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -230,7 +259,6 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ================= DASHBOARD HEADER =================
-# Get first letter of username for avatar
 user_initial = st.session_state.username[0].upper() if st.session_state.username else "?"
 
 col1, col2 = st.columns([6, 2])
@@ -246,34 +274,82 @@ with col1:
 
 with col2:
     st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center; height:100%; padding-top:10px;">
+    <div style="display:flex; justify-content:flex-end; align-items:center; gap:15px; padding-top:10px;">
         <div class="header-user-info">
             <div class="user-avatar">{user_initial}</div>
             <span class="user-name">مرحباً، {st.session_state.username}</span>
         </div>
-        <div style="margin-left: 10px;">
-             <button onclick="document.querySelector('[data-testid=\'stSidebarCollapsedControl\']').click()" style="background:none; border:none; cursor:pointer; font-size:20px;">⚙️</button>
-        </div>
+        
+        <!-- زر تسجيل الخروج المتحرك -->
+        <button class="logout-btn" onclick="window.location.href='?logout=true'">
+            🚪 تسجيل الخروج
+        </button>
+
+        <!-- زر Manage App - يظهر فقط للأدمن -->
+        {'<button style="background:#0B6B3A; color:white; border:none; padding:8px 16px; border-radius:50px; font-weight:bold; margin-left:10px; cursor:pointer;" onclick="window.location.href=\'?admin=true\'">⚙️ Manage app</button>' if st.session_state.role == "admin" else ''}
     </div>
     """, unsafe_allow_html=True)
-    
-    # Hidden logout logic handled via sidebar or a small button if needed, 
-    # but keeping UI clean as per request. Adding explicit logout in sidebar below.
 
-with st.sidebar:
-    st.markdown("### الإعدادات")
-    if st.button("🚪 تسجيل الخروج", use_container_width=True):
+    # معالجة تسجيل الخروج
+    if "logout" in st.query_params:
         st.session_state.logged_in = False
         st.rerun()
 
-# ================= ADMIN PANEL (Optional) =================
-if st.session_state.role == "admin":
-    with st.expander("⚙️ لوحة الإدارة (Admin Only)"):
-        c1, c2, c3 = st.columns(3)
-        c1.metric("إجمالي المستخدمين", len(df_users))
-        c2.metric("المشرفين", len(df_users[df_users["Role"]=="admin"]))
-        c3.metric("المستخدمين العاديين", len(df_users[df_users["Role"]=="user"]))
-        st.dataframe(df_users)
+    # فتح لوحة الإدارة
+    if "admin" in st.query_params and st.session_state.role == "admin":
+        st.session_state.show_admin_panel = True
+        st.rerun()
+
+# ================= ADMIN PANEL (Real Management) =================
+if st.session_state.get("show_admin_panel", False) and st.session_state.role == "admin":
+    st.markdown("---")
+    st.markdown("### ⚙️ لوحة إدارة المستخدمين")
+
+    # عرض جدول المستخدمين
+    st.markdown("#### قائمة المستخدمين الحاليين:")
+    st.dataframe(df_users, use_container_width=True)
+
+    # نموذج إضافة مستخدم جديد
+    st.markdown("#### ➕ إضافة مستخدم جديد:")
+    with st.form("add_user_form"):
+        new_username = st.text_input("اسم المستخدم الجديد")
+        new_password = st.text_input("كلمة المرور", type="password")
+        new_role = st.selectbox("الدور", ["user", "admin"])
+        submitted = st.form_submit_button("إضافة المستخدم")
+
+        if submitted:
+            if new_username and new_password:
+                if new_username in users:
+                    st.error("❌ اسم المستخدم موجود بالفعل!")
+                else:
+                    # إضافة إلى DataFrame
+                    new_row = pd.DataFrame([{
+                        "Username": new_username,
+                        "Password": new_password,
+                        "Role": new_role
+                    }])
+                    df_users = pd.concat([df_users, new_row], ignore_index=True)
+                    
+                    # حفظ الملف
+                    df_users.to_excel("users.xlsx", index=False)
+                    
+                    # تحديث قاموس المستخدمين
+                    users[new_username] = {
+                        "password": new_password,
+                        "role": new_role
+                    }
+                    
+                    st.success(f"✅ تم إضافة المستخدم '{new_username}' بنجاح!")
+                    st.rerun()
+            else:
+                st.error("❌ يرجى ملء جميع الحقول!")
+
+    # زر إغلاق اللوحة
+    if st.button("🔙 العودة للداشبورد", key="close_admin"):
+        st.session_state.show_admin_panel = False
+        st.rerun()
+
+    st.markdown("---")
 
 # ================= MODE SELECTION =================
 mode = st.radio(
@@ -491,15 +567,15 @@ if files:
                 data = parse_en(file)
             elif mode == "Auto 🤖":
                 data = parse_ar(file)
-                if not data:
+                if not 
                     data = parse_en(file)
-                if not data:
+                if not 
                     data = parse_ai(file)
             else: # Arabic
                 data = parse_ar(file)
                 
             # Fallback to AI if specific parsers fail
-            if not data:
+            if not 
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -508,7 +584,7 @@ if files:
         progress_bar.progress(100)
         status_text.empty()
 
-        if all_data:
+        if all_
             df_result = pd.DataFrame(all_data)
             
             # Calculations
