@@ -181,26 +181,26 @@ def login_page():
     
     col1, col2, col3 = st.columns([1, 2, 1])
     
-    with col2:
-        st.markdown("""
-        <div class="login-card">
-            <div class="login-title">
-                🔐 تسجيل الدخول
-            </div>
+   with col2:
+    st.markdown("""
+    <div class="login-card">
+        <div class="login-title">
+            🔐 تسجيل الدخول
         </div>
-        """, unsafe_allow_html=True)
-        
-  username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
-  password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")  
-        
-        if st.button("تسجيل الدخول", use_container_width=True):
-            if username in users and users[username]["password"] == password:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.role = users[username]["role"]
-                st.rerun()
-            else:
-                st.error("⚠️ بيانات الدخول غير صحيحة")
+    </div>
+    """, unsafe_allow_html=True)
+    
+    username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
+    password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")
+    
+    if st.button("تسجيل الدخول", use_container_width=True):
+        if username in users and users[username]["password"] == password:
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.role = users[username]["role"]
+            st.rerun()
+        else:
+            st.error("⚠️ بيانات الدخول غير صحيحة")
 
 # ================= MAIN APP LOGIC =================
 if not st.session_state.logged_in:
