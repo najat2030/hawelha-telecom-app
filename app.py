@@ -115,29 +115,6 @@ st.markdown(f"""
         font-size: 16px;
     }}
 
-    /* === Logout Button with Animation === */
-    .logout-btn {{
-        background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 50px;
-        font-weight: bold;
-        box-shadow: 0 4px 10px rgba(238, 90, 90, 0.3);
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }}
-
-    .logout-btn:hover {{
-        transform: scale(1.08) translateY(-2px);
-        box-shadow: 0 8px 20px rgba(238, 90, 90, 0.5);
-        background: linear-gradient(135deg, #ee5a5a, #ff6b6b);
-    }}
-
-    .logout-btn:active {{
-        transform: scale(0.98);
-    }}
-
     /* Metric Cards Styling */
     .metric-card {{
         background: white;
@@ -162,34 +139,6 @@ st.markdown(f"""
         color: {PRIMARY_COLOR};
         font-size: 26px;
         font-weight: 700;
-    }}
-
-    /* Admin Panel Table */
-    .admin-table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }}
-    .admin-table th, .admin-table td {{
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #eee;
-    }}
-    .admin-table th {{
-        background-color: #f8f9fa;
-        font-weight: 600;
-    }}
-    .delete-btn {{
-        background: #fee2e2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        cursor: pointer;
-    }}
-    .delete-btn:hover {{
-        background: #fecaca;
     }}
 
     /* Footer */
@@ -273,32 +222,29 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
+    # عرض معلومات المستخدم (Avatar + Name)
     st.markdown(f"""
     <div style="display:flex; justify-content:flex-end; align-items:center; gap:15px; padding-top:10px;">
         <div class="header-user-info">
             <div class="user-avatar">{user_initial}</div>
             <span class="user-name">مرحباً، {st.session_state.username}</span>
         </div>
-        
-        <!-- زر تسجيل الخروج المتحرك -->
-        <button class="logout-btn" onclick="window.location.href='?logout=true'">
-            🚪 تسجيل الخروج
-        </button>
-
-        <!-- زر Manage App - يظهر فقط للأدمن -->
-        {'<button style="background:#0B6B3A; color:white; border:none; padding:8px 16px; border-radius:50px; font-weight:bold; margin-left:10px; cursor:pointer;" onclick="window.location.href=\'?admin=true\'">⚙️ Manage app</button>' if st.session_state.role == "admin" else ''}
     </div>
     """, unsafe_allow_html=True)
 
-    # معالجة تسجيل الخروج
-    if "logout" in st.query_params:
+    # إضافة مسافة بسيطة قبل الأزرار
+    st.write("") 
+
+    # زر تسجيل الخروج - بسيط ومضمون ويعمل فوراً
+    if st.button("🚪 تسجيل الخروج", key="logout_btn", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
-    # فتح لوحة الإدارة
-    if "admin" in st.query_params and st.session_state.role == "admin":
-        st.session_state.show_admin_panel = True
-        st.rerun()
+    # زر Manage App - يظهر فقط للأدمن
+    if st.session_state.role == "admin":
+        if st.button("⚙️ Manage app", key="manage_app_btn", use_container_width=True):
+            st.session_state.show_admin_panel = True
+            st.rerun()
 
 # ================= ADMIN PANEL (Real Management) =================
 if st.session_state.get("show_admin_panel", False) and st.session_state.role == "admin":
@@ -567,15 +513,15 @@ if files:
                 data = parse_en(file)
             elif mode == "Auto 🤖":
                 data = parse_ar(file)
-                if not data:
+                if not 
                     data = parse_en(file)
-                if not data:
+                if not 
                     data = parse_ai(file)
             else: # Arabic
                 data = parse_ar(file)
                 
             # Fallback to AI if specific parsers fail - CORRECTED LINE
-            if not data:
+            if not 
                 data = parse_ai(file)
 
             all_data.extend(data)
@@ -585,7 +531,7 @@ if files:
         status_text.empty()
 
         # CORRECTED LINE
-        if all_data:
+        if all_
             df_result = pd.DataFrame(all_data)
             
             # Calculations
