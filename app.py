@@ -25,20 +25,28 @@ st.markdown(f"""
     }}
 
     /* Hide Default Streamlit Elements */
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    header {{visibility: hidden;}}
+    #MainMenu {{
+        visibility: hidden;
+    }}
 
-    /* === LOGIN PAGE BACKGROUND - FULL LOGO VISIBILITY === */
-    .login-background {
+    footer {{
+        visibility: hidden;
+    }}
+
+    header {{
+        visibility: hidden;
+    }}
+
+    /* Login Page Background */
+    .login-background {{
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #F4F6F8;
+        background-color: {BG_COLOR};
         z-index: -1;
-    }
+    }}
 
     /* Glassmorphism Card for Login Form */
     .login-card {{
@@ -61,7 +69,7 @@ st.markdown(f"""
         margin-bottom: 25px;
     }}
 
-    /* === DASHBOARD HEADER DESIGN === */
+    /* Dashboard Header */
     .dashboard-header {{
         display: flex;
         justify-content: space-between;
@@ -69,7 +77,7 @@ st.markdown(f"""
         background: white;
         padding: 15px 30px;
         border-radius: 0 0 20px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         margin-bottom: 30px;
         border-bottom: 4px solid {PRIMARY_COLOR};
     }}
@@ -111,26 +119,29 @@ st.markdown(f"""
         font-size: 16px;
     }}
 
-    /* Metric Cards Styling */
+    /* Metric Cards */
     .metric-card {{
         background: white;
         padding: 25px;
         border-radius: 15px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
         border-right: 5px solid {PRIMARY_COLOR};
-        transition: transform 0.2s;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
         height: 100%;
     }}
+
     .metric-card:hover {{
         transform: translateY(-5px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
     }}
+
     .metric-title {{
         color: #666;
         font-size: 15px;
         font-weight: 500;
         margin-bottom: 10px;
     }}
+
     .metric-value {{
         color: {PRIMARY_COLOR};
         font-size: 26px;
@@ -146,7 +157,6 @@ st.markdown(f"""
         padding: 20px;
         border-top: 1px solid #e0e0e0;
     }}
-
 </style>
 """, unsafe_allow_html=True)
 
