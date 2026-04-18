@@ -190,8 +190,8 @@ def login_page():
         </div>
         """, unsafe_allow_html=True)
         
-username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
-password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")  
+  username = st.text_input("اسم المستخدم", placeholder="اسم المستخدم 👤", label_visibility="collapsed")
+  password = st.text_input("كلمة المرور", placeholder="كلمة المرور 🔒", type="password", label_visibility="collapsed")  
         
         if st.button("تسجيل الدخول", use_container_width=True):
             if username in users and users[username]["password"] == password:
