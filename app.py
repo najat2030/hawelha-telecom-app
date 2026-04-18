@@ -28,7 +28,7 @@ st.markdown("""
     .royal-green-box, div.stButton > button {
         background-color: #1a7e43 !important;
         color: white !important;
-        padding: 5px 5px !important;
+        padding: 5px 10px !important;
         border-radius: 50px !important;
         border: 2px solid #146435 !important;
         font-family: 'Segoe UI', sans-serif;
