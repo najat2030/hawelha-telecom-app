@@ -72,12 +72,12 @@ st.markdown("""
         justify-content: center;
         align-items: center;
         background: white;
-        padding: 24px 30px 34px 30px;
+        padding: 24px 30px 24px 30px;
         border-radius: 0 0 20px 20px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         margin-bottom: 30px;
         border-bottom: 4px solid #0B6B3A;
-        min-height: 340px;
+        min-height: 280px;
     }
 
     .header-main-text {
@@ -85,17 +85,8 @@ st.markdown("""
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 28px;
+        gap: 10px;
         width: 100%;
-        text-align: center;
-    }
-
-    .header-main-text h1 {
-        margin: 0;
-        font-size: 26px;
-        color: #0B6B3A;
-        font-weight: 800;
-        letter-spacing: 0.5px;
         text-align: center;
     }
 
@@ -108,16 +99,28 @@ st.markdown("""
         margin: 0 auto;
     }
 
+    .header-main-text h1 {
+        margin: 0;
+        font-size: 26px;
+        color: #0B6B3A;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-align: center;
+        line-height: 1.2;
+    }
+
     .header-user-info {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 15px;
         background: #f0fdf4;
         padding: 8px 20px;
         border-radius: 50px;
         border: 1px solid #dcfce7;
-        width: fit-content;
-        margin-left: auto;
+        min-height: 56px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .user-avatar {
@@ -131,18 +134,14 @@ st.markdown("""
         justify-content: center;
         font-weight: bold;
         font-size: 16px;
+        flex-shrink: 0;
     }
 
     .user-name {
         font-weight: 600;
         color: #333;
         font-size: 16px;
-    }
-
-    .logout-wrap {
-        margin-top: 12px;
-        display: flex;
-        justify-content: flex-end;
+        white-space: nowrap;
     }
 
     .processing-box {
@@ -195,28 +194,44 @@ st.markdown("""
         border-top: 1px solid #e0e0e0;
     }
 
-    /* Logout button styling */
-    div.stButton > button[kind="secondary"],
+    /* جميع الأزرار */
     div.stButton > button {
         border-radius: 50px !important;
         font-weight: 700 !important;
+        min-height: 56px !important;
     }
 
-    /* تخصيص زر تسجيل الخروج فقط */
-    div[data-testid="stVerticalBlock"] div.stButton > button[id*="logout_btn"] {
+    /* زر تسجيل الخروج */
+    div.stButton > button[key="logout_btn"] {
         background: #f0fdf4 !important;
         color: #0B6B3A !important;
         border: 1px solid #dcfce7 !important;
-        padding: 10px 20px !important;
+        padding: 8px 20px !important;
         border-radius: 50px !important;
         font-weight: 700 !important;
+        min-height: 56px !important;
+        width: 100% !important;
         box-shadow: none !important;
     }
 
-    div[data-testid="stVerticalBlock"] div.stButton > button[id*="logout_btn"]:hover {
+    div.stButton > button[key="logout_btn"]:hover {
         background: #dcfce7 !important;
         color: #084c2b !important;
         border: 1px solid #bbf7d0 !important;
+    }
+
+    /* زر بدء المعالجة والتحليل */
+    div.stButton > button[key="process_btn"] {
+        background: #0B6B3A !important;
+        color: white !important;
+        border: 1px solid #095c32 !important;
+        box-shadow: 0 6px 18px rgba(11,107,58,0.20) !important;
+    }
+
+    div.stButton > button[key="process_btn"]:hover {
+        background: #095c32 !important;
+        color: white !important;
+        border: 1px solid #084c2b !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -312,29 +327,29 @@ with col1:
     st.markdown(f"""
     <div class="dashboard-header">
         <div class="header-main-text">
-            <h1>Convert PDF invoices to Excel instantly</h1>
             <img src="{logo_url}" class="header-logo" alt="Hawelha Telecom Logo">
+            <h1>Convert PDF invoices to Excel instantly</h1>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end; align-items:center; gap:15px; padding-top:10px;">
+    right_col, left_col = st.columns(2)
+
+    with right_col:
+        st.markdown(f"""
         <div class="header-user-info">
             <div class="user-avatar">{user_initial}</div>
             <span class="user-name">مرحباً، {st.session_state.username}</span>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
-    if st.button("🚪 تسجيل الخروج", key="logout_btn", width="stretch"):
-        log_action(st.session_state.username, "Logout", "User logged out")
-        st.session_state.logged_in = False
-        st.session_state.show_admin_panel = False
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    with left_col:
+        if st.button("🚪 تسجيل الخروج", key="logout_btn", width="stretch"):
+            log_action(st.session_state.username, "Logout", "User logged out")
+            st.session_state.logged_in = False
+            st.session_state.show_admin_panel = False
+            st.rerun()
 
     if st.session_state.get("role") == "admin":
         if st.button("⚙️ Manage app", key="manage_app_btn", width="stretch"):
@@ -614,7 +629,7 @@ def to_excel(df):
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 
 if files:
-    if st.button("🚀 بدء المعالجة والتحليل", width="stretch"):
+    if st.button("🚀 بدء المعالجة والتحليل", key="process_btn", width="stretch"):
         log_action(st.session_state.username, "Processing Started", f"Files count: {len(files)} | Mode: {mode}")
 
         progress_bar = st.progress(0)
