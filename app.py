@@ -57,16 +57,17 @@ st.markdown("""
 
     /* ===== 3. مقاسات مربع مرحباً (مستقل الآن) ===== */
     .royal-green-box {
-        min-height: 45px !important;
-        max-height: 45px !important;
-        width: 100% !important;
-        padding: 5px 10px !important;
-        font-size: 14px !important;
-        gap: 8px !important;
-        overflow: hidden;
-        white-space: nowrap;
-    }
-
+    min-height: 45px !important;
+    max-height: 45px !important;
+    width: fit-content !important;    /* ينكمش على قد الكلام */
+    margin-right: auto !important;    /* يضبط مكانه جهة اليمين */
+    padding: 5px 20px !important;     /* مساحة تنفس بسيطة يمين ويسار */
+    font-size: 14px !important;
+    gap: 10px !important;             /* مسافة بين الدائرة والنص */
+    display: flex !important;         
+    align-items: center !important;
+    white-space: nowrap !important;
+}
     /* دائرة الأفتار البيضاء داخل مربع مرحباً */
     .avatar-circle-white {
         background-color: white !important;
