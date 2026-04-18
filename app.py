@@ -31,7 +31,7 @@ st.markdown("""
         padding: 5px 15px !important;
         border-radius: 50px !important;
         border: 2px solid #146435 !important;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Segoe UI', sans-serif;
         font-weight: 600 !important;
         display: flex;
         align-items: center;
@@ -39,11 +39,22 @@ st.markdown("""
         text-align: center;
         transition: all 0.3s ease;
         margin: 0 !important;
-        min-height: 45px !important; /* حجم أصغر ومتناسق */
+        min-height: 45px !important;
         max-height: 45px !important;
         width: 100% !important;
         box-sizing: border-box;
         font-size: 14px !important;
+    }
+
+    /* ===== تعديل مربع مرحباً فقط ليبقى نفس حجم الزر ===== */
+    .royal-green-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        padding: 5px 12px !important;
+        gap: 8px !important;
+        overflow: hidden;
+        white-space: nowrap;
     }
 
     /* Avatar Circle inside the box */
@@ -58,7 +69,7 @@ st.markdown("""
         justify-content: center;
         font-weight: bold;
         flex-shrink: 0;
-        margin-left: 10px;
+        margin-left: 8px;
     }
 
     /* Hover effect */
