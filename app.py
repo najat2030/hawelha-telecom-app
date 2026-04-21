@@ -100,17 +100,23 @@ def parse_file(file, is_arabic):
                     for i, row in enumerate(table):
                         if not row:
                             continue
+
                         text = normalize(" ".join([str(c) for c in row if c]))
                         phone = re.search(r'(01[0125]\d{8})', text)
+
                         if phone:
                             p = phone.group(1)
                             vals = extract_numbers(text)
+
                             if i + 1 < len(table):
                                 nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
                                 if len(nxt) > len(vals):
                                     vals = nxt
 
                             vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                            if len(vals) < 13:
+                                continue
 
                             def build_record(v):
                                 def g(idx):
@@ -135,27 +141,60 @@ def parse_file(file, is_arabic):
 
                             def score_record(rec):
                                 score = 0
+
                                 monthly = abs(rec["رسوم شهرية"])
-                                total = abs(rec["إجمالي"])
+                                services = abs(rec["رسوم الخدمات"])
+                                local_calls = abs(rec["مكالمات محلية"])
+                                local_sms = abs(rec["رسائل محلية"])
+                                local_data = abs(rec["إنترنت محلية"])
+                                intl_calls = abs(rec["مكالمات دولية"])
+                                intl_sms = abs(rec["رسائل دولية"])
+                                roam_calls = abs(rec["مكالمات تجوال"])
+                                roam_sms = abs(rec["رسائل تجوال"])
+                                roam_data = abs(rec["إنترنت تجوال"])
+                                settlements = rec["رسوم تسويات"]
                                 taxes = abs(rec["ضرائب"])
+                                total = abs(rec["إجمالي"])
+
+                                components_sum = (
+                                    monthly + services + local_calls + local_sms + local_data +
+                                    intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
+                                    settlements + taxes
+                                )
 
                                 if total >= monthly:
                                     score += 2
+
                                 if total >= taxes:
                                     score += 1
-                                if monthly <= total:
+
+                                if services <= (monthly + 1):
+                                    score += 1
+
+                                diff = abs(total - abs(components_sum))
+                                if diff <= 1:
+                                    score += 6
+                                elif diff <= 3:
+                                    score += 4
+                                elif diff <= 10:
+                                    score += 2
+
+                                if taxes <= total:
                                     score += 1
 
                                 return score
 
-                            normal_record = build_record(vals)
-                            reversed_record = build_record(vals[::-1])
+                            candidates = []
 
-                            if is_arabic:
-                                best_record = reversed_record if score_record(reversed_record) > score_record(normal_record) else normal_record
-                            else:
-                                best_record = normal_record
+                            for start in range(len(vals) - 13 + 1):
+                                window = vals[start:start + 13]
+                                normal_record = build_record(window)
+                                reversed_record = build_record(window[::-1])
 
+                                candidates.append((score_record(normal_record), normal_record))
+                                candidates.append((score_record(reversed_record), reversed_record))
+
+                            best_record = max(candidates, key=lambda x: x[0])[1]
                             records.append(best_record)
     except:
         pass
