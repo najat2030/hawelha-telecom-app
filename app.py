@@ -111,30 +111,52 @@ def parse_file(file, is_arabic):
                                     vals = nxt
 
                             vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                            def build_record(v):
+                                def g(idx):
+                                    return v[idx] if idx < len(v) else 0
+
+                                return {
+                                    "محمول": p,
+                                    "رسوم شهرية": g(0),
+                                    "رسوم الخدمات": g(1),
+                                    "مكالمات محلية": g(2),
+                                    "رسائل محلية": g(3),
+                                    "إنترنت محلية": g(4),
+                                    "مكالمات دولية": g(5),
+                                    "رسائل دولية": g(6),
+                                    "مكالمات تجوال": g(7),
+                                    "رسائل تجوال": g(8),
+                                    "إنترنت تجوال": g(9),
+                                    "رسوم تسويات": g(10),
+                                    "ضرائب": g(11),
+                                    "إجمالي": g(12)
+                                }
+
+                            def score_record(rec):
+                                score = 0
+                                monthly = abs(rec["رسوم شهرية"])
+                                total = abs(rec["إجمالي"])
+                                taxes = abs(rec["ضرائب"])
+
+                                if total >= monthly:
+                                    score += 2
+                                if total >= taxes:
+                                    score += 1
+                                if monthly <= total:
+                                    score += 1
+
+                                return score
+
+                            normal_record = build_record(vals)
+                            reversed_record = build_record(vals[::-1])
+
                             if is_arabic:
-                                vals = vals[::-1]
+                                best_record = reversed_record if score_record(reversed_record) > score_record(normal_record) else normal_record
+                            else:
+                                best_record = normal_record
 
-                            def g(idx):
-                                return vals[idx] if idx < len(vals) else 0
-
-                            taswiya = g(10)
-
-                            records.append({
-                                "محمول": p,
-                                "رسوم شهرية": g(0),
-                                "رسوم الخدمات": g(1),
-                                "مكالمات محلية": g(2),
-                                "رسائل محلية": g(3),
-                                "إنترنت محلية": g(4),
-                                "مكالمات دولية": g(5),
-                                "رسائل دولية": g(6),
-                                "مكالمات تجوال": g(7),
-                                "رسائل تجوال": g(8),
-                                "إنترنت تجوال": g(9),
-                                "رسوم تسويات": taswiya,
-                                "ضرائب": g(11),
-                                "إجمالي": g(12)
-                            })
+                            records.append(best_record)
     except:
         pass
     return records
