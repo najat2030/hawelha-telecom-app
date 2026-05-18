@@ -191,12 +191,11 @@ def parse_file(file, is_arabic):
                                 normal_record = build_record(window)
                                 reversed_record = build_record(window[::-1])
 
-                                candidates.append((score_record(normal_record), normal_record))
+                                                                candidates.append((score_record(normal_record), normal_record))
                                 candidates.append((score_record(reversed_record), reversed_record))
 
-                                                        best_record = max(candidates, key=lambda x: x[0])[1]
+                            best_record = max(candidates, key=lambda x: x[0])[1]
 
-                            # تصحيح التسويات السالبة
                             if best_record["مكالمات محلية"] < 0:
                                 best_record["رسوم تسويات"] += best_record["مكالمات محلية"]
                                 best_record["مكالمات محلية"] = 0
