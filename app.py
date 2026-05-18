@@ -10,7 +10,7 @@ from datetime import datetime
 # ================= CONFIG =================
 st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
 
-# ================= STYLE & THEME (نفس ستايلك الملكي) =================
+# ================= STYLE & THEME =================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
@@ -94,110 +94,84 @@ def parse_file(file, is_arabic):
     records = []
     try:
         with pdfplumber.open(file) as pdf:
+            # الفواتير عادة تبدأ من الصفحة الثالثة
             for page in pdf.pages[2:]:
                 tables = page.extract_tables()
                 for table in tables or []:
-                    for i, row in enumerate(table):
-                        if not row:
+                    for row in table:
+                        if not row: continue
+
+                        # 1. البحث عن رقم الموبايل لتحديد الصف الصحيح
+                        row_text_full = " ".join([str(c) for c in row if c])
+                        phone_match = re.search(r'(01[0125]\d{8})', normalize(row_text_full))
+                        
+                        if not phone_match: 
                             continue
+                            
+                        phone = phone_match.group(1)
+                        vals = []
 
-                        text = normalize(" ".join([str(c) for c in row if c]))
-                        phone = re.search(r'(01[0125]\d{8})', text)
+                        # 2. استخراج القيم مع الحفاظ على الخلايا الفارغة
+                        if len(row) > 8: # الجدول مقسم بشكل سليم
+                            phone_passed = False
+                            for cell in row:
+                                cell_str = normalize(str(cell) if cell else "")
+                                if not phone_passed:
+                                    if phone in cell_str:
+                                        phone_passed = True
+                                    continue
+                                
+                                # السر هنا: وضع 0 في الخلايا الفارغة لمنع تشفيت الأرقام
+                                if cell_str.strip() == "" or cell is None:
+                                    vals.append(0.0)
+                                else:
+                                    nums = extract_numbers(cell_str)
+                                    if nums:
+                                        vals.extend(nums)
+                                    else:
+                                        vals.append(0.0)
+                        else:
+                            # في حال فشل قراءة الأعمدة (Fallback)
+                            raw_nums = extract_numbers(row_text_full)
+                            vals = [v for v in raw_nums if str(int(v)) != str(int(phone))]
 
-                        if phone:
-                            p = phone.group(1)
-                            vals = extract_numbers(text)
+                        # إزالة أي أرقام مشابهة للهاتف بالخطأ
+                        vals = [v for v in vals if str(int(v)) != str(int(phone))]
+                        
+                        # إكمال الأعمدة الناقصة بأصفار
+                        while len(vals) < 13: 
+                            vals.append(0.0)
 
-                            if i + 1 < len(table):
-                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
-                                if len(nxt) > len(vals):
-                                    vals = nxt
+                        # ==========================================
+                        # 🛡️ شبكة الأمان الصارمة (The Safety Net) 🛡️
+                        # مستحيل أن تكون المكالمات أو الخدمات بالسالب
+                        # أي رقم سالب يقع في الأعمدة من 0 إلى 9 يجب نقله للتسويات (10)
+                        # ==========================================
+                        for idx in range(10): 
+                            if vals[idx] < 0:
+                                vals[10] += vals[idx] # نقل القيمة السالبة لعمود التسويات
+                                vals[idx] = 0.0       # تصفير الخانة الخاطئة
 
-                            vals = [v for v in vals if str(int(v)) != str(int(p))]
-
-                            if len(vals) < 13:
-                                continue
-
-                            def build_record(v):
-                                def g(idx):
-                                    return v[idx] if idx < len(v) else 0
-
-                                return {
-                                    "محمول": p,
-                                    "رسوم شهرية": g(0),
-                                    "رسوم الخدمات": g(1),
-                                    "مكالمات محلية": g(2),
-                                    "رسائل محلية": g(3),
-                                    "إنترنت محلية": g(4),
-                                    "مكالمات دولية": g(5),
-                                    "رسائل دولية": g(6),
-                                    "مكالمات تجوال": g(7),
-                                    "رسائل تجوال": g(8),
-                                    "إنترنت تجوال": g(9),
-                                    "رسوم تسويات": g(10),
-                                    "ضرائب": g(11),
-                                    "إجمالي": g(12)
-                                }
-
-                            def score_record(rec):
-                                score = 0
-
-                                monthly = abs(rec["رسوم شهرية"])
-                                services = abs(rec["رسوم الخدمات"])
-                                local_calls = abs(rec["مكالمات محلية"])
-                                local_sms = abs(rec["رسائل محلية"])
-                                local_data = abs(rec["إنترنت محلية"])
-                                intl_calls = abs(rec["مكالمات دولية"])
-                                intl_sms = abs(rec["رسائل دولية"])
-                                roam_calls = abs(rec["مكالمات تجوال"])
-                                roam_sms = abs(rec["رسائل تجوال"])
-                                roam_data = abs(rec["إنترنت تجوال"])
-                                settlements = rec["رسوم تسويات"]
-                                taxes = abs(rec["ضرائب"])
-                                total = abs(rec["إجمالي"])
-
-                                components_sum = (
-                                    monthly + services + local_calls + local_sms + local_data +
-                                    intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
-                                    settlements + taxes
-                                )
-
-                                if total >= monthly:
-                                    score += 2
-
-                                if total >= taxes:
-                                    score += 1
-
-                                if services <= (monthly + 1):
-                                    score += 1
-
-                                diff = abs(total - abs(components_sum))
-                                if diff <= 1:
-                                    score += 6
-                                elif diff <= 3:
-                                    score += 4
-                                elif diff <= 10:
-                                    score += 2
-
-                                if taxes <= total:
-                                    score += 1
-
-                                return score
-
-                            candidates = []
-
-                            for start in range(len(vals) - 13 + 1):
-                                window = vals[start:start + 13]
-                                normal_record = build_record(window)
-                                reversed_record = build_record(window[::-1])
-
-                                candidates.append((score_record(normal_record), normal_record))
-                                candidates.append((score_record(reversed_record), reversed_record))
-
-                            best_record = max(candidates, key=lambda x: x[0])[1]
-                            records.append(best_record)
-    except:
-        pass
+                        # 3. بناء السجل النهائي بدقة
+                        record = {
+                            "محمول": phone,
+                            "رسوم شهرية": vals[0],
+                            "رسوم الخدمات": vals[1],
+                            "مكالمات محلية": vals[2],
+                            "رسائل محلية": vals[3],
+                            "إنترنت محلية": vals[4],
+                            "مكالمات دولية": vals[5],
+                            "رسائل دولية": vals[6],
+                            "مكالمات تجوال": vals[7],
+                            "رسائل تجوال": vals[8],
+                            "إنترنت تجوال": vals[9],
+                            "رسوم تسويات": vals[10], # هنا ستستقر كل القيم السالبة بنجاح
+                            "ضرائب": vals[11],
+                            "إجمالي": vals[12]
+                        }
+                        records.append(record)
+    except Exception as e:
+        pass # تجاهل الأخطاء الصامتة لعدم تعطيل التطبيق
     return records
 
 # ================= UI =================
@@ -245,4 +219,4 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
-            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
+            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report_Fixed.xlsx")
