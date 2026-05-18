@@ -195,10 +195,13 @@ def parse_file(file, is_arabic):
                                 candidates.append((score_record(reversed_record), reversed_record))
 
                             best_record = max(candidates, key=lambda x: x[0])[1]
-                            records.append(best_record)
-    except:
-        pass
-    return records
+
+# تصحيح التسويات السالبة
+if best_record["مكالمات محلية"] < 0:
+    best_record["رسوم تسويات"] += best_record["مكالمات محلية"]
+    best_record["مكالمات محلية"] = 0
+
+records.append(best_record)
 
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
