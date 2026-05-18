@@ -201,6 +201,10 @@ def parse_file(file, is_arabic):
                                 best_record["مكالمات محلية"] = 0
 
                             records.append(best_record)
+        except:
+        pass
+
+    return records
 
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
