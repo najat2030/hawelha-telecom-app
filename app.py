@@ -10,7 +10,7 @@ from datetime import datetime
 # ================= CONFIG =================
 st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
 
-# ================= STYLE & THEME (نفس ستايلك الملكي) =================
+# ================= STYLE & THEME =================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
@@ -101,26 +101,54 @@ def parse_file(file, is_arabic):
                         if not row:
                             continue
 
-                        text = normalize(" ".join([str(c) for c in row if c]))
-                        phone = re.search(r'(01[0125]\d{8})', text)
+                        # 1. البحث عن رقم الموبايل للتأكد من أن السطر صحيح
+                        text_for_phone = normalize(" ".join([str(c) for c in row if c]))
+                        phone = re.search(r'(01[0125]\d{8})', text_for_phone)
 
                         if phone:
                             p = phone.group(1)
-                            vals = extract_numbers(text)
+                            
+                            # 2. استخراج الأرقام خلية بخلية للحفاظ على ترتيب الأعمدة والفراغات (السر هنا)
+                            vals = []
+                            for cell in row:
+                                if cell is None or str(cell).strip() == "":
+                                    vals.append(0.0) # نحافظ على الخلية الفارغة بصفر لمنع التشفيت
+                                else:
+                                    cell_nums = extract_numbers(str(cell))
+                                    # إزالة رقم الهاتف نفسه لو تم اعتباره رقم مالي بالخطأ
+                                    cell_nums = [v for v in cell_nums if str(int(v)) != str(int(p))]
+                                    
+                                    if cell_nums:
+                                        vals.extend(cell_nums)
+                                    else:
+                                        vals.append(0.0)
 
+                            # التعامل مع الصفحات التي ينقسم فيها السطر
                             if i + 1 < len(table):
-                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
-                                if len(nxt) > len(vals):
-                                    vals = nxt
+                                nxt_vals = []
+                                for cell in table[i+1]:
+                                    if cell is None or str(cell).strip() == "":
+                                        nxt_vals.append(0.0)
+                                    else:
+                                        cell_nums = extract_numbers(str(cell))
+                                        cell_nums = [v for v in cell_nums if str(int(v)) != str(int(p))]
+                                        if cell_nums:
+                                            nxt_vals.extend(cell_nums)
+                                        else:
+                                            nxt_vals.append(0.0)
+                                
+                                # نأخذ السطر التالي إذا كان يحتوي على قيم فعلية أكثر
+                                if sum(1 for v in nxt_vals if v != 0) > sum(1 for v in vals if v != 0):
+                                    vals = nxt_vals
 
-                            vals = [v for v in vals if str(int(v)) != str(int(p))]
+                            # ضمان وجود 13 قيمة
+                            while len(vals) < 13:
+                                vals.append(0.0)
 
-                            if len(vals) < 13:
-                                continue
-
+                            # 3. بناء السجل (من غير أي تعديل أو تلاعب في الأرقام السالبة)
                             def build_record(v):
                                 def g(idx):
-                                    return v[idx] if idx < len(v) else 0
+                                    return v[idx] if idx < len(v) else 0.0
 
                                 return {
                                     "محمول": p,
@@ -139,9 +167,9 @@ def parse_file(file, is_arabic):
                                     "إجمالي": g(12)
                                 }
 
+                            # التقييم (Scoring System) لضمان دقة السطر (كودك الأصلي الممتاز)
                             def score_record(rec):
                                 score = 0
-
                                 monthly = abs(rec["رسوم شهرية"])
                                 services = abs(rec["رسوم الخدمات"])
                                 local_calls = abs(rec["مكالمات محلية"])
@@ -152,40 +180,30 @@ def parse_file(file, is_arabic):
                                 roam_calls = abs(rec["مكالمات تجوال"])
                                 roam_sms = abs(rec["رسائل تجوال"])
                                 roam_data = abs(rec["إنترنت تجوال"])
-                                settlements = rec["رسوم تسويات"]
+                                settlements = rec["رسوم تسويات"] # هنا السالب هيفضل سالب والموجب موجب
                                 taxes = abs(rec["ضرائب"])
                                 total = abs(rec["إجمالي"])
 
+                                # المجموع الجبري زي ما بيكون في الفاتورة بالظبط
                                 components_sum = (
                                     monthly + services + local_calls + local_sms + local_data +
                                     intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
                                     settlements + taxes
                                 )
 
-                                if total >= monthly:
-                                    score += 2
-
-                                if total >= taxes:
-                                    score += 1
-
-                                if services <= (monthly + 1):
-                                    score += 1
+                                if total >= monthly: score += 2
+                                if total >= taxes: score += 1
+                                if services <= (monthly + 1): score += 1
 
                                 diff = abs(total - abs(components_sum))
-                                if diff <= 1:
-                                    score += 6
-                                elif diff <= 3:
-                                    score += 4
-                                elif diff <= 10:
-                                    score += 2
+                                if diff <= 1: score += 6
+                                elif diff <= 3: score += 4
+                                elif diff <= 10: score += 2
 
-                                if taxes <= total:
-                                    score += 1
-
+                                if taxes <= total: score += 1
                                 return score
 
                             candidates = []
-
                             for start in range(len(vals) - 13 + 1):
                                 window = vals[start:start + 13]
                                 normal_record = build_record(window)
@@ -194,9 +212,10 @@ def parse_file(file, is_arabic):
                                 candidates.append((score_record(normal_record), normal_record))
                                 candidates.append((score_record(reversed_record), reversed_record))
 
-                            best_record = max(candidates, key=lambda x: x[0])[1]
-                            records.append(best_record)
-    except:
+                            if candidates:
+                                best_record = max(candidates, key=lambda x: x[0])[1]
+                                records.append(best_record)
+    except Exception as e:
         pass
     return records
 
@@ -245,4 +264,4 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
-            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
+            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report_Fixed.xlsx")
