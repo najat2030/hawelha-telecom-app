@@ -10,7 +10,7 @@ from datetime import datetime
 # ================= CONFIG =================
 st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
 
-# ================= STYLE & THEME =================
+# ================= STYLE & THEME (نفس ستايلك الملكي) =================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
@@ -60,7 +60,7 @@ if not st.session_state.logged_in:
                 st.session_state.username = u.strip()
                 st.rerun()
             else:
-                st.error("❌ خطأ في اسم المستخدم أو كلمة المرور")
+                st.error("خطأ في البيانات")
     st.stop()
 
 # ================= HEADER =================
@@ -76,287 +76,173 @@ with col_me:
     initial = st.session_state.username[0].upper()
     st.markdown(f'<div class="royal-green-box"><span class="avatar-circle-white">{initial}</span>مرحباً، {st.session_state.username}</div>', unsafe_allow_html=True)
 
-# ================= HELPER FUNCTIONS =================
+# ================= LOGIC =================
 def normalize(t):
-    """توحيد علامات الطرح والأقواس"""
     return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
 
-def extract_numbers_with_position(text, phone):
-    """
-    استخراج الأرقام مع مراعاة الترتيب الصحيح للفواتير العربية (RTL)
-    وإزالة رقم الموبايل من القائمة
-    """
+def extract_numbers(text):
     if not text:
         return []
-    
     text = normalize(str(text))
-    # تحويل الأقواس لقيم سالبة: (7.12) -> -7.12
     text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
-    
-    # استخراج الأرقام مع مواضعها في النص
-    matches = []
-    for match in re.finditer(r'-?\d+(?:\.\d+)?', text):
-        num = float(match.group())
-        # استبعاد رقم الموبايل
-        if str(int(abs(num))) != phone[:10] and abs(num) > 0.01:
-            matches.append((match.start(), num))
-    
-    # ترتيب حسب الموضع في النص (مهم للجداول العربية)
-    matches.sort(key=lambda x: x[0])
-    return [num for _, num in matches]
+    text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
+    text = re.sub(r'-\s+(\d)', r'-\1', text)
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+    return [float(n) for n in numbers]
 
-def build_record_smart(values, phone):
-    """
-    بناء سجل ذكي يضع القيم السالبة في عمود 'رسوم تسويات' أولاً
-    ثم يوزع باقي القيم على الأعمدة بالترتيب
-    """
-    columns_order = [
-        "رسوم شهرية", "رسوم الخدمات", "مكالمات محلية", "رسائل محلية", 
-        "إنترنت محلية", "مكالمات دولية", "رسائل دولية", "مكالمات تجوال", 
-        "رسائل تجوال", "إنترنت تجوال", "رسوم تسويات", "ضرائب", "إجمالي"
-    ]
-    
-    # عزل القيم السالبة (مرشحة للتسويات)
-    negatives = [v for v in values if v < 0]
-    positives = [v for v in values if v >= 0]
-    
-    record = {"محمول": phone}
-    
-    # 1️⃣ أولاً: نضع القيمة السالبة في "رسوم تسويات" إذا وجدت
-    if negatives:
-        record["رسوم تسويات"] = negatives[0]
-        remaining_values = positives + negatives[1:]  # باقي القيم
-    else:
-        record["رسوم تسويات"] = 0.0
-        remaining_values = positives
-    
-    # 2️⃣ نوزع باقي القيم على الأعمدة الأخرى بالترتيب
-    val_idx = 0
-    for col in columns_order:
-        if col in record:  # تم ملؤه مسبقاً
-            continue
-        if val_idx < len(remaining_values):
-            record[col] = remaining_values[val_idx]
-            val_idx += 1
-        else:
-            record[col] = 0.0
-    
-    return record
-
-def validate_record(record):
-    """تحقق بسيط من منطقية القيم المستخرجة"""
-    try:
-        total = abs(record.get("إجمالي", 0))
-        components = [
-            abs(record.get("رسوم شهرية", 0)),
-            abs(record.get("رسوم الخدمات", 0)),
-            abs(record.get("مكالمات محلية", 0)),
-            abs(record.get("رسائل محلية", 0)),
-            abs(record.get("إنترنت محلية", 0)),
-            abs(record.get("مكالمات دولية", 0)),
-            abs(record.get("رسائل دولية", 0)),
-            abs(record.get("مكالمات تجوال", 0)),
-            abs(record.get("رسائل تجوال", 0)),
-            abs(record.get("إنترنت تجوال", 0)),
-            abs(record.get("رسوم تسويات", 0)),
-            abs(record.get("ضرائب", 0))
-        ]
-        expected = sum(components)
-        # هامش خطأ 5 جنيهات مقبول
-        return abs(total - expected) <= 5
-    except:
-        return False
-
-def parse_file_improved(file, is_arabic):
-    """الدالة الرئيسية لمعالجة ملفات PDF بدقة عالية"""
+def parse_file(file, is_arabic):
     records = []
     try:
         with pdfplumber.open(file) as pdf:
-            # نبدأ من الصفحة الثالثة كما في الهيكل الأصلي للفاتورة
             for page in pdf.pages[2:]:
                 tables = page.extract_tables()
                 for table in tables or []:
-                    for row_idx, row in enumerate(table):
-                        if not row or not any(row):
+                    for i, row in enumerate(table):
+                        if not row:
                             continue
-                        
-                        # تجميع نص الصف مع الحفاظ على الترتيب
-                        cells = [str(c).strip() for c in row if c is not None]
-                        full_text = " ".join(cells)
-                        
-                        # استخراج رقم الموبايل
-                        phone_match = re.search(r'(01[0125]\d{8})', full_text)
-                        if not phone_match:
-                            continue
-                        
-                        phone = phone_match.group(1)
-                        
-                        # استخراج الأرقام بالترتيب الصحيح
-                        values = extract_numbers_with_position(full_text, phone)
-                        
-                        # نحتاج على الأقل 10 قيم لبناء سجل معقول
-                        if len(values) < 10:
-                            continue
-                        
-                        # بناء السجل الذكي
-                        record = build_record_smart(values, phone)
-                        
-                        # إضافة علامة تحقق من الجودة
-                        record["✓ تم التحقق"] = "نعم" if validate_record(record) else "مراجعة"
-                        
-                        records.append(record)
-                        
-    except Exception as e:
-        st.error(f"⚠️ خطأ في معالجة الملف: {str(e)}")
-    
+
+                        text = normalize(" ".join([str(c) for c in row if c]))
+                        phone = re.search(r'(01[0125]\d{8})', text)
+
+                        if phone:
+                            p = phone.group(1)
+                            vals = extract_numbers(text)
+
+                            if i + 1 < len(table):
+                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                                if len(nxt) > len(vals):
+                                    vals = nxt
+
+                            vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                            if len(vals) < 13:
+                                continue
+
+                            def build_record(v):
+                                def g(idx):
+                                    return v[idx] if idx < len(v) else 0
+
+                                return {
+                                    "محمول": p,
+                                    "رسوم شهرية": g(0),
+                                    "رسوم الخدمات": g(1),
+                                    "مكالمات محلية": g(2),
+                                    "رسائل محلية": g(3),
+                                    "إنترنت محلية": g(4),
+                                    "مكالمات دولية": g(5),
+                                    "رسائل دولية": g(6),
+                                    "مكالمات تجوال": g(7),
+                                    "رسائل تجوال": g(8),
+                                    "إنترنت تجوال": g(9),
+                                    "رسوم تسويات": g(10),
+                                    "ضرائب": g(11),
+                                    "إجمالي": g(12)
+                                }
+
+                            def score_record(rec):
+                                score = 0
+
+                                monthly = abs(rec["رسوم شهرية"])
+                                services = abs(rec["رسوم الخدمات"])
+                                local_calls = abs(rec["مكالمات محلية"])
+                                local_sms = abs(rec["رسائل محلية"])
+                                local_data = abs(rec["إنترنت محلية"])
+                                intl_calls = abs(rec["مكالمات دولية"])
+                                intl_sms = abs(rec["رسائل دولية"])
+                                roam_calls = abs(rec["مكالمات تجوال"])
+                                roam_sms = abs(rec["رسائل تجوال"])
+                                roam_data = abs(rec["إنترنت تجوال"])
+                                settlements = rec["رسوم تسويات"]
+                                taxes = abs(rec["ضرائب"])
+                                total = abs(rec["إجمالي"])
+
+                                components_sum = (
+                                    monthly + services + local_calls + local_sms + local_data +
+                                    intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
+                                    settlements + taxes
+                                )
+
+                                if total >= monthly:
+                                    score += 2
+
+                                if total >= taxes:
+                                    score += 1
+
+                                if services <= (monthly + 1):
+                                    score += 1
+
+                                diff = abs(total - abs(components_sum))
+                                if diff <= 1:
+                                    score += 6
+                                elif diff <= 3:
+                                    score += 4
+                                elif diff <= 10:
+                                    score += 2
+
+                                if taxes <= total:
+                                    score += 1
+
+                                return score
+
+                            candidates = []
+
+                            for start in range(len(vals) - 13 + 1):
+                                window = vals[start:start + 13]
+                                normal_record = build_record(window)
+                                reversed_record = build_record(window[::-1])
+
+                                candidates.append((score_record(normal_record), normal_record))
+                                candidates.append((score_record(reversed_record), reversed_record))
+
+                            best_record = max(candidates, key=lambda x: x[0])[1]
+                            records.append(best_record)
+    except:
+        pass
     return records
 
-# ================= UI & MAIN LOGIC =================
+# ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
 mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪🇬", "English 🇺🇸"], horizontal=True)
 
-if st.button("🚀 بدء المعالجة والتحليل", type="primary"):
-    if not files:
-        st.warning("⚠️ من فضلك اختر ملفاً واحداً على الأقل")
-    else:
+if st.button("🚀 بدء المعالجة والتحليل"):
+    if files:
         progress_bar = st.progress(0)
-        status_text = st.empty()
         all_data = []
-        
         for idx, file in enumerate(files):
-            status_text.text(f"🔄 جاري معالجة: {file.name} ...")
             file.seek(0)
-            
-            # تحديد اللغة تلقائياً أو يدوياً
             if mode == "Auto 🤖":
                 try:
                     with pdfplumber.open(file) as pdf:
-                        first_page_text = pdf.pages[0].extract_text() or ""
-                    is_ar = bool(re.search(r'[\u0600-\u06FF]', first_page_text))
+                        txt = pdf.pages[0].extract_text() or ""
+                    is_ar = True if re.search(r'[\u0600-\u06FF]', txt) else False
                 except:
-                    is_ar = True  # الافتراضي عربي
+                    is_ar = True
             else:
-                is_ar = (mode == "عربي 🇪🇬")
-            
+                is_ar = True if mode == "عربي 🇪🇬" else False
+
             file.seek(0)
-            data = parse_file_improved(file, is_ar)
+            data = parse_file(file, is_ar)
             all_data.extend(data)
-            
-            # تحديث شريط التقدم
             progress_bar.progress((idx + 1) / len(files))
             gc.collect()
-        
-        status_text.empty()
-        
+
         if all_data:
             df = pd.DataFrame(all_data)
-            
-            # 📊 عرض الملخص المالي
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
-            
             with m1:
-                st.markdown(f'''
-                <div class="metric-card">
-                    <div class="metric-title">📱 إجمالي الخطوط</div>
-                    <div class="metric-value">{len(df):,}</div>
-                </div>''', unsafe_allow_html=True)
-            
+                st.markdown(f'<div class="metric-card"><div class="metric-title">📱 الخطوط</div><div class="metric-value">{len(df)}</div></div>', unsafe_allow_html=True)
             with m2:
-                monthly_sum = df["رسوم شهرية"].sum()
-                st.markdown(f'''
-                <div class="metric-card">
-                    <div class="metric-title">💰 الرسوم الشهرية</div>
-                    <div class="metric-value">{monthly_sum:,.2f} ج.م</div>
-                </div>''', unsafe_allow_html=True)
-            
+                st.markdown(f'<div class="metric-card"><div class="metric-title">💰 الرسوم</div><div class="metric-value">{df["رسوم شهرية"].sum():,.1f}</div></div>', unsafe_allow_html=True)
             with m3:
-                settlements_sum = df["رسوم تسويات"].sum()
-                color = "red" if settlements_sum < 0 else "#1a7e43"
-                st.markdown(f'''
-                <div class="metric-card">
-                    <div class="metric-title">🧾 صافي التسويات</div>
-                    <div class="metric-value" style="color: {color};">{settlements_sum:,.2f} ج.م</div>
-                </div>''', unsafe_allow_html=True)
-            
+                st.markdown(f'<div class="metric-card"><div class="metric-title">🧾 تسويات</div><div class="metric-value" style="color: red;">{df["رسوم تسويات"].sum():,.1f}</div></div>', unsafe_allow_html=True)
             with m4:
-                taxes_sum = df["ضرائب"].sum()
-                st.markdown(f'''
-                <div class="metric-card">
-                    <div class="metric-title">🏛️ إجمالي الضرائب</div>
-                    <div class="metric-value">{taxes_sum:,.2f} ج.م</div>
-                </div>''', unsafe_allow_html=True)
-            
+                st.markdown(f'<div class="metric-card"><div class="metric-title">🏛️ ضرائب</div><div class="metric-value">{df["ضرائب"].sum():,.1f}</div></div>', unsafe_allow_html=True)
             with m5:
-                total_sum = df["إجمالي"].sum()
-                st.markdown(f'''
-                <div class="metric-card">
-                    <div class="metric-title">💎 الإجمالي النهائي</div>
-                    <div class="metric-value">{total_sum:,.2f} ج.م</div>
-                </div>''', unsafe_allow_html=True)
-            
-            # 🔍 فلاتر عرض البيانات
-            col_filt1, col_filt2 = st.columns(2)
-            with col_filt1:
-                show_only_verified = st.checkbox("✅ عرض الصفوف المُتحقق منها فقط", value=False)
-            with col_filt2:
-                search_phone = st.text_input("🔍 بحث برقم الموبايل", placeholder="اكتب جزء من الرقم...")
-            
-            # تطبيق الفلاتر
-            display_df = df.copy()
-            if show_only_verified:
-                display_df = display_df[display_df["✓ تم التحقق"] == "نعم"]
-            if search_phone:
-                display_df = display_df[display_df["محمول"].str.contains(search_phone, na=False)]
-            
-            # عرض الجدول
-            st.markdown("### 📋 تفاصيل البيانات المستخرجة")
-            st.dataframe(
-                display_df, 
-                use_container_width=True,
-                column_config={
-                    "محمول": st.column_config.TextColumn("📱 المحمول", width="medium"),
-                    "إجمالي": st.column_config.NumberColumn("💰 الإجمالي", format="%.2f"),
-                    "✓ تم التحقق": st.column_config.TextColumn("الحالة", width="small")
-                }
-            )
-            
-            # 📥 أزرار التصدير
-            col_exp1, col_exp2 = st.columns(2)
-            
-            # تصدير Excel
-            with col_exp1:
-                excel_buf = io.BytesIO()
-                with pd.ExcelWriter(excel_buf, engine="openpyxl") as writer:
-                    df.to_excel(writer, index=False, sheet_name="تقرير الفواتير")
-                st.download_button(
-                    "📥 تحميل تقرير Excel", 
-                    data=excel_buf.getvalue(), 
-                    file_name=f"Hawelha_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-            
-            # تصدير CSV
-            with col_exp2:
-                csv_buf = io.BytesIO()
-                df.to_csv(csv_buf, index=False, encoding='utf-8-sig')
-                st.download_button(
-                    "📄 تحميل كـ CSV", 
-                    data=csv_buf.getvalue(), 
-                    file_name=f"Hawelha_Report_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-            
-            # 📝 ملاحظة جودة البيانات
-            unverified_count = len(df[df["✓ تم التحقق"] != "نعم"])
-            if unverified_count > 0:
-                st.info(f"💡 ملاحظة: هناك {unverified_count} صف يحتاج مراجعة يدوية بسبب اختلاف بسيط في المجموع")
-        
-        else:
-            st.warning("⚠️ لم يتم استخراج أي بيانات. تأكد من أن ملفات PDF تحتوي على جداول بالفواتير من الصفحة الثالثة فصاعداً.")
+                st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي</div><div class="metric-value">{df["إجمالي"].sum():,.1f}</div></div>', unsafe_allow_html=True)
 
-# ================= FOOTER =================
-st.markdown("---")
-st.markdown('<div style="text-align: center; color: #666; font-size: 12px; padding: 10px;">© 2026 Hawelha Telecom | جميع الحقوق محفوظة</div>', unsafe_allow_html=True)
+            st.dataframe(df, use_container_width=True)
+            buf = io.BytesIO()
+            with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+                df.to_excel(writer, index=False)
+            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
