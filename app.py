@@ -140,47 +140,65 @@ def parse_file(file, is_arabic):
                                 }
 
                             def score_record(rec):
-                                score = 0
-
-                                monthly = abs(rec["رسوم شهرية"])
-                                services = abs(rec["رسوم الخدمات"])
-                                local_calls = abs(rec["مكالمات محلية"])
-                                local_sms = abs(rec["رسائل محلية"])
-                                local_data = abs(rec["إنترنت محلية"])
-                                intl_calls = abs(rec["مكالمات دولية"])
-                                intl_sms = abs(rec["رسائل دولية"])
-                                roam_calls = abs(rec["مكالمات تجوال"])
-                                roam_sms = abs(rec["رسائل تجوال"])
-                                roam_data = abs(rec["إنترنت تجوال"])
+                                monthly = rec["رسوم شهرية"]
+                                services = rec["رسوم الخدمات"]
+                                local_calls = rec["مكالمات محلية"]
+                                local_sms = rec["رسائل محلية"]
+                                local_data = rec["إنترنت محلية"]
+                                intl_calls = rec["مكالمات دولية"]
+                                intl_sms = rec["رسائل دولية"]
+                                roam_calls = rec["مكالمات تجوال"]
+                                roam_sms = rec["رسائل تجوال"]
+                                roam_data = rec["إنترنت تجوال"]
                                 settlements = rec["رسوم تسويات"]
-                                taxes = abs(rec["ضرائب"])
-                                total = abs(rec["إجمالي"])
+                                taxes = rec["ضرائب"]
+                                total = rec["إجمالي"]
 
-                                components_sum = (
+                                calculated_total = (
                                     monthly + services + local_calls + local_sms + local_data +
                                     intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
                                     settlements + taxes
                                 )
 
-                                if total >= monthly:
-                                    score += 2
+                                diff = abs(total - calculated_total)
+                                score = 0
 
-                                if total >= taxes:
-                                    score += 1
-
-                                if services <= (monthly + 1):
-                                    score += 1
-
-                                diff = abs(total - abs(components_sum))
-                                if diff <= 1:
-                                    score += 6
+                                if diff <= 0.05:
+                                    score += 1000
+                                elif diff <= 0.10:
+                                    score += 500
+                                elif diff <= 0.50:
+                                    score += 250
+                                elif diff <= 1:
+                                    score += 100
                                 elif diff <= 3:
-                                    score += 4
+                                    score += 30
                                 elif diff <= 10:
-                                    score += 2
+                                    score += 10
 
-                                if taxes <= total:
-                                    score += 1
+                                if monthly >= 0:
+                                    score += 10
+
+                                if taxes >= 0:
+                                    score += 10
+
+                                if services >= 0:
+                                    score += 5
+
+                                if abs(total) >= abs(taxes):
+                                    score += 5
+
+                                if abs(total) >= abs(monthly):
+                                    score += 5
+
+                                if abs(local_calls) <= 100:
+                                    score += 3
+
+                                if abs(local_sms) <= 100:
+                                    score += 3
+
+                                if abs(local_data) <= 100:
+                                    score += 3
 
                                 return score
 
@@ -195,18 +213,6 @@ def parse_file(file, is_arabic):
                                 candidates.append((score_record(reversed_record), reversed_record))
 
                             best_record = max(candidates, key=lambda x: x[0])[1]
-
-                            if (
-                                best_record["إجمالي"] > 0
-                                and best_record["رسوم شهرية"] > 0
-                                and best_record["إجمالي"] < best_record["رسوم شهرية"]
-                                and best_record["رسوم شهرية"] > 20
-                            ):
-                                best_record["رسوم شهرية"], best_record["إجمالي"] = (
-                                    best_record["إجمالي"],
-                                    best_record["رسوم شهرية"]
-                                )
-
                             records.append(best_record)
     except:
         pass
