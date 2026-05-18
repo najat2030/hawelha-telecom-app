@@ -201,7 +201,8 @@ def parse_file(file, is_arabic):
                                 best_record["مكالمات محلية"] = 0
 
                             records.append(best_record)
-        except:
+
+    except:
         pass
 
     return records
