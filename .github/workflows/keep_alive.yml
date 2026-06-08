@@ -1,0 +1,10 @@
+name: Keep Alive
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake app
+        run: curl -s https://hawelha-telecom.streamlit.app > /dev/null
