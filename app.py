@@ -1,5 +1,5 @@
 import streamlit as st
-import fitz  # <-- تم التغيير من pdfplumber إلى fitz (PyMuPDF)
+import pdfplumber
 import pandas as pd
 import re
 import io
@@ -36,14 +36,12 @@ div.stButton > button { min-height: 45px !important; width: 100% !important; fon
 
 # ================= USERS DATA =================
 def load_users():
-    return {
-        "noga": "19852026",
-        "amany": "123456",
-        "ayat": "987654",
-        "ghada": "456789",
-        "omniya": "654321",
-        "hussein": "1119885757"
-    }
+    try:
+        df_users = pd.read_excel("users.xlsx")
+        return {str(row["Username"]).strip(): str(row["Password"]).strip() for _, row in df_users.iterrows()}
+    except:
+        return {"admin": "123"}
+
 users = load_users()
 
 # ================= SESSION STATE =================
@@ -69,7 +67,7 @@ if not st.session_state.logged_in:
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 col_out, col_logo, col_me = st.columns([1, 4, 1], vertical_alignment="center")
 with col_out:
-    if st.button(" خروج"):
+    if st.button("🚪 خروج"):
         st.session_state.logged_in = False
         st.rerun()
 with col_logo:
@@ -95,95 +93,134 @@ def extract_numbers(text):
 def parse_file(file, is_arabic):
     records = []
     try:
-        file_bytes = file.read()
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        
-        for page_num in range(2, len(doc)):
-            page = doc[page_num]
-            tabs = page.find_tables()
-            if not tabs:
-                continue
-                
-            for table in tabs:
-                extracted_rows = table.extract()
-                if not extracted_rows:
-                    continue
-                    
-                for i, row in enumerate(extracted_rows):
-                    if not row:
-                        continue
-
-                    text = normalize(" ".join([str(c) for c in row if c]))
-                    phone = re.search(r'(01[0125]\d{8})', text)
-
-                    if phone:
-                        p = phone.group(1)
-                        vals = extract_numbers(text)
-
-                        if i + 1 < len(extracted_rows):
-                            nxt_text = normalize(" ".join([str(c) for c in extracted_rows[i+1] if c]))
-                            nxt = extract_numbers(nxt_text)
-                            if len(nxt) > len(vals):
-                                vals = nxt
-
-                        vals = [v for v in vals if str(int(v)) != str(int(p))]
-
-                        if len(vals) < 13:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages[2:]:
+                tables = page.extract_tables()
+                for table in tables or []:
+                    for i, row in enumerate(table):
+                        if not row:
                             continue
 
-                        def build_record(v):
-                            def g(idx):
-                                return v[idx] if idx < len(v) else 0
-                            return {
-                                "محمول": p,
-                                "رسوم شهرية": g(0), "رسوم الخدمات": g(1),
-                                "مكالمات محلية": g(2), "رسائل محلية": g(3),
-                                "إنترنت محلية": g(4), "مكالمات دولية": g(5),
-                                "رسائل دولية": g(6), "مكالمات تجوال": g(7),
-                                "رسائل تجوال": g(8), "إنترنت تجوال": g(9),
-                                "رسوم تسويات": g(10), "ضرائب": g(11), "إجمالي": g(12)
-                            }
+                        text = normalize(" ".join([str(c) for c in row if c]))
+                        phone = re.search(r'(01[0125]\d{8})', text)
 
-                        def score_record(rec):
-                            total_calc = sum([rec[k] for k in rec if k not in ["محمول", "إجمالي"]])
-                            diff = abs(rec["إجمالي"] - total_calc)
-                            score = 0
-                            if diff <= 0.05: score += 1000
-                            elif diff <= 0.10: score += 500
-                            elif diff <= 0.50: score += 250
-                            elif diff <= 1: score += 100
-                            elif diff <= 3: score += 30
-                            elif diff <= 10: score += 10
-                            
-                            if rec["رسوم شهرية"] >= 0: score += 10
-                            if rec["ضرائب"] >= 0: score += 10
-                            if rec["رسوم الخدمات"] >= 0: score += 5
-                            if abs(rec["إجمالي"]) >= abs(rec["ضرائب"]): score += 5
-                            if abs(rec["إجمالي"]) >= abs(rec["رسوم شهرية"]): score += 5
-                            if abs(rec["مكالمات محلية"]) <= 100: score += 3
-                            if abs(rec["رسائل محلية"]) <= 100: score += 3
-                            if abs(rec["إنترنت محلية"]) <= 100: score += 3
-                            return score
+                        if phone:
+                            p = phone.group(1)
+                            vals = extract_numbers(text)
 
-                        candidates = []
-                        for start in range(len(vals) - 13 + 1):
-                            window = vals[start:start + 13]
-                            candidates.append((score_record(build_record(window)), build_record(window)))
-                            candidates.append((score_record(build_record(window[::-1])), build_record(window[::-1])))
-                        
-                        best_record = max(candidates, key=lambda x: x[0])[1]
-                        records.append(best_record)
-                        
-        doc.close()
-        
-    except Exception as e:
-        st.error(f"حدث خطأ أثناء معالجة الملف: {str(e)}")
-        
+                            if i + 1 < len(table):
+                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                                if len(nxt) > len(vals):
+                                    vals = nxt
+
+                            vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                            if len(vals) < 13:
+                                continue
+
+                            def build_record(v):
+                                def g(idx):
+                                    return v[idx] if idx < len(v) else 0
+
+                                return {
+                                    "محمول": p,
+                                    "رسوم شهرية": g(0),
+                                    "رسوم الخدمات": g(1),
+                                    "مكالمات محلية": g(2),
+                                    "رسائل محلية": g(3),
+                                    "إنترنت محلية": g(4),
+                                    "مكالمات دولية": g(5),
+                                    "رسائل دولية": g(6),
+                                    "مكالمات تجوال": g(7),
+                                    "رسائل تجوال": g(8),
+                                    "إنترنت تجوال": g(9),
+                                    "رسوم تسويات": g(10),
+                                    "ضرائب": g(11),
+                                    "إجمالي": g(12)
+                                }
+
+                            def score_record(rec):
+                                monthly = rec["رسوم شهرية"]
+                                services = rec["رسوم الخدمات"]
+                                local_calls = rec["مكالمات محلية"]
+                                local_sms = rec["رسائل محلية"]
+                                local_data = rec["إنترنت محلية"]
+                                intl_calls = rec["مكالمات دولية"]
+                                intl_sms = rec["رسائل دولية"]
+                                roam_calls = rec["مكالمات تجوال"]
+                                roam_sms = rec["رسائل تجوال"]
+                                roam_data = rec["إنترنت تجوال"]
+                                settlements = rec["رسوم تسويات"]
+                                taxes = rec["ضرائب"]
+                                total = rec["إجمالي"]
+
+                                calculated_total = (
+                                    monthly + services + local_calls + local_sms + local_data +
+                                    intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
+                                    settlements + taxes
+                                )
+
+                                diff = abs(total - calculated_total)
+                                score = 0
+
+                                if diff <= 0.05:
+                                    score += 1000
+                                elif diff <= 0.10:
+                                    score += 500
+                                elif diff <= 0.50:
+                                    score += 250
+                                elif diff <= 1:
+                                    score += 100
+                                elif diff <= 3:
+                                    score += 30
+                                elif diff <= 10:
+                                    score += 10
+
+                                if monthly >= 0:
+                                    score += 10
+
+                                if taxes >= 0:
+                                    score += 10
+
+                                if services >= 0:
+                                    score += 5
+
+                                if abs(total) >= abs(taxes):
+                                    score += 5
+
+                                if abs(total) >= abs(monthly):
+                                    score += 5
+
+                                if abs(local_calls) <= 100:
+                                    score += 3
+
+                                if abs(local_sms) <= 100:
+                                    score += 3
+
+                                if abs(local_data) <= 100:
+                                    score += 3
+
+                                return score
+
+                            candidates = []
+
+                            for start in range(len(vals) - 13 + 1):
+                                window = vals[start:start + 13]
+                                normal_record = build_record(window)
+                                reversed_record = build_record(window[::-1])
+
+                                candidates.append((score_record(normal_record), normal_record))
+                                candidates.append((score_record(reversed_record), reversed_record))
+
+                            best_record = max(candidates, key=lambda x: x[0])[1]
+                            records.append(best_record)
+    except:
+        pass
     return records
 
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
-mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪", "English 🇺🇸"], horizontal=True)
+mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪🇬", "English 🇺🇸"], horizontal=True)
 
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
@@ -193,10 +230,8 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             file.seek(0)
             if mode == "Auto 🤖":
                 try:
-                    file_bytes_temp = file.read()
-                    temp_doc = fitz.open(stream=file_bytes_temp, filetype="pdf")
-                    txt = temp_doc[0].get_text() or ""
-                    temp_doc.close()
+                    with pdfplumber.open(file) as pdf:
+                        txt = pdf.pages[0].extract_text() or ""
                     is_ar = True if re.search(r'[\u0600-\u06FF]', txt) else False
                 except:
                     is_ar = True
@@ -207,12 +242,11 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             data = parse_file(file, is_ar)
             all_data.extend(data)
             progress_bar.progress((idx + 1) / len(files))
-            gc.collect() 
+            gc.collect()
 
         if all_data:
             df = pd.DataFrame(all_data)
-            
-            st.markdown("###  ملخص التحليل المالي")
+            st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
             with m1:
                 st.markdown(f'<div class="metric-card"><div class="metric-title">📱 الخطوط</div><div class="metric-value">{len(df)}</div></div>', unsafe_allow_html=True)
@@ -225,16 +259,8 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             with m5:
                 st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي</div><div class="metric-value">{df["إجمالي"].sum():,.1f}</div></div>', unsafe_allow_html=True)
 
-            # عرض أول 50 صف فقط لتوفير الذاكرة
-            st.dataframe(df.head(50), use_container_width=True)
-            if len(df) > 50:
-                st.caption(f"️ تم عرض أول 50 سجل فقط لتوفير موارد السيرفر. إجمالي السجلات: {len(df)}")
-
+            st.dataframe(df, use_container_width=True)
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
             st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
-            
-            # تفريغ الذاكرة بعد الانتهاء
-            del df, all_data, buf
-            gc.collect()
