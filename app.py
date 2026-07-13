@@ -1,38 +1,47 @@
 import streamlit as st
-import fitz  # PyMuPDF
+import pdfplumber
 import pandas as pd
 import re
 import io
+import os
 import gc
+from datetime import datetime
 
 # ================= CONFIG =================
-st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="")
+st.set_page_config(page_title="Hawelha Telecom", layout="wide", page_icon="📊")
 
-# ================= STYLE & THEME =================
+# ================= STYLE & THEME (نفس ستايلك الملكي) =================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
 .stApp { background-color: #f8f9fa; font-family: 'Tajawal', sans-serif; }
-#MainMenu, footer, header { visibility: hidden; }
-.login-card { background: white; padding: 35px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); max-width: 430px; margin: 70px auto; text-align: center; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header { visibility: hidden; }
+.login-background { position: fixed; inset: 0; background-color: #F4F6F8; z-index: -1; }
+.login-card { background: rgba(255, 255, 255, 0.97); padding: 35px 30px; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); border: 1px solid rgba(255, 255, 255, 0.4); max-width: 430px; margin: 70px auto; text-align: center; }
 .login-title { color: #1a7e43; font-size: 26px; font-weight: 800; margin-bottom: 20px; }
-.royal-green-box, div.stButton > button { background-color: #1a7e43 !important; color: white !important; border-radius: 50px !important; border: 2px solid #146435 !important; font-weight: 600 !important; }
+.royal-green-box, div.stButton > button { background-color: #1a7e43 !important; color: white !important; border-radius: 50px !important; border: 2px solid #146435 !important; font-family: 'Segoe UI', sans-serif; font-weight: 600 !important; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; margin: 0 !important; }
+.royal-green-box { min-height: 45px !important; width: fit-content !important; padding: 5px 16px !important; font-size: 14px !important; gap: 8px !important; margin-left: auto !important; }
+div.stButton > button { min-height: 45px !important; width: 100% !important; font-size: 14px !important; }
+.avatar-circle-white { background-color: white !important; color: #1a7e43 !important; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; margin-left: 8px; }
 .header-container { background: white; padding: 10px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center; }
-.metric-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-right: 5px solid #1a7e43; text-align: center; }
+.header-logo { width: 100% !important; max-width: 650px !important; height: auto; }
+.metric-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-right: 5px solid #1a7e43; margin-bottom: 10px; text-align: center; }
+.metric-title { font-size: 18px !important; color: #555; font-weight: 600 !important; }
 .metric-value { font-size: 32px !important; color: #1a7e43; font-weight: 800 !important; }
+.stProgress > div > div > div > div { background-color: #daa520 !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ================= USERS DATA =================
 def load_users():
-    return {
-        "noga": "19852026",
-        "amany": "123456",
-        "ayat": "987654",
-        "ghada": "456789",
-        "omniya": "654321",
-        "hussein": "1119885757"
-    }
+    try:
+        df_users = pd.read_excel("users.xlsx")
+        return {str(row["Username"]).strip(): str(row["Password"]).strip() for _, row in df_users.iterrows()}
+    except:
+        return {"admin": "123"}
+
 users = load_users()
 
 # ================= SESSION STATE =================
@@ -58,113 +67,160 @@ if not st.session_state.logged_in:
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 col_out, col_logo, col_me = st.columns([1, 4, 1], vertical_alignment="center")
 with col_out:
-    if st.button(" خروج"):
+    if st.button("🚪 خروج"):
         st.session_state.logged_in = False
         st.rerun()
 with col_logo:
-    st.markdown(f'<div class="header-container"><img src="{logo_url}" style="max-width: 650px; height: auto;"></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="header-container"><img src="{logo_url}" class="header-logo"></div>', unsafe_allow_html=True)
 with col_me:
     initial = st.session_state.username[0].upper()
-    st.markdown(f'<div class="royal-green-box"><span>{initial}</span> مرحباً، {st.session_state.username}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="royal-green-box"><span class="avatar-circle-white">{initial}</span>مرحباً، {st.session_state.username}</div>', unsafe_allow_html=True)
 
 # ================= LOGIC =================
 def normalize(t):
     return (t or "").replace("−", "-").replace("–", "-").replace("—", "-")
 
-def parse_file_smart(file):
+def extract_numbers(text):
+    if not text:
+        return []
+    text = normalize(str(text))
+    text = re.sub(r'\((\d+\.?\d*)\)', r'-\1', text)
+    text = re.sub(r'(\d+\.?\d*)-', r'-\1', text)
+    text = re.sub(r'-\s+(\d)', r'-\1', text)
+    numbers = re.findall(r'-?\d+(?:\.\d+)?', text)
+    return [float(n) for n in numbers]
+
+def parse_file(file, is_arabic):
     records = []
     try:
-        file_bytes = file.read()
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        
-        # نبدأ من الصفحة الثالثة زي ما اتفقنا
-        for page_num in range(2, len(doc)):
-            page = doc[page_num]
-            text = page.get_text()
-            
-            # البحث عن كل أرقام الموبايل في الصفحة
-            phones = re.findall(r'(01[0125]\d{8})', text)
-            
-            for phone in phones:
-                # نجد موقع الرقم في النص
-                idx = text.find(phone)
-                if idx == -1: continue
-                
-                # ناخذ جزء كبير من النص بعد الرقم لاستخراج القيم
-                # في فواتيركم، الأرقام بتيجي في سطر منفصل أو بعد الاسم مباشرة
-                # هنبحث عن أقرب 13 رقم عشري بعد موقع الهاتف
-                chunk = text[idx:idx+1000] 
-                
-                # استخراج كل الأرقام العشرية من هذا الجزء
-                numbers = re.findall(r'-?\d+(?:\.\d+)?', chunk)
-                
-                # تحويلها لـ float واستبعاد رقم الهاتف نفسه
-                vals = []
-                for n in numbers:
-                    try:
-                        f_val = float(n)
-                        if str(int(f_val)) != phone: # تأكد إن الرقم مش هو رقم التليفون
-                            vals.append(f_val)
-                    except:
-                        pass
-                
-                # لو لقينا 13 رقم أو أكتر، نحاول نبني السجل
-                if len(vals) >= 13:
-                    # في الغالب الترتيب بيكون: شهري، خدمات، محلي مكالمات، محلي رسائل، محلي نت، دولي مكالمات... إلخ
-                    # لكن أحياناً بيكون فيه أرقام زائدة قبلهم، فبنستخدم نفس منطق الـ Scoring بتاعك
-                    
-                    def build_record(v):
-                        return {
-                            "محمول": phone,
-                            "رسوم شهرية": v[0] if len(v)>0 else 0,
-                            "رسوم الخدمات": v[1] if len(v)>1 else 0,
-                            "مكالمات محلية": v[2] if len(v)>2 else 0,
-                            "رسائل محلية": v[3] if len(v)>3 else 0,
-                            "إنترنت محلية": v[4] if len(v)>4 else 0,
-                            "مكالمات دولية": v[5] if len(v)>5 else 0,
-                            "رسائل دولية": v[6] if len(v)>6 else 0,
-                            "مكالمات تجوال": v[7] if len(v)>7 else 0,
-                            "رسائل تجوال": v[8] if len(v)>8 else 0,
-                            "إنترنت تجوال": v[9] if len(v)>9 else 0,
-                            "رسوم تسويات": v[10] if len(v)>10 else 0,
-                            "ضرائب": v[11] if len(v)>11 else 0,
-                            "إجمالي": v[12] if len(v)>12 else 0
-                        }
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages[2:]:
+                tables = page.extract_tables()
+                for table in tables or []:
+                    for i, row in enumerate(table):
+                        if not row:
+                            continue
 
-                    def score_record(rec):
-                        total_calc = sum([rec[k] for k in rec if k not in ["محمول", "إجمالي"]])
-                        diff = abs(rec["إجمالي"] - total_calc)
-                        score = 0
-                        if diff <= 0.05: score += 1000
-                        elif diff <= 0.10: score += 500
-                        elif diff <= 0.50: score += 250
-                        elif diff <= 1: score += 100
-                        elif diff <= 3: score += 30
-                        elif diff <= 10: score += 10
-                        if rec["رسوم شهرية"] >= 0: score += 10
-                        if rec["ضرائب"] >= 0: score += 10
-                        return score
+                        text = normalize(" ".join([str(c) for c in row if c]))
+                        phone = re.search(r'(01[0125]\d{8})', text)
 
-                    # نجرب أول 13 رقم، ونجرب شيفت واحد، ونختار الأعلى سكور
-                    candidates = []
-                    for start in range(min(5, len(vals)-13)): # نجرب أول 5 احتمالات للبدء
-                        window = vals[start:start+13]
-                        rec = build_record(window)
-                        candidates.append((score_record(rec), rec))
-                    
-                    if candidates:
-                        best_rec = max(candidates, key=lambda x: x[0])[1]
-                        # نتأكد إن الإجمالي مش صفر عشان نتجنب الأخطاء
-                        if best_rec["إجمالي"] > 0:
-                            records.append(best_rec)
+                        if phone:
+                            p = phone.group(1)
+                            vals = extract_numbers(text)
 
-        doc.close()
-    except Exception as e:
-        st.error(f"خطأ في المعالجة: {str(e)}")
+                            if i + 1 < len(table):
+                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
+                                if len(nxt) > len(vals):
+                                    vals = nxt
+
+                            vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                            if len(vals) < 13:
+                                continue
+
+                            def build_record(v):
+                                def g(idx):
+                                    return v[idx] if idx < len(v) else 0
+
+                                return {
+                                    "محمول": p,
+                                    "رسوم شهرية": g(0),
+                                    "رسوم الخدمات": g(1),
+                                    "مكالمات محلية": g(2),
+                                    "رسائل محلية": g(3),
+                                    "إنترنت محلية": g(4),
+                                    "مكالمات دولية": g(5),
+                                    "رسائل دولية": g(6),
+                                    "مكالمات تجوال": g(7),
+                                    "رسائل تجوال": g(8),
+                                    "إنترنت تجوال": g(9),
+                                    "رسوم تسويات": g(10),
+                                    "ضرائب": g(11),
+                                    "إجمالي": g(12)
+                                }
+
+                            def score_record(rec):
+                                monthly = rec["رسوم شهرية"]
+                                services = rec["رسوم الخدمات"]
+                                local_calls = rec["مكالمات محلية"]
+                                local_sms = rec["رسائل محلية"]
+                                local_data = rec["إنترنت محلية"]
+                                intl_calls = rec["مكالمات دولية"]
+                                intl_sms = rec["رسائل دولية"]
+                                roam_calls = rec["مكالمات تجوال"]
+                                roam_sms = rec["رسائل تجوال"]
+                                roam_data = rec["إنترنت تجوال"]
+                                settlements = rec["رسوم تسويات"]
+                                taxes = rec["ضرائب"]
+                                total = rec["إجمالي"]
+
+                                calculated_total = (
+                                    monthly + services + local_calls + local_sms + local_data +
+                                    intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
+                                    settlements + taxes
+                                )
+
+                                diff = abs(total - calculated_total)
+                                score = 0
+
+                                if diff <= 0.05:
+                                    score += 1000
+                                elif diff <= 0.10:
+                                    score += 500
+                                elif diff <= 0.50:
+                                    score += 250
+                                elif diff <= 1:
+                                    score += 100
+                                elif diff <= 3:
+                                    score += 30
+                                elif diff <= 10:
+                                    score += 10
+
+                                if monthly >= 0:
+                                    score += 10
+
+                                if taxes >= 0:
+                                    score += 10
+
+                                if services >= 0:
+                                    score += 5
+
+                                if abs(total) >= abs(taxes):
+                                    score += 5
+
+                                if abs(total) >= abs(monthly):
+                                    score += 5
+
+                                if abs(local_calls) <= 100:
+                                    score += 3
+
+                                if abs(local_sms) <= 100:
+                                    score += 3
+
+                                if abs(local_data) <= 100:
+                                    score += 3
+
+                                return score
+
+                            candidates = []
+
+                            for start in range(len(vals) - 13 + 1):
+                                window = vals[start:start + 13]
+                                normal_record = build_record(window)
+                                reversed_record = build_record(window[::-1])
+
+                                candidates.append((score_record(normal_record), normal_record))
+                                candidates.append((score_record(reversed_record), reversed_record))
+
+                            best_record = max(candidates, key=lambda x: x[0])[1]
+                            records.append(best_record)
+    except:
+        pass
     return records
 
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
+mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪🇬", "English 🇺🇸"], horizontal=True)
 
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
@@ -172,14 +228,24 @@ if st.button("🚀 بدء المعالجة والتحليل"):
         all_data = []
         for idx, file in enumerate(files):
             file.seek(0)
-            data = parse_file_smart(file)
+            if mode == "Auto 🤖":
+                try:
+                    with pdfplumber.open(file) as pdf:
+                        txt = pdf.pages[0].extract_text() or ""
+                    is_ar = True if re.search(r'[\u0600-\u06FF]', txt) else False
+                except:
+                    is_ar = True
+            else:
+                is_ar = True if mode == "عربي 🇪🇬" else False
+
+            file.seek(0)
+            data = parse_file(file, is_ar)
             all_data.extend(data)
             progress_bar.progress((idx + 1) / len(files))
             gc.collect()
 
         if all_data:
             df = pd.DataFrame(all_data)
-            
             st.markdown("### 📈 ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
             with m1:
@@ -193,14 +259,8 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             with m5:
                 st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي</div><div class="metric-value">{df["إجمالي"].sum():,.1f}</div></div>', unsafe_allow_html=True)
 
-            st.dataframe(df.head(50), use_container_width=True)
-            if len(df) > 50:
-                st.caption(f"️ تم عرض أول 50 سجل فقط. إجمالي السجلات: {len(df)}")
-
+            st.dataframe(df, use_container_width=True)
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
-            st.download_button(" تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
-            
-            del df, all_data, buf
-            gc.collect()
+            st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
