@@ -36,12 +36,14 @@ div.stButton > button { min-height: 45px !important; width: 100% !important; fon
 
 # ================= USERS DATA =================
 def load_users():
-    try:
-        df_users = pd.read_excel("users.xlsx")
-        return {str(row["Username"]).strip(): str(row["Password"]).strip() for _, row in df_users.iterrows()}
-    except:
-        return {"admin": "123"}
-
+    return {
+        "noga": "19852026",
+        "amany": "123456",
+        "ayat": "987654",
+        "ghada": "456789",
+        "omniya": "654321",
+        "hussein": "1119885757"
+    }
 users = load_users()
 
 # ================= SESSION STATE =================
