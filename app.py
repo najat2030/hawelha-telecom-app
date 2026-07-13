@@ -95,15 +95,11 @@ def extract_numbers(text):
 def parse_file(file, is_arabic):
     records = []
     try:
-        # قراءة الملف كـ Bytes عشان يتوافق مع Streamlit Cloud
         file_bytes = file.read()
         doc = fitz.open(stream=file_bytes, filetype="pdf")
         
-        # نبدأ من الصفحة الثالثة (index 2) زي ما كنتي عاملة
         for page_num in range(2, len(doc)):
             page = doc[page_num]
-            
-            # استخراج الجداول باستخدام PyMuPDF
             tabs = page.find_tables()
             if not tabs:
                 continue
@@ -117,7 +113,6 @@ def parse_file(file, is_arabic):
                     if not row:
                         continue
 
-                    # تجميع النص والبحث عن الموبايل
                     text = normalize(" ".join([str(c) for c in row if c]))
                     phone = re.search(r'(01[0125]\d{8})', text)
 
@@ -125,20 +120,17 @@ def parse_file(file, is_arabic):
                         p = phone.group(1)
                         vals = extract_numbers(text)
 
-                        # نفس منطقك الأصلي: لو الصف اللي بعده فيه أرقام أكتر نستخدمه
                         if i + 1 < len(extracted_rows):
                             nxt_text = normalize(" ".join([str(c) for c in extracted_rows[i+1] if c]))
                             nxt = extract_numbers(nxt_text)
                             if len(nxt) > len(vals):
                                 vals = nxt
 
-                        # استبعاد رقم الموبايل من قائمة الأرقام
                         vals = [v for v in vals if str(int(v)) != str(int(p))]
 
                         if len(vals) < 13:
                             continue
 
-                        # دوال البناء والتقييم (نفسها بالظبط زي ما هي)
                         def build_record(v):
                             def g(idx):
                                 return v[idx] if idx < len(v) else 0
@@ -191,7 +183,7 @@ def parse_file(file, is_arabic):
 
 # ================= UI =================
 files = st.file_uploader("📂 رفع ملفات PDF", type=["pdf"], accept_multiple_files=True)
-mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪🇬", "English 🇺🇸"], horizontal=True)
+mode = st.radio("إعدادات اللغة", ["Auto 🤖", "عربي 🇪", "English 🇺🇸"], horizontal=True)
 
 if st.button("🚀 بدء المعالجة والتحليل"):
     if files:
@@ -201,7 +193,6 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             file.seek(0)
             if mode == "Auto 🤖":
                 try:
-                    # استخدام fitz بدلاً من pdfplumber لكشف اللغة
                     file_bytes_temp = file.read()
                     temp_doc = fitz.open(stream=file_bytes_temp, filetype="pdf")
                     txt = temp_doc[0].get_text() or ""
@@ -216,11 +207,12 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             data = parse_file(file, is_ar)
             all_data.extend(data)
             progress_bar.progress((idx + 1) / len(files))
-            gc.collect() # تفريغ الذاكرة بعد كل ملف
+            gc.collect() 
 
         if all_data:
             df = pd.DataFrame(all_data)
-            st.markdown("### 📈 ملخص التحليل المالي")
+            
+            st.markdown("###  ملخص التحليل المالي")
             m1, m2, m3, m4, m5 = st.columns(5)
             with m1:
                 st.markdown(f'<div class="metric-card"><div class="metric-title">📱 الخطوط</div><div class="metric-value">{len(df)}</div></div>', unsafe_allow_html=True)
@@ -233,8 +225,16 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             with m5:
                 st.markdown(f'<div class="metric-card"><div class="metric-title">💎 الإجمالي</div><div class="metric-value">{df["إجمالي"].sum():,.1f}</div></div>', unsafe_allow_html=True)
 
-            st.dataframe(df, use_container_width=True)
+            # عرض أول 50 صف فقط لتوفير الذاكرة
+            st.dataframe(df.head(50), use_container_width=True)
+            if len(df) > 50:
+                st.caption(f"️ تم عرض أول 50 سجل فقط لتوفير موارد السيرفر. إجمالي السجلات: {len(df)}")
+
             buf = io.BytesIO()
             with pd.ExcelWriter(buf, engine="openpyxl") as writer:
                 df.to_excel(writer, index=False)
             st.download_button("📥 تحميل تقرير Excel", data=buf.getvalue(), file_name="Telecom_Report.xlsx")
+            
+            # تفريغ الذاكرة بعد الانتهاء
+            del df, all_data, buf
+            gc.collect()
