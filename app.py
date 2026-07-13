@@ -1,5 +1,5 @@
 import streamlit as st
-import pdfplumber
+import fitz  # <-- تم التغيير من pdfplumber إلى fitz (PyMuPDF)
 import pandas as pd
 import re
 import io
@@ -67,7 +67,7 @@ if not st.session_state.logged_in:
 logo_url = "https://raw.githubusercontent.com/najat2030/hawelha-telecom-app/main/static/logo.png"
 col_out, col_logo, col_me = st.columns([1, 4, 1], vertical_alignment="center")
 with col_out:
-    if st.button("🚪 خروج"):
+    if st.button(" خروج"):
         st.session_state.logged_in = False
         st.rerun()
 with col_logo:
@@ -93,129 +93,98 @@ def extract_numbers(text):
 def parse_file(file, is_arabic):
     records = []
     try:
-        with pdfplumber.open(file) as pdf:
-            for page in pdf.pages[2:]:
-                tables = page.extract_tables()
-                for table in tables or []:
-                    for i, row in enumerate(table):
-                        if not row:
+        # قراءة الملف كـ Bytes عشان يتوافق مع Streamlit Cloud
+        file_bytes = file.read()
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        
+        # نبدأ من الصفحة الثالثة (index 2) زي ما كنتي عاملة
+        for page_num in range(2, len(doc)):
+            page = doc[page_num]
+            
+            # استخراج الجداول باستخدام PyMuPDF
+            tabs = page.find_tables()
+            if not tabs:
+                continue
+                
+            for table in tabs:
+                extracted_rows = table.extract()
+                if not extracted_rows:
+                    continue
+                    
+                for i, row in enumerate(extracted_rows):
+                    if not row:
+                        continue
+
+                    # تجميع النص والبحث عن الموبايل
+                    text = normalize(" ".join([str(c) for c in row if c]))
+                    phone = re.search(r'(01[0125]\d{8})', text)
+
+                    if phone:
+                        p = phone.group(1)
+                        vals = extract_numbers(text)
+
+                        # نفس منطقك الأصلي: لو الصف اللي بعده فيه أرقام أكتر نستخدمه
+                        if i + 1 < len(extracted_rows):
+                            nxt_text = normalize(" ".join([str(c) for c in extracted_rows[i+1] if c]))
+                            nxt = extract_numbers(nxt_text)
+                            if len(nxt) > len(vals):
+                                vals = nxt
+
+                        # استبعاد رقم الموبايل من قائمة الأرقام
+                        vals = [v for v in vals if str(int(v)) != str(int(p))]
+
+                        if len(vals) < 13:
                             continue
 
-                        text = normalize(" ".join([str(c) for c in row if c]))
-                        phone = re.search(r'(01[0125]\d{8})', text)
+                        # دوال البناء والتقييم (نفسها بالظبط زي ما هي)
+                        def build_record(v):
+                            def g(idx):
+                                return v[idx] if idx < len(v) else 0
+                            return {
+                                "محمول": p,
+                                "رسوم شهرية": g(0), "رسوم الخدمات": g(1),
+                                "مكالمات محلية": g(2), "رسائل محلية": g(3),
+                                "إنترنت محلية": g(4), "مكالمات دولية": g(5),
+                                "رسائل دولية": g(6), "مكالمات تجوال": g(7),
+                                "رسائل تجوال": g(8), "إنترنت تجوال": g(9),
+                                "رسوم تسويات": g(10), "ضرائب": g(11), "إجمالي": g(12)
+                            }
 
-                        if phone:
-                            p = phone.group(1)
-                            vals = extract_numbers(text)
+                        def score_record(rec):
+                            total_calc = sum([rec[k] for k in rec if k not in ["محمول", "إجمالي"]])
+                            diff = abs(rec["إجمالي"] - total_calc)
+                            score = 0
+                            if diff <= 0.05: score += 1000
+                            elif diff <= 0.10: score += 500
+                            elif diff <= 0.50: score += 250
+                            elif diff <= 1: score += 100
+                            elif diff <= 3: score += 30
+                            elif diff <= 10: score += 10
+                            
+                            if rec["رسوم شهرية"] >= 0: score += 10
+                            if rec["ضرائب"] >= 0: score += 10
+                            if rec["رسوم الخدمات"] >= 0: score += 5
+                            if abs(rec["إجمالي"]) >= abs(rec["ضرائب"]): score += 5
+                            if abs(rec["إجمالي"]) >= abs(rec["رسوم شهرية"]): score += 5
+                            if abs(rec["مكالمات محلية"]) <= 100: score += 3
+                            if abs(rec["رسائل محلية"]) <= 100: score += 3
+                            if abs(rec["إنترنت محلية"]) <= 100: score += 3
+                            return score
 
-                            if i + 1 < len(table):
-                                nxt = extract_numbers(" ".join([str(c) for c in table[i+1] if c]))
-                                if len(nxt) > len(vals):
-                                    vals = nxt
-
-                            vals = [v for v in vals if str(int(v)) != str(int(p))]
-
-                            if len(vals) < 13:
-                                continue
-
-                            def build_record(v):
-                                def g(idx):
-                                    return v[idx] if idx < len(v) else 0
-
-                                return {
-                                    "محمول": p,
-                                    "رسوم شهرية": g(0),
-                                    "رسوم الخدمات": g(1),
-                                    "مكالمات محلية": g(2),
-                                    "رسائل محلية": g(3),
-                                    "إنترنت محلية": g(4),
-                                    "مكالمات دولية": g(5),
-                                    "رسائل دولية": g(6),
-                                    "مكالمات تجوال": g(7),
-                                    "رسائل تجوال": g(8),
-                                    "إنترنت تجوال": g(9),
-                                    "رسوم تسويات": g(10),
-                                    "ضرائب": g(11),
-                                    "إجمالي": g(12)
-                                }
-
-                            def score_record(rec):
-                                monthly = rec["رسوم شهرية"]
-                                services = rec["رسوم الخدمات"]
-                                local_calls = rec["مكالمات محلية"]
-                                local_sms = rec["رسائل محلية"]
-                                local_data = rec["إنترنت محلية"]
-                                intl_calls = rec["مكالمات دولية"]
-                                intl_sms = rec["رسائل دولية"]
-                                roam_calls = rec["مكالمات تجوال"]
-                                roam_sms = rec["رسائل تجوال"]
-                                roam_data = rec["إنترنت تجوال"]
-                                settlements = rec["رسوم تسويات"]
-                                taxes = rec["ضرائب"]
-                                total = rec["إجمالي"]
-
-                                calculated_total = (
-                                    monthly + services + local_calls + local_sms + local_data +
-                                    intl_calls + intl_sms + roam_calls + roam_sms + roam_data +
-                                    settlements + taxes
-                                )
-
-                                diff = abs(total - calculated_total)
-                                score = 0
-
-                                if diff <= 0.05:
-                                    score += 1000
-                                elif diff <= 0.10:
-                                    score += 500
-                                elif diff <= 0.50:
-                                    score += 250
-                                elif diff <= 1:
-                                    score += 100
-                                elif diff <= 3:
-                                    score += 30
-                                elif diff <= 10:
-                                    score += 10
-
-                                if monthly >= 0:
-                                    score += 10
-
-                                if taxes >= 0:
-                                    score += 10
-
-                                if services >= 0:
-                                    score += 5
-
-                                if abs(total) >= abs(taxes):
-                                    score += 5
-
-                                if abs(total) >= abs(monthly):
-                                    score += 5
-
-                                if abs(local_calls) <= 100:
-                                    score += 3
-
-                                if abs(local_sms) <= 100:
-                                    score += 3
-
-                                if abs(local_data) <= 100:
-                                    score += 3
-
-                                return score
-
-                            candidates = []
-
-                            for start in range(len(vals) - 13 + 1):
-                                window = vals[start:start + 13]
-                                normal_record = build_record(window)
-                                reversed_record = build_record(window[::-1])
-
-                                candidates.append((score_record(normal_record), normal_record))
-                                candidates.append((score_record(reversed_record), reversed_record))
-
-                            best_record = max(candidates, key=lambda x: x[0])[1]
-                            records.append(best_record)
-    except:
-        pass
+                        candidates = []
+                        for start in range(len(vals) - 13 + 1):
+                            window = vals[start:start + 13]
+                            candidates.append((score_record(build_record(window)), build_record(window)))
+                            candidates.append((score_record(build_record(window[::-1])), build_record(window[::-1])))
+                        
+                        best_record = max(candidates, key=lambda x: x[0])[1]
+                        records.append(best_record)
+                        
+        doc.close()
+        
+    except Exception as e:
+        st.error(f"حدث خطأ أثناء معالجة الملف: {str(e)}")
+        
     return records
 
 # ================= UI =================
@@ -230,8 +199,11 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             file.seek(0)
             if mode == "Auto 🤖":
                 try:
-                    with pdfplumber.open(file) as pdf:
-                        txt = pdf.pages[0].extract_text() or ""
+                    # استخدام fitz بدلاً من pdfplumber لكشف اللغة
+                    file_bytes_temp = file.read()
+                    temp_doc = fitz.open(stream=file_bytes_temp, filetype="pdf")
+                    txt = temp_doc[0].get_text() or ""
+                    temp_doc.close()
                     is_ar = True if re.search(r'[\u0600-\u06FF]', txt) else False
                 except:
                     is_ar = True
@@ -242,7 +214,7 @@ if st.button("🚀 بدء المعالجة والتحليل"):
             data = parse_file(file, is_ar)
             all_data.extend(data)
             progress_bar.progress((idx + 1) / len(files))
-            gc.collect()
+            gc.collect() # تفريغ الذاكرة بعد كل ملف
 
         if all_data:
             df = pd.DataFrame(all_data)
